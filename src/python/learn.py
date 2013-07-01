@@ -8,8 +8,6 @@ def localStop(H) :
     FP_p = H.FP1
     FP_c = H.FP
     
-    #print H.POS, H.NEG
-    
     return ( TP_c - TP_p == 0 ) or ( FP_c - FP_p == 0 )
 
 def localScore(rs) :
@@ -31,7 +29,7 @@ def learn(H) :
     while True :
         H.pushRule()
         while not localStop(H) :
-            lit = best_literal( H, H.rules[-1].refine(H.data), lambda H : localScore(H) ) 
+            lit = best_literal( H, H.refine(), lambda H : localScore(H) ) 
             #if lit == None : return H
             H.pushLiteral(lit)
 
@@ -46,7 +44,7 @@ def learn(H) :
         
         score_nH = globalScore(H)
         
-        #print score_H, score_nH
+        print score_H, score_nH, H.rules[-1]
         if (score_H >= score_nH) :
             H.popRule()
             break
@@ -68,6 +66,123 @@ def best_literal( H, generator, score_func ) :
     return max_x
 
 
+class RuleSet(object) :
+    
+    def __init__(self, RuleType, target, data) :
+        self.target = target
+        self.rules = []
+        self.data = data
+        self.Rule = RuleType
+        
+        evaluated = ( [], [] )
+        for ex in self.data :
+            h, b = self.Rule(target).evaluate(self.data[ex])
+            evaluated[h].append( ex )
+        negatives, positives = evaluated
+        
+        self.P = float(len(positives))
+        self.N = float(len(negatives))
+        
+        self.POS = [positives]  # should be set of positive examples
+        self.NEG = [negatives]  # should be set of negative examples
+                
+    def getTP(self) :
+        return float(self.P - self.FN)
+    
+    def getTN(self) :
+        return float(len(self.NEG[0]))
+    
+    def getFP(self) :
+        return float(self.N - self.TN)
+    
+    def getFN(self) :
+        return float(len(self.POS[0]))
+
+    def getTP1(self) :
+        return float(self.P - self.FN1)
+    
+    def getTN1(self) :
+        return float(len(self.NEG[0]) + len(self.NEG[-1]))
+    
+    def getFP1(self) :
+        return float(self.N - self.TN1)
+    
+    def getFN1(self) :
+        return float(len(self.POS[0]) + len(self.POS[-1]))
+
+        
+    TP = property(getTP)    
+    TN = property(getTN)
+    FP = property(getFP)
+    FN = property(getFN)
+
+    TP1 = property(getTP1)    
+    TN1 = property(getTN1)
+    FP1 = property(getFP1)
+    FN1 = property(getFN1)
+
+    def refine(self) :
+        # Generate literals that are in FP of last rule
+        TP_examples = self.POS[-1]
+        FN_examples = self.POS[0]
+        literals = set([])
+        for x in TP_examples + FN_examples :
+#            print self.data.literals(x)
+            literals |= self.data.literals(x)
+            
+        result = set(self.rules[-1].refine(self.data))
+        result = literals & result
+        print len(result), 'refinements', self.TP, self.FN
+        return result
+        
+    def pushRule(self, rule=None) :
+        if rule == None : rule = self.newRule()
+        
+        evaluated = [[],[]]
+        for example in self.POS[0] :
+            h, b = rule.evaluate(self.data[example])
+            evaluated[b].append(example)
+        self.POS[0] = evaluated[0]
+        self.POS.append( evaluated[1] )
+        
+        evaluated = [[],[]]
+        for example in self.NEG[0] :
+            h, b = rule.evaluate(self.data[example])
+            evaluated[b].append(example)
+        self.NEG[0] = evaluated[0]
+        self.NEG.append( evaluated[1] )                    
+        
+        self.rules.append(rule)
+
+    def popRule(self) :
+        self.POS[0] = self.POS[0]+self.POS[-1]
+        self.POS.pop(-1)
+        
+        self.NEG[0] = self.NEG[0]+self.NEG[-1]
+        self.NEG.pop(-1)
+        
+        self.rules.pop(-1)
+        
+    def pushLiteral(self, literal) :
+        # quick implementation
+        rule = self.rules[-1]
+        self.popRule()
+        self.pushRule( rule + literal )
+    
+    def popLiteral(self) :
+        # quick implementation
+        rule = self.rules[-1]
+        self.popRule()
+        rule.body = rule.body[:-1]
+        self.pushRule( rule )
+        
+    def newRule(self) :
+        return self.Rule(self.target)
+        
+    def __str__(self) :
+        return '\n'.join(map(str,self.rules))
+        
+    
 
         
 def argmax( generator, score ) :
