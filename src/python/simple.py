@@ -129,8 +129,10 @@ def test(args=[]) :
     for value in kb.values(field) :
         target = Literal(kb, field, value)
         print '==> LEARNING CONCEPT:', target 
-        print learn(RuleSet(Rule, target, kb))   
-#        break 
+        H = learn(RuleSet(Rule, target, kb))   
+        print H
+        print H.TP, H.TN, H.FP, H.FN
+        break
     
 if __name__ == '__main__' :
     import sys    

@@ -21,9 +21,12 @@ class Literal(object) :
         
         result = {}
         for ARG, arg in zip(self.args, ground_args) :
-            if ARG.startswith('_') :
+            if self.is_var(ARG) :
                 result[ARG] = arg
         return result
+        
+    def is_var(self, arg) :
+        return arg[0] in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'
         
     def assign(self, subst) :
         new_args = []
@@ -113,26 +116,25 @@ class Rule(object) :
         return tv_head, tv_body
         
     def evaluate_body(self, kb, body, substitution) :
+        if not body : 
+            return True
+        
         
         body_first = body[0]
         body_rest = body[1:]
         
-        ground_body = body_first.head.assign( substitution )
+        ground_body = body_first.assign( substitution )
         
         for match in kb.find_fact(ground_body.functor, ground_body.args) :
             new_substitution = dict(substitution)
-            new_substitution.update( self.ground_body.assign( match ) )
-            # call recursive
+            new_substitution.update( ground_body.unify( match ) )
+            if self.evaluate_body(kb, body_rest, new_substitution) :
+                return True
+        return False
         
     def refine(self, kb) :
-        all_fields = set([ f for f in kb.fields() if f[0] != '#' ] )
-        my_fields = set([ lit.field for lit in self.body+[self.head] ])
-        
-        new_fields = all_fields - my_fields
-        
-        for fld in new_fields :
-            for val in kb.values(fld) :
-                yield Literal(kb, fld, val)
+        yield Literal('has_hair',['X'])
+        yield Literal('gives_milk',['X'])
     
     def __str__(self) :
         return str(self.head) + ' <- ' + ', '.join(map(str,self.body))
@@ -170,9 +172,11 @@ def test(args=[]) :
     
     from learn import learn, RuleSet
 
-    target = Literal('mammal', ['_X'])
+    target = Literal('mammal', ['X'])
     print '==> LEARNING CONCEPT:', target 
-    print learn(RuleSet(Rule, target, kb))   
+    H = learn(RuleSet(Rule, target, kb))   
+    
+    print H, H.TP, H.TN, H.FP, H.FN
 #        break 
     
     

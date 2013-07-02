@@ -43,7 +43,7 @@ def learn(H) :
         
         score_nH = globalScore(H)
         
-        #print score_H, score_nH, H.rules[-1]
+        print score_H, score_nH, H.rules[-1], '\n\n\n\n\n\n\n'
         if (score_H >= score_nH) :
             H.popRule()
             break
@@ -66,9 +66,10 @@ def best_clause( H, beam_size = 5 ) :
                keep.append((s, rule)) 
             else :
                 H.pushRule(rule)
+                print 'XX', H.TP, H.TN, H.FP, H.FN
                 sub_beam = best_literal( H, H.refine(), lambda H : localScore(H), 5 )
                 H.popRule()
-            
+                print rule, sub_beam
                 better_child = False
                 for score, lit in sub_beam :
                     if score > s :
@@ -128,8 +129,10 @@ def best_literal( H, generator, score_func , beam_size) :
     for lit in generator :
         
         posM, negM = H.testLiteral(lit)
+#        print lit, posM, negM
         stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
-        
+        print H.NEG[0], H.NEG[-1]
+        print lit, stats
 #        H.pushLiteral(lit)
         
         # print stats.TP, stats.TN, stats.FP, stats.FN, stats.P, stats.N
@@ -138,9 +141,10 @@ def best_literal( H, generator, score_func , beam_size) :
         current_score = score_func(stats), stats.TP, stats.FP
         beam.push(lit, current_score)
         
-#        print 'TEST',lit, current_score, stats.FP, stats.FN, stats.TP + stats.FP
+#        print 'TEST', current_score, stats.FP, stats.FN, stats.TP + stats.FP
 #        H.popLiteral()
 #    lit = argmax(r.refine(data), lambda lt : localScore(H, r+lt, data)) 
+#    print '==>', beam
     return beam
 
 class Timer(object) :
@@ -211,15 +215,16 @@ class RuleSet(object) :
     FN1 = property(getFN1)
 
     def refine(self) :
-        # Generate literals that are in FP of last rule
+#         # Generate literals that are in FP of last rule
         TP_examples = self.POS[-1]
         FN_examples = self.POS[0]
         literals = set([])
-        for x in TP_examples + FN_examples :
+        for x in TP_examples : # + FN_examples :
 #            print self.data.literals(x)
             literals |= self.data.literals(x)
             
         result = set(self.rules[-1].refine(self.data))
+        print map(str,literals)
         result = literals & result
         #print len(result), 'refinements', self.TP, self.FN
         return result
