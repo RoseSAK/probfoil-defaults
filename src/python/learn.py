@@ -1,5 +1,8 @@
 #! /usr/bin/env python3
 
+from collections import namedtuple
+import time
+
 def localStop(H) :
     
     TP_p = H.TP1
@@ -11,7 +14,7 @@ def localStop(H) :
     return ( TP_c - TP_p == 0 ) or ( FP_c - FP_p == 0 )
 
 def localScore(rs) :
-    m = 1
+    m = 10
     
     m_estimate_c = (rs.TP + m * (rs.P / (rs.N + rs.P))) / (rs.TP + rs.FP + m) 
     
@@ -27,12 +30,8 @@ def learn(H) :
     score_H = globalScore(H)
 
     while True :
-        H.pushRule()
-        while not localStop(H) :
-            lit = best_literal( H, H.refine(), lambda H : localScore(H) ) 
-            #if lit == None : return H
-            H.pushLiteral(lit)
-
+        rule = best_clause( H )
+        H.pushRule(rule)
         
         # FIXME pruning step
         # n = len(r.body)
@@ -44,7 +43,7 @@ def learn(H) :
         
         score_nH = globalScore(H)
         
-        print score_H, score_nH, H.rules[-1]
+        #print score_H, score_nH, H.rules[-1]
         if (score_H >= score_nH) :
             H.popRule()
             break
@@ -52,19 +51,109 @@ def learn(H) :
             score_H = score_nH
     return H
 
-def best_literal( H, generator, score_func ) :
-    max_score = None
-    max_x = None
+
+def best_clause( H, beam_size = 5 ) :
+    beam = Beam(beam_size)
+    beam.push((False,H.newRule()) , 0)
+    
+    while True :
+        next_beam = Beam(beam_size)
+        
+        keep = []
+        for s, h_rule in beam :
+            handled, rule = h_rule
+            if handled : 
+               keep.append((s, rule)) 
+            else :
+                H.pushRule(rule)
+                sub_beam = best_literal( H, H.refine(), lambda H : localScore(H), 5 )
+                H.popRule()
+            
+                better_child = False
+                for score, lit in sub_beam :
+                    if score > s :
+                        better_child = True
+                        next_beam.push( (False, rule + lit), score + (-len(rule.body),) )
+            
+                if not better_child :
+                    keep.append((s, rule))
+
+        if not next_beam.content :
+            break
+        else :
+            beam = next_beam
+            for s,r in keep :
+                beam.push((True,r),s)
+    
+    return beam.content[0][1][1]
+
+class Beam(object) :
+    
+    def __init__(self, size) :
+        self.size = size
+        self.content = []
+       
+    def __iter__(self) :
+        return iter(self.content)
+        
+    def push(self, obj, score) :
+        if len(self.content) == self.size and score < self.content[-1][0] : return
+        
+        p = len(self.content) - 1
+        self.content.append( (score, obj) )
+        while p >= 0 and self.content[p][0] < self.content[p+1][0] :
+            self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
+            p = p - 1
+        
+        while len(self.content) > self.size :
+            self.content.pop(-1)
+    
+    def pop(self) :
+        self.content = self.content[1:]
+        
+    def __str__(self) :
+        r = 'BEAM <<<\n'
+        for s, c in self.content :
+            r += str(c) + ': ' + str(s) + '\n'
+        r += '>>>'
+        return r
+        
+
+def best_literal( H, generator, score_func , beam_size) :
+  with Timer('best_literals') :
+    beam = Beam(beam_size)
+    
+    EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )
     
     for lit in generator :
-        H.pushLiteral(lit)
-        current_score = score_func(H)
-        if max_score == None or max_score < current_score :
-            max_score, max_x = current_score, lit
-        H.popLiteral()
+        
+        posM, negM = H.testLiteral(lit)
+        stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
+        
+#        H.pushLiteral(lit)
+        
+        # print stats.TP, stats.TN, stats.FP, stats.FN, stats.P, stats.N
+        # print H.TP, H.TN, H.FP, H.FN, H.P, H.N
+        
+        current_score = score_func(stats), stats.TP, stats.FP
+        beam.push(lit, current_score)
+        
+#        print 'TEST',lit, current_score, stats.FP, stats.FN, stats.TP + stats.FP
+#        H.popLiteral()
 #    lit = argmax(r.refine(data), lambda lt : localScore(H, r+lt, data)) 
-    return max_x
+    return beam
 
+class Timer(object) :
+    
+    def __init__(self, desc) :
+        self.desc = desc
+    
+    def __enter__(self) :
+        self.start = time.time()
+        
+    def __exit__(self, *args) :
+        t = time.time()
+        #print ( '%s: %.5f' % (self.desc, t-self.start ))
 
 class RuleSet(object) :
     
@@ -76,7 +165,7 @@ class RuleSet(object) :
         
         evaluated = ( [], [] )
         for ex in self.data :
-            h, b = self.Rule(target).evaluate(self.data[ex])
+            h, b = self.Rule(target).evaluate(self.data, self.data[ex])
             evaluated[h].append( ex )
         negatives, positives = evaluated
         
@@ -132,22 +221,24 @@ class RuleSet(object) :
             
         result = set(self.rules[-1].refine(self.data))
         result = literals & result
-        print len(result), 'refinements', self.TP, self.FN
+        #print len(result), 'refinements', self.TP, self.FN
         return result
         
     def pushRule(self, rule=None) :
+    #  with Timer('push rule') :
+        
         if rule == None : rule = self.newRule()
         
         evaluated = [[],[]]
         for example in self.POS[0] :
-            h, b = rule.evaluate(self.data[example])
+            h, b = rule.evaluate(self.data, self.data[example])
             evaluated[b].append(example)
         self.POS[0] = evaluated[0]
         self.POS.append( evaluated[1] )
         
         evaluated = [[],[]]
         for example in self.NEG[0] :
-            h, b = rule.evaluate(self.data[example])
+            h, b = rule.evaluate(self.data, self.data[example])
             evaluated[b].append(example)
         self.NEG[0] = evaluated[0]
         self.NEG.append( evaluated[1] )                    
@@ -162,6 +253,26 @@ class RuleSet(object) :
         self.NEG.pop(-1)
         
         self.rules.pop(-1)
+        
+    def testLiteral(self, literal) :
+    #  with Timer('test literal') :
+        current_rule = self.rules[-1]
+        
+        # can only move examples from self.XXX[-1] to self.XXX[0]
+        
+        posMoved = 0
+        for ex in self.POS[-1] :
+            h, b = self.Rule(literal).evaluate(self.data, self.data[ex])
+            if not h :
+                posMoved += 1
+
+        negMoved = 0
+        for ex in self.NEG[-1] :
+            h, b = self.Rule(literal).evaluate(self.data, self.data[ex])
+            if not h :
+                negMoved += 1
+        
+        return posMoved, negMoved
         
     def pushLiteral(self, literal) :
         # quick implementation
@@ -181,9 +292,7 @@ class RuleSet(object) :
         
     def __str__(self) :
         return '\n'.join(map(str,self.rules))
-        
     
-
         
 def argmax( generator, score ) :
     max_score = None

@@ -1,4 +1,4 @@
-#name,hair,feathers,eggs,milk,airborne,aquatic,predator,toothed,backbone,breathes,venomous,fins,legs,tail,domestic,catsize,type
+#id,has_hair,has_feathers,lays_eggs,gives_milk,is_airborne,is_aquatic,is_predator,is_toothed,has_backbone,breathes,is_venomous,has_fins,has_legs,has_tail,is_domestic,is_catsize,class
 aardvark,1,0,0,1,0,0,1,1,1,1,0,0,4,0,0,1,mammal
 antelope,1,0,0,1,0,0,0,1,1,1,0,0,4,1,0,1,mammal
 bass,0,0,1,0,0,1,1,1,1,0,0,1,0,1,0,0,fish

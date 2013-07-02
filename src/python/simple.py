@@ -8,9 +8,10 @@ class Literal(object) :
         self.kb = kb
         self.field = field
         self.value = value
+        self.field_index = self.kb.field_index(self.field)
         
     def __iter__(self) :
-        return iter( [ self.field, self.value ] )
+        return iter( [ self.field_index, self.value ] )
 
     def __str__(self) :
         return self.kb.format( self )
@@ -31,9 +32,10 @@ class SimpleTable(object) :
         self.__values = defaultdict(set)
         
         for index in self :
-            example = self[index]
-            for field in example :
-                self.__values[field].add(example[field])
+            example = self.__data[index]
+            for field_index, value in enumerate(example) :
+                field = self.__header[field_index]
+                self.__values[field].add(value)
         
     def __len__(self) :
         return len(self.__data)
@@ -43,7 +45,11 @@ class SimpleTable(object) :
 
     def __getitem__(self, index) :
         example = self.__data[index]
-        return dict( (n, example[i]) for i,n in enumerate(self.__header ))
+        return example
+        #return dict( (n, example[i]) for i,n in enumerate(self.__header ))
+        
+    def field_index(self, name) :
+        return self.__names [ name ]
         
     def fields(self) :
         return self.__header
@@ -57,7 +63,7 @@ class SimpleTable(object) :
         
         
     def format(self, literal) :
-        field, value = literal
+        field, value = literal.field, literal.value
         values = self.values(field)
         if len(values) == 2 and '0' in values and '1' in values :
             if value == '0' :
@@ -74,7 +80,7 @@ class Rule(object) :
         self.head = head
         self.body = body
         
-    def evaluate(self, example) :
+    def evaluate(self, kb, example) :
         p, v = self.head
         tv_head = (example[p] == v) 
         
@@ -86,7 +92,7 @@ class Rule(object) :
         
     def refine(self, kb) :
         all_fields = set([ f for f in kb.fields() if f[0] != '#' ] )
-        my_fields = set([ f for f,v in self.body+[self.head] ])
+        my_fields = set([ lit.field for lit in self.body+[self.head] ])
         
         new_fields = all_fields - my_fields
         
@@ -122,7 +128,9 @@ def test(args=[]) :
     field = kb.fields()[-1]
     for value in kb.values(field) :
         target = Literal(kb, field, value)
-        print learn(RuleSet(Rule, target, kb))    
+        print '==> LEARNING CONCEPT:', target 
+        print learn(RuleSet(Rule, target, kb))   
+#        break 
     
 if __name__ == '__main__' :
     import sys    
