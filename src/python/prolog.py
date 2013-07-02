@@ -121,8 +121,8 @@ class Rule(object) :
         
         for match in kb.find_fact(ground_body.functor, ground_body.args) :
             new_substitution = dict(substitution)
-            
-        
+            new_substitution.update( self.ground_body.assign( match ) )
+            # call recursive
         
     def refine(self, kb) :
         all_fields = set([ f for f in kb.fields() if f[0] != '#' ] )
