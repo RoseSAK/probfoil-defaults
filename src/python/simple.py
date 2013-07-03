@@ -118,7 +118,7 @@ def read_file(filename) :
         
     return data
     
-def test(args=[]) :
+def main(args=[]) :
 
     data = read_file(args[0])
     kb = SimpleTable(data[0], data[1:])

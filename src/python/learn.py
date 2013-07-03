@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 from collections import namedtuple
-import time
+import time, sys
 
 def localStop(H) :
     
@@ -43,7 +43,7 @@ def learn(H) :
         
         score_nH = globalScore(H)
         
-        print score_H, score_nH, H.rules[-1], '\n\n\n\n\n\n\n'
+#        print score_H, score_nH, H.rules[-1], '\n\n\n\n\n\n\n'
         if (score_H >= score_nH) :
             H.popRule()
             break
@@ -57,6 +57,8 @@ def best_clause( H, beam_size = 5 ) :
     beam.push((False,H.newRule()) , 0)
     
     while True :
+        print >> sys.stderr, beam
+        
         next_beam = Beam(beam_size)
         
         keep = []
@@ -66,15 +68,15 @@ def best_clause( H, beam_size = 5 ) :
                keep.append((s, rule)) 
             else :
                 H.pushRule(rule)
-                print 'XX', H.TP, H.TN, H.FP, H.FN
+#                print 'XX', H.TP, H.TN, H.FP, H.FN
                 sub_beam = best_literal( H, H.refine(), lambda H : localScore(H), 5 )
                 H.popRule()
-                print rule, sub_beam
+#                print rule, sub_beam
                 better_child = False
                 for score, lit in sub_beam :
-                    if score > s :
-                        better_child = True
-                        next_beam.push( (False, rule + lit), score + (-len(rule.body),) )
+                   # if score > s :
+                    better_child = True
+                    next_beam.push( (False, rule + lit), score + (-len(rule.body),) )
             
                 if not better_child :
                     keep.append((s, rule))
@@ -115,7 +117,7 @@ class Beam(object) :
     def __str__(self) :
         r = 'BEAM <<<\n'
         for s, c in self.content :
-            r += str(c) + ': ' + str(s) + '\n'
+            r += str(c[1]) + ': ' + str(s) + '\n'
         r += '>>>'
         return r
         
@@ -131,16 +133,20 @@ def best_literal( H, generator, score_func , beam_size) :
         posM, negM = H.testLiteral(lit)
 #        print lit, posM, negM
         stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
-        print H.NEG[0], H.NEG[-1]
-        print lit, stats
+#        print H.NEG[0], H.NEG[-1]
+#        print lit, stats
 #        H.pushLiteral(lit)
-        
+
         # print stats.TP, stats.TN, stats.FP, stats.FN, stats.P, stats.N
         # print H.TP, H.TN, H.FP, H.FN, H.P, H.N
-        
-        current_score = score_func(stats), stats.TP, stats.FP
-        beam.push(lit, current_score)
-        
+        if negM > 0 and H.TP - posM > H.TP1 :
+            current_score = score_func(stats), stats.TP, stats.FP
+            print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit
+
+            beam.push(lit, current_score)
+ #       else :
+ #           print 'skipped', negM, posM, H.TP-posM, H.rules[-1], lit
+    
 #        print 'TEST', current_score, stats.FP, stats.FN, stats.TP + stats.FP
 #        H.popLiteral()
 #    lit = argmax(r.refine(data), lambda lt : localScore(H, r+lt, data)) 
@@ -216,16 +222,16 @@ class RuleSet(object) :
 
     def refine(self) :
 #         # Generate literals that are in FP of last rule
-        TP_examples = self.POS[-1]
-        FN_examples = self.POS[0]
-        literals = set([])
-        for x in TP_examples : # + FN_examples :
-#            print self.data.literals(x)
-            literals |= self.data.literals(x)
+#         TP_examples = self.POS[-1]
+#         FN_examples = self.POS[0]
+#         literals = set([])
+#         for x in TP_examples : # + FN_examples :
+# #            print self.data.literals(x)
+#             literals |= self.data.literals(x)
             
         result = set(self.rules[-1].refine(self.data))
-        print map(str,literals)
-        result = literals & result
+#        print map(str,literals)
+#        result = literals & result
         #print len(result), 'refinements', self.TP, self.FN
         return result
         
