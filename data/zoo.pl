@@ -1,28 +1,71 @@
+base(animal(animal)).
+modes(animal(+)).
 
-% base(parent(person,person)).
-% modes(parent(-,-)).
-% base(male(person)).
-% modes(male(+)). 
-% base(female(person)).
-% modes(female(+)).
-% 
-% learn(mother(person,person)).
-% modes(mother(-,-)).
-% 
-% learn(father(person,person)).
-% modes(father(-,-)).
-% 
-% learn(male_ancestor(person,person)).
-% base(male_ancestor(person,person)).
-% modes(male_ancestor(-,-)).
-% 
-% learn(female_ancestor(person,person)).
-% base(female_ancestor(person,person)).
-% modes(female_ancestor(-,-)).
+base(has_hair(animal)).
+modes(has_hair(+)).
+
+base(has_feathers(animal)).
+modes(has_feathers(+)).
+
+base(lays_eggs(animal)).
+modes(lays_eggs(+)).
+
+base(gives_milk(animal)).
+modes(gives_milk(+)).
+
+base(is_airborne(animal)).
+modes(is_airborne(+)).
+
+base(is_aquatic(animal)).
+modes(is_aquatic(+)).
+
+base(is_predator(animal)).
+modes(is_predator(+)).
+
+base(is_toothed(animal)).
+modes(is_toothed(+)).
+
+base(has_backbone(animal)).
+modes(has_backbone(+)).
+
+base(breathes(animal)).
+modes(breathes(+)).
+
+base(is_venomous(animal)).
+modes(is_venomous(+)).
+
+base(has_fins(animal)).
+modes(has_fins(+)).
+
+base(has_legs(animal,numberlegs)).
+modes(has_legs(+,c)).
+
+base(has_tail(animal)).
+modes(has_tail(+)).
+
+base(is_domestic(animal)).
+modes(is_domestic(+)).
+
+base(is_catsize(animal)).
+modes(is_catsize(+)).
+
+base(mammal(animal)).
+base(bird(animal)).
+base(fish(animal)).
+base(reptile(animal)).
+base(invertebrate(animal)).
+base(amphibian(animal)).
+base(insect(animal)).
+
+learn(mammal(animal)).
+learn(bird(animal)).
+learn(fish(animal)).
+learn(reptile(animal)).
+learn(invertebrate(animal)).
+learn(amphibian(animal)).
+learn(insect(animal)).
 
 
-% positive(mammal(X)) :- animal(X), mammal(X).
-% negative(mammal(X)) :- animal(X), \+mammal(X).
 
 animal(aardvark).
 has_hair(aardvark).

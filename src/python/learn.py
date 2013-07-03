@@ -3,6 +3,8 @@
 from collections import namedtuple
 import time, sys
 
+BEAM_SIZE = 5
+
 def localStop(H) :
     
     TP_p = H.TP1
@@ -52,7 +54,7 @@ def learn(H) :
     return H
 
 
-def best_clause( H, beam_size = 5 ) :
+def best_clause( H, beam_size = BEAM_SIZE ) :
     beam = Beam(beam_size)
     beam.push((False,H.newRule()) , 0)
     
@@ -123,7 +125,7 @@ class Beam(object) :
         
 
 def best_literal( H, generator, score_func , beam_size) :
-  with Timer('best_literals') :
+#  with Timer('best_literals') :
     beam = Beam(beam_size)
     
     EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )
@@ -141,7 +143,7 @@ def best_literal( H, generator, score_func , beam_size) :
         # print H.TP, H.TN, H.FP, H.FN, H.P, H.N
         if negM > 0 and H.TP - posM > H.TP1 :
             current_score = score_func(stats), stats.TP, stats.FP
-            print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit
+            print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit, negM, posM
 
             beam.push(lit, current_score)
  #       else :
@@ -163,7 +165,7 @@ class Timer(object) :
         
     def __exit__(self, *args) :
         t = time.time()
-        #print ( '%s: %.5f' % (self.desc, t-self.start ))
+        print ( '%s: %.5fs' % (self.desc, t-self.start ))
 
 class RuleSet(object) :
     
@@ -269,18 +271,19 @@ class RuleSet(object) :
     #  with Timer('test literal') :
         current_rule = self.rules[-1]
         
+        new_rule = current_rule + literal
         # can only move examples from self.XXX[-1] to self.XXX[0]
         
         posMoved = 0
         for ex in self.POS[-1] :
-            h, b = self.Rule(literal).evaluate(self.data, self.data[ex])
-            if not h :
+            h, b = new_rule.evaluate(self.data, self.data[ex])
+            if not b :
                 posMoved += 1
 
         negMoved = 0
         for ex in self.NEG[-1] :
-            h, b = self.Rule(literal).evaluate(self.data, self.data[ex])
-            if not h :
+            h, b = new_rule.evaluate(self.data, self.data[ex])
+            if not b :
                 negMoved += 1
         
         return posMoved, negMoved

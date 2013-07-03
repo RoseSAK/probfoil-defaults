@@ -6,12 +6,18 @@ import re
 def is_var(arg) :
     return arg == None or arg[0] in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 
+def strip_negation(name) :
+    if name.startswith('\+') :
+        return name[2:].strip()
+    else :
+        return name
 
 class Literal(object) :
     
-    def __init__(self, functor, args) :
+    def __init__(self, kb, functor, args) :
         self.functor = functor
         self.args = args
+        self.kb = kb
                 
     def __str__(self) :
         return '%s(%s)' % (self.functor, ','.join(self.args))
@@ -37,42 +43,67 @@ class Literal(object) :
                 new_args.append(subst[arg])
             else :
                 new_args.append(arg)
-        return Literal(self.functor, new_args)
+        return Literal(self.kb, self.functor, new_args)
+        
+    def variables(self) :
+        result = defaultdict(list)
+        types = self.kb.argtypes(strip_negation(self.functor), len(self.args))
+        for tp, arg in zip(types, self.args) :
+            if is_var(arg) and not arg == '_' :
+                result[tp].append(arg)
+        return result
         
     @classmethod
-    def parse(cls, string) :
+    def parse(cls, kb, string) :
         regex = re.compile('\s*(?P<name>[^\(]+)\((?P<args>[^\)]+)\)[,.]?\s*')
         result = []
         for name, args in regex.findall(string) :
-            result.append( Literal( name , map(lambda s : s.strip(), args.split(','))) )
+            result.append( Literal( kb, name , map(lambda s : s.strip(), args.split(','))) )
         return result
         
 class FactDB(object) :
     
-    def __init__(self, idpred) :
+    def __init__(self, idtypes=[]) :
         self.predicates = {}
-        self.idpred = idpred
+        self.idtypes = idtypes
         self.__examples = None
+        self.types = defaultdict(set)
+        self.modes = {}
+        self.learn = []
             
-    def register_predicate(self, name, arity) :
+    def register_predicate(self, name, args) :
+        arity = len(args)
         identifier = (name, arity)
         
         if not identifier in self.predicates :
             index = [ defaultdict(list) for i in range(0,arity) ] 
             values = []
-            self.predicates[identifier] = (index, values)
+            self.predicates[identifier] = (index, values, args)
+            
+    def add_mode(self, name, args) :
+        arity = len(args)
+        identifier = (name, arity)
+        self.modes[identifier] = args
+        
+    def add_learn(self, name, args) :
+        self.learn.append( (name, args) )
         
     def add_fact(self, name, args) :
         arity = len(args)
-        self.register_predicate(name, arity)
+       # self.register_predicate(name, arity)
         identifier = (name, arity)
-        index, values = self.predicates[identifier]
+        index, values, types = self.predicates[identifier]
         
         arg_index = len(values)
         values.append( args )
 
         for i, arg in enumerate(args) :
+            self.types[types[i]].add(arg)
             index[i][arg].append(arg_index)
+            
+    def argtypes(self, name, arity) :
+        identifier = (name, arity)
+        return self.predicates[identifier][2]
         
     def find_fact(self, name, args) :
         if name.startswith('\+') :
@@ -85,7 +116,7 @@ class FactDB(object) :
         arity = len(args)
         identifier = (name, arity)
         
-        index, values = self.predicates[identifier]
+        index, values = self.predicates[identifier][:2]
         result = set(range(0, len(values))) 
         for i,arg in enumerate(args) :
             if not is_var(arg) :
@@ -106,11 +137,14 @@ class FactDB(object) :
             for args in self.predicates[(name,arity)][1] :
                 s += '%s(%s)' % (name, ','.join(args)) + '.\n'
         return s
+          
+    def reset_examples(self) :          
+        self.__examples = None
         
     def _get_examples(self) :
         if self.__examples == None :
-            name, arity = self.idpred
-            self.__examples = self.find_fact(name,[None]*arity )
+            from itertools import product
+            self.__examples = list(product(*[ self.types[t] for t in self.idtypes ]))
         return self.__examples
     
     examples = property(_get_examples)
@@ -150,6 +184,9 @@ class Rule(object) :
         self.head = head
         self.body = body
         
+        self.variables = self.extract_variables()
+        self.varcount = sum(map(len,self.variables))
+        
     def evaluate(self, kb, example) :
         substitute = self.head.unify( example )
         ground_head = self.head.assign( substitute )
@@ -159,132 +196,145 @@ class Rule(object) :
         tv_body = kb.test(self.body, substitute)
         return tv_head, tv_body
         
-    # def evaluate_body(self, kb, body, substitution) :
-    #     if not body : 
-    #         return True
-    #     
-    #     
-    #     body_first = body[0]
-    #     body_rest = body[1:]
-    #     
-    #     ground_body = body_first.assign( substitution )
-    #     
-    #     for match in kb.find_fact(ground_body.functor, ground_body.args) :
-    #         new_substitution = dict(substitution)
-    #         new_substitution.update( ground_body.unify( match ) )
-    #         if self.evaluate_body(kb, body_rest, new_substitution) :
-    #             return True
-    #     return False
+    def extract_variables(self) :
+        result = self.head.variables()
+        for lit in self.body :
+            result.update( lit.variables() )
+        return result
+
+    def build_refine_one(self, kb, positive, arg_type, arg_mode, defined_vars) :
+        if arg_mode in ['+','-'] :
+            for var in self.variables[arg_type] :
+                yield var
+        if arg_mode == '-' :
+            defined_vars.append(True)
+            yield '_' + str(self.varcount + len(defined_vars))
+            defined_vars.pop(-1)
+        if arg_mode == 'c' :
+            if positive :
+                for val in kb.types[arg_type] :
+                    yield val
+            else :
+                yield '_'
+
+    def build_refine(self, kb, positive, arg_info, defined_vars) :
+        if arg_info :
+            for arg0 in self.build_refine_one(kb, positive, arg_info[0][0], arg_info[0][1], defined_vars) :
+                for argN in self.build_refine(kb, positive, arg_info[1:], defined_vars) :
+                    yield [arg0] + argN
+        else :
+            yield []
+        
+        
         
     def refine(self, kb) :
-        yield Literal('\+animal',['X'])
-        yield Literal('\+has_hair',['X'])
-        yield Literal('\+has_feathers',['X'])
-        yield Literal('\+lays_eggs',['X'])
-        yield Literal('\+gives_milk',['X'])
-        yield Literal('\+is_airborne',['X'])
-        yield Literal('\+is_aquatic',['X'])
-        yield Literal('\+is_predator',['X'])
-        yield Literal('\+is_toothed',['X'])
-        yield Literal('\+has_backbone',['X'])
-        yield Literal('\+breathes',['X'])
-        yield Literal('\+is_venomous',['X'])
-        yield Literal('\+has_fins',['X'])
-        yield Literal('\+has_legs',['X','_'])
-        yield Literal('\+has_tail',['X'])
-        yield Literal('\+is_domestic',['X'])
-        yield Literal('\+is_catsize',['X'])
-        yield Literal('animal',['X'])
-        yield Literal('has_hair',['X'])
-        yield Literal('has_feathers',['X'])
-        yield Literal('lays_eggs',['X'])
-        yield Literal('gives_milk',['X'])
-        yield Literal('is_airborne',['X'])
-        yield Literal('is_aquatic',['X'])
-        yield Literal('is_predator',['X'])
-        yield Literal('is_toothed',['X'])
-        yield Literal('has_backbone',['X'])
-        yield Literal('breathes',['X'])
-        yield Literal('is_venomous',['X'])
-        yield Literal('has_fins',['X'])
-        yield Literal('has_legs',['X','2'])
-        yield Literal('has_legs',['X','4'])
-        yield Literal('has_legs',['X','5'])
-        yield Literal('has_legs',['X','6'])    
-        yield Literal('has_legs',['X','8'])
-        yield Literal('has_tail',['X'])
-        yield Literal('is_domestic',['X'])
-        yield Literal('is_catsize',['X'])
+        for pred_id in kb.modes :
+            pred_name = pred_id[0]
+            arg_info = zip(kb.argtypes(*pred_id), kb.modes[pred_id])
+            for args in self.build_refine(kb, True, arg_info, []) :
+                yield Literal(kb, pred_name, args)
+
+            for args in self.build_refine(kb, False, arg_info, []) :
+                yield Literal(kb, '\+' + pred_name, args)
+            
+       
     
     def __str__(self) :
         return str(self.head) + ' <- ' + ', '.join(map(str,self.body))
         
-    def __iadd__(self, lit) :
-        self.body.append(lit)
-        return self
+    # def __iadd__(self, lit) :
+    #     self.body.append(lit)
+    #     return self
         
     def __add__(self, lit) :
         return Rule(self.head, self.body + [lit])
         
 
-def read_file(filename, idpred) :
+def read_file(filename, idtypes=[]) :
 
     import re 
     
+    regex_base = re.compile('base\((?P<name>\w+)\((?P<args>[^\)]+)\)\).')
+    regex_mode = re.compile('modes\((?P<name>\w+)\((?P<args>[^\)]+)\)\).')
+    regex_learn = re.compile('learn\((?P<name>\w+)\((?P<args>[^\)]+)\)\).')
+    
     regex = re.compile('(?P<name>\w+)\((?P<args>[^\)]+)\).')
 
-    kb = FactDB(idpred)
+    kb = FactDB(idtypes)
 
     with open(filename) as f :
         for line in f :
-            m = regex.match(line.strip())
+            if line.strip().startswith('%') :
+                continue
+            
+            m = regex_base.match(line.strip())
             if m :
                 pred = m.group('name')
                 args = map(lambda s : s.strip(), m.group('args').split(','))
-                kb.add_fact(pred,args)
+                kb.register_predicate(pred, args)
+            else :
+                m = regex_mode.match(line.strip())
+                if m :
+                    pred = m.group('name')
+                    args = map(lambda s : s.strip(), m.group('args').split(','))
+                    kb.add_mode(pred,args)
+                else :
+                    m = regex_learn.match(line.strip())
+                    if m :
+                        pred = m.group('name')
+                        args = map(lambda s : s.strip(), m.group('args').split(','))
+                        kb.add_learn(pred,args)
+                    else :
+                        m = regex.match(line.strip())
+                        if m :
+                            pred = m.group('name')
+                            args = map(lambda s : s.strip(), m.group('args').split(','))
+                            kb.add_fact(pred,args)
     return kb
 
 def test(args=[]) :
 
-    kb = read_file(args[0], ('animal',1))
+    kb = read_file(args[0])
     from learn import learn, RuleSet
 
     print "# loaded dataset '%s'" % (args[0])
+#    print "# ", kb.modes
     
     stop = False
     while not stop :
         try :
             s = raw_input('?- ')
-            l = Literal.parse(s)
+            l = Literal.parse(kb, s)
             print '\n'.join(map(str,kb.query(l, {})))
         except EOFError :
             break
         except KeyboardInterrupt :
             break
-
-#    print kb.find_fact(l1.functor, l1.args)
-
-    
+        
 def main(args=[]) :
 
-    kb = read_file(args[0], ('animal',1))
-    
-    from learn import learn, RuleSet
+    kb = read_file(args[0])
 
-    targets = [ 'mammal', 'bird', 'fish', 'reptile', 'amphibian', 'invertebrate']
-#    targets = [ 'fish' ]
+    from learn import learn, RuleSet, Timer
 
-    for t in targets :
-        target = Literal(t, ['X'])
+#    targets = [ 'mammal', 'bird', 'fish', 'reptile', 'amphibian', 'invertebrate']
+
+    varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+    targets = kb.learn
+
+    for pred, args in targets :
+      with Timer('learning time') :
+        
+        kb.idtypes = args
+        kb.reset_examples()
+        
+        target = Literal(kb, pred, varnames[:len(args)] )
         print '==> LEARNING CONCEPT:', target 
         H = learn(RuleSet(Rule, target, kb))   
     
         print H
         print H.TP, H.TN, H.FP, H.FN
-#        break 
-    
-    
-#    print data.find_fact('has_legs', [None, '4'])
     
 if __name__ == '__main__' :
     import sys    
