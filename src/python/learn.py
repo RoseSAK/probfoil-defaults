@@ -56,7 +56,7 @@ def learn(H) :
 
 def best_clause( H, beam_size = BEAM_SIZE ) :
     beam = Beam(beam_size)
-    beam.push((False,H.newRule()) , 0)
+    beam.push((False,H.newRule()) , None)
     
     while True :
         print >> sys.stderr, beam
@@ -66,7 +66,7 @@ def best_clause( H, beam_size = BEAM_SIZE ) :
         keep = []
         for s, h_rule in beam :
             handled, rule = h_rule
-            if handled : 
+            if handled or (s != None and s[2] == 0) : # no need to extend rules if FP is already 0
                keep.append((s, rule)) 
             else :
                 H.pushRule(rule)
@@ -76,9 +76,9 @@ def best_clause( H, beam_size = BEAM_SIZE ) :
 #                print rule, sub_beam
                 better_child = False
                 for score, lit in sub_beam :
-                   # if score > s :
-                    better_child = True
-                    next_beam.push( (False, rule + lit), score + (-len(rule.body),) )
+                    if s == None or score > s :
+                        better_child = True
+                        next_beam.push( (False, rule + lit), score + (-len(rule.body),) )
             
                 if not better_child :
                     keep.append((s, rule))
@@ -146,7 +146,8 @@ def best_literal( H, generator, score_func , beam_size) :
             print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit, negM, posM
 
             beam.push(lit, current_score)
- #       else :
+        else :
+            print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM
  #           print 'skipped', negM, posM, H.TP-posM, H.rules[-1], lit
     
 #        print 'TEST', current_score, stats.FP, stats.FN, stats.TP + stats.FP

@@ -4,13 +4,18 @@ from collections import namedtuple, defaultdict
 import re
 
 def is_var(arg) :
-    return arg == None or arg[0] in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+    return arg == None or arg[0] == '_' or (arg[0] >= 'A' and arg[0] <= 'Z')
 
 def strip_negation(name) :
     if name.startswith('\+') :
         return name[2:].strip()
     else :
         return name
+
+def true(f) :
+    for x in f :
+        return True
+    return False
 
 class Literal(object) :
     
@@ -37,13 +42,7 @@ class Literal(object) :
         return result  
         
     def assign(self, subst) :
-        new_args = []
-        for arg in self.args :
-            if arg in subst :
-                new_args.append(subst[arg])
-            else :
-                new_args.append(arg)
-        return Literal(self.kb, self.functor, new_args)
+        return Literal(self.kb, self.functor, [ subst.get(arg, arg) for arg in self.args ])
         
     def variables(self) :
         result = defaultdict(list)
@@ -76,7 +75,7 @@ class FactDB(object) :
         identifier = (name, arity)
         
         if not identifier in self.predicates :
-            index = [ defaultdict(list) for i in range(0,arity) ] 
+            index = [ defaultdict(set) for i in range(0,arity) ] 
             values = []
             self.predicates[identifier] = (index, values, args)
             
@@ -99,7 +98,8 @@ class FactDB(object) :
 
         for i, arg in enumerate(args) :
             self.types[types[i]].add(arg)
-            index[i][arg].append(arg_index)
+            index[i][arg].add(arg_index)
+        #index[-1][tuple(arg)].add(arg_index)
             
     def argtypes(self, name, arity) :
         identifier = (name, arity)
@@ -109,7 +109,7 @@ class FactDB(object) :
         if name.startswith('\+') :
            # raise NotImplementedError("No support for negative literals yet!")
             negated = True
-            name = name[2:].strip()
+            name = strip_negation(name)
         else :
             negated = False
 
@@ -117,11 +117,12 @@ class FactDB(object) :
         identifier = (name, arity)
         
         index, values = self.predicates[identifier][:2]
+        
         result = set(range(0, len(values))) 
         for i,arg in enumerate(args) :
             if not is_var(arg) :
-                arg_index = set(index[i][arg])
-                result &= arg_index
+                result &= index[i][arg]
+            if not result : break
                 
         if negated :
             if len(result) == 0 :
@@ -129,7 +130,7 @@ class FactDB(object) :
             else :
                 return []
         else :
-            return [ values[i] for i in result ]  
+            return [ values[i] for i in result ]
         
     def __str__(self) :
         s = ''
@@ -157,6 +158,11 @@ class FactDB(object) :
         
     def __iter__(self) :
         return iter(range(0,len(self.examples)))
+        
+    def clause(self, head, body, args) :
+        subst = head.unify( args )
+        for sol in self.query(body, subst) :
+            yield sol
 
     def query(self, literals, substitution) :
         if not literals :  # reached end of query
@@ -171,12 +177,6 @@ class FactDB(object) :
                 new_substitution.update( head_ground.unify( match ) )
                 for sol in self.query(tail, new_substitution) :
                     yield sol
-    
-    def test(self, literals, substitution) :
-        for sol in self.query(literals, substitution) :
-            return True
-        return False
-
 
 class Rule(object) :
     
@@ -188,21 +188,20 @@ class Rule(object) :
         self.varcount = sum(map(len,self.variables))
         
     def evaluate(self, kb, example) :
-        substitute = self.head.unify( example )
-        ground_head = self.head.assign( substitute )
-        
-        tv_head = kb.test([self.head], self.head.unify( example ))
-        
-        tv_body = kb.test(self.body, substitute)
+        subst = self.head.unify( example )
+        tv_head = true(kb.query([self.head],subst))
+        tv_body = true(kb.query(self.body, subst) )
         return tv_head, tv_body
         
     def extract_variables(self) :
         result = self.head.variables()
         for lit in self.body :
-            result.update( lit.variables() )
+            lit_vars = lit.variables()
+            for t in lit_vars :
+                result[t] += lit_vars[t]
         return result
 
-    def build_refine_one(self, kb, positive, arg_type, arg_mode, defined_vars) :
+    def _build_refine_one(self, kb, positive, arg_type, arg_mode, defined_vars) :
         if arg_mode in ['+','-'] :
             for var in self.variables[arg_type] :
                 yield var
@@ -217,34 +216,28 @@ class Rule(object) :
             else :
                 yield '_'
 
-    def build_refine(self, kb, positive, arg_info, defined_vars) :
+    def _build_refine(self, kb, positive, arg_info, defined_vars) :
         if arg_info :
-            for arg0 in self.build_refine_one(kb, positive, arg_info[0][0], arg_info[0][1], defined_vars) :
-                for argN in self.build_refine(kb, positive, arg_info[1:], defined_vars) :
+            for arg0 in self._build_refine_one(kb, positive, arg_info[0][0], arg_info[0][1], defined_vars) :
+                for argN in self._build_refine(kb, positive, arg_info[1:], defined_vars) :
                     yield [arg0] + argN
         else :
             yield []
         
-        
-        
     def refine(self, kb) :
+       # print 'VARS', self.variables
+        
         for pred_id in kb.modes :
             pred_name = pred_id[0]
             arg_info = zip(kb.argtypes(*pred_id), kb.modes[pred_id])
-            for args in self.build_refine(kb, True, arg_info, []) :
+            for args in self._build_refine(kb, True, arg_info, []) :
                 yield Literal(kb, pred_name, args)
 
-            for args in self.build_refine(kb, False, arg_info, []) :
+            for args in self._build_refine(kb, False, arg_info, []) :
                 yield Literal(kb, '\+' + pred_name, args)
             
-       
-    
     def __str__(self) :
         return str(self.head) + ' <- ' + ', '.join(map(str,self.body))
-        
-    # def __iadd__(self, lit) :
-    #     self.body.append(lit)
-    #     return self
         
     def __add__(self, lit) :
         return Rule(self.head, self.body + [lit])
@@ -254,42 +247,27 @@ def read_file(filename, idtypes=[]) :
 
     import re 
     
-    regex_base = re.compile('base\((?P<name>\w+)\((?P<args>[^\)]+)\)\).')
-    regex_mode = re.compile('modes\((?P<name>\w+)\((?P<args>[^\)]+)\)\).')
-    regex_learn = re.compile('learn\((?P<name>\w+)\((?P<args>[^\)]+)\)\).')
+    line_regex = re.compile( "((?P<type>(base|modes|learn))\()?\s*(?P<name>\w+)\((?P<args>[^\)]+)\)\)?." )
     
-    regex = re.compile('(?P<name>\w+)\((?P<args>[^\)]+)\).')
-
     kb = FactDB(idtypes)
 
     with open(filename) as f :
-        for line in f :
+        for line in f :        
             if line.strip().startswith('%') :
                 continue
-            
-            m = regex_base.match(line.strip())
-            if m :
-                pred = m.group('name')
-                args = map(lambda s : s.strip(), m.group('args').split(','))
-                kb.register_predicate(pred, args)
-            else :
-                m = regex_mode.match(line.strip())
-                if m :
-                    pred = m.group('name')
-                    args = map(lambda s : s.strip(), m.group('args').split(','))
-                    kb.add_mode(pred,args)
+            m = line_regex.match(line.strip())
+            if m : 
+                ltype, pred, args = m.group('type'), m.group('name'), map(lambda s : s.strip(), m.group('args').split(','))
+                
+                if ltype == 'base' :
+                    kb.register_predicate(pred, args)                    
+                elif ltype == 'modes' :
+                    kb.add_mode(pred,args)                    
+                elif ltype == 'learn' :
+                    kb.add_learn(pred,args)                
                 else :
-                    m = regex_learn.match(line.strip())
-                    if m :
-                        pred = m.group('name')
-                        args = map(lambda s : s.strip(), m.group('args').split(','))
-                        kb.add_learn(pred,args)
-                    else :
-                        m = regex.match(line.strip())
-                        if m :
-                            pred = m.group('name')
-                            args = map(lambda s : s.strip(), m.group('args').split(','))
-                            kb.add_fact(pred,args)
+                    kb.add_fact(pred,args)
+                                
     return kb
 
 def test(args=[]) :
