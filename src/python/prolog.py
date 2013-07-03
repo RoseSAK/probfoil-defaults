@@ -205,7 +205,7 @@ class Rule(object) :
         if arg_mode in ['+','-'] :
             for var in self.variables[arg_type] :
                 yield var
-        if arg_mode == '-' :
+        if arg_mode == '-' and positive :
             defined_vars.append(True)
             yield '_' + str(self.varcount + len(defined_vars))
             defined_vars.pop(-1)
@@ -225,14 +225,16 @@ class Rule(object) :
             yield []
         
     def refine(self, kb) :
-       # print 'VARS', self.variables
-        
+       # print 'VARS', self.variables        
         for pred_id in kb.modes :
             pred_name = pred_id[0]
             arg_info = zip(kb.argtypes(*pred_id), kb.modes[pred_id])
             for args in self._build_refine(kb, True, arg_info, []) :
                 yield Literal(kb, pred_name, args)
 
+        for pred_id in kb.modes :
+            pred_name = pred_id[0]
+            arg_info = zip(kb.argtypes(*pred_id), kb.modes[pred_id])
             for args in self._build_refine(kb, False, arg_info, []) :
                 yield Literal(kb, '\+' + pred_name, args)
             

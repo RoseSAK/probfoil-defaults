@@ -232,11 +232,11 @@ class RuleSet(object) :
 # #            print self.data.literals(x)
 #             literals |= self.data.literals(x)
             
-        result = set(self.rules[-1].refine(self.data))
+#        result = set()
 #        print map(str,literals)
 #        result = literals & result
         #print len(result), 'refinements', self.TP, self.FN
-        return result
+        return self.rules[-1].refine(self.data)
         
     def pushRule(self, rule=None) :
     #  with Timer('push rule') :
