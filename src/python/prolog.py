@@ -48,11 +48,11 @@ class Literal(object) :
         return Literal(self.kb, self.functor, [ subst.get(arg, arg) for arg in self.args ])
         
     def variables(self) :
-        result = defaultdict(list)
+        result = defaultdict(set)
         types = self.kb.argtypes(strip_negation(self.functor), len(self.args))
         for tp, arg in zip(types, self.args) :
             if is_var(arg) and not arg == '_' :
-                result[tp].append(arg)
+                result[tp].add(arg)
         return result
         
     @classmethod
@@ -187,7 +187,7 @@ class Rule(object) :
         self.head = head
         self.body = body
         
-        self.variables = self.extract_variables()
+        self.variables, dummy = self.extract_variables([self.head] + self.body)
         self.varcount = sum(map(len,self.variables))
         
     def evaluate(self, kb, example) :
@@ -196,13 +196,15 @@ class Rule(object) :
         tv_body = true(kb.query(self.body, subst) )
         return tv_head, tv_body
         
-    def extract_variables(self) :
-        result = self.head.variables()
-        for lit in self.body :
+    def extract_variables(self, literals) :
+        names = set([])
+        result = defaultdict(set)
+        for lit in literals :
             lit_vars = lit.variables()
             for t in lit_vars :
-                result[t] += lit_vars[t]
-        return result
+                result[t] |= lit_vars[t]
+                names |= lit_vars[t]
+        return result, names
 
     def _build_refine_one(self, kb, positive, arg_type, arg_mode, defined_vars) :
         if arg_mode in ['+','-'] :
@@ -210,7 +212,7 @@ class Rule(object) :
                 yield var
         if arg_mode == '-' and positive :
             defined_vars.append(True)
-            yield '_' + str(self.varcount + len(defined_vars))
+            yield 'X_' + str(self.varcount + len(defined_vars))
             defined_vars.pop(-1)
         if arg_mode == 'c' :
             if positive :
@@ -219,26 +221,42 @@ class Rule(object) :
             else :
                 yield '_'
 
-    def _build_refine(self, kb, positive, arg_info, defined_vars) :
+    def _build_refine(self, kb, positive, arg_info, defined_vars, use_vars) :
         if arg_info :
             for arg0 in self._build_refine_one(kb, positive, arg_info[0][0], arg_info[0][1], defined_vars) :
-                for argN in self._build_refine(kb, positive, arg_info[1:], defined_vars) :
+                if use_vars != None and arg0 in use_vars :
+                    use_vars1 = None
+                else :
+                    use_vars1 = use_vars 
+                for argN in self._build_refine(kb, positive, arg_info[1:], defined_vars, use_vars1) :
                     yield [arg0] + argN
         else :
-            yield []
+            if use_vars == None :
+                yield []
         
-    def refine(self, kb) :
+    def refine(self, kb, update=False) :
+        if update :
+            if not self.body : return
+            d, old_vars = self.extract_variables([self.head] + self.body[:-1])
+            d, new_vars = self.extract_variables([self.body[-1]])
+            use_vars = new_vars - old_vars
+            if not use_vars : return
+            #use_vars = None
+            #print >> sys.stderr, use_vars
+        else :
+            use_vars = None
+        
        # print 'VARS', self.variables        
         for pred_id in kb.modes :
             pred_name = pred_id[0]
             arg_info = zip(kb.argtypes(*pred_id), kb.modes[pred_id])
-            for args in self._build_refine(kb, True, arg_info, []) :
+            for args in self._build_refine(kb, True, arg_info, [], use_vars) :
                 yield Literal(kb, pred_name, args)
 
         for pred_id in kb.modes :
             pred_name = pred_id[0]
             arg_info = zip(kb.argtypes(*pred_id), kb.modes[pred_id])
-            for args in self._build_refine(kb, False, arg_info, []) :
+            for args in self._build_refine(kb, False, arg_info, [], use_vars) :
                 yield Literal(kb, '\+' + pred_name, args)
             
     def __str__(self) :

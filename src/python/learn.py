@@ -54,18 +54,25 @@ def best_clause( H, beam_size = BEAM_SIZE ) :
     rule = H.newRule()
     refinements = [ (0,r) for r in rule.refine(H.data) ]
     
+
     beam.push( rule, refinements , None )
-    
-    for score, rule, refs in beam.peak_active() :
-        H.pushRule(rule)
-        new_refs = update_refinements(H, refs, localScore)
-        for i, score_ref in enumerate(new_refs) :
-            score, ref = score_ref
-            if not beam.push( rule + ref, refs[i+1:], score ) :
-                break  # current ref does not have high enough score -> next ones will also fail
-        refs[:] = []
-        H.popRule()
-    
+
+    while beam.has_active() :
+        new_beam = Beam(beam_size)
+        for score, rule, refs in beam :
+            new_beam.push( rule, None, score )
+            H.pushRule(rule)
+            new_refs = update_refinements(H, refs, localScore)
+            print >> sys.stderr, '>>', new_refs
+            for i, score_ref in enumerate(new_refs) :
+                new_score, ref = score_ref
+                if new_score <= score or not new_beam.push( rule + ref, new_refs, new_score ) : # was new_refs[i+1:]
+                    break  # current ref does not have high enough score -> next ones will also fail
+            print >> sys.stderr, new_beam
+            H.popRule()
+        beam = new_beam
+        
+    print >> sys.stderr, 'FOUND RULE',beam.content[0][1]
     return beam.content[0][1]
 
 class Beam(object) :
@@ -106,6 +113,11 @@ class Beam(object) :
                 i = 0
             else :
                 i += 1
+                
+    def has_active(self) :
+        for s, r, act in self :
+            if act : return True
+        return False
     
     def pop(self) :
         self.content = self.content[1:]
@@ -113,12 +125,22 @@ class Beam(object) :
     def __str__(self) :
         res = 'BEAM <<<\n'
         for s, c, r in self.content :
-            res += str(c) + ': ' + str(s) + '\n'
+            res += str(c) + ': ' + str(s) + ' | ' + str(r) + '\n'
         res += '>>>'
         return res
         
 def update_refinements(H, refine, score_func) :
+    if refine == None :
+        return []
+    
     literals = []
+    
+    new_refine = [ (0,r) for r in H.refine(update=True) ]
+    
+    if new_refine : print >> sys.stderr, 'NEW REFINEMENTS', new_refine
+    
+    refine += new_refine
+    
     
     EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
     for s, lit in refine :
@@ -221,8 +243,8 @@ class RuleSet(object) :
     FP1 = property(getFP1)
     FN1 = property(getFN1)
 
-    def refine(self) :
-        return self.rules[-1].refine(self.data)
+    def refine(self, update=False) :
+        return self.rules[-1].refine(self.data, update)
         
     def pushRule(self, rule=None) :
         if rule == None : rule = self.newRule()
