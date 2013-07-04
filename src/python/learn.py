@@ -41,41 +41,32 @@ def learn(H) :
             score_H = score_nH
     return H
 
+        
+    
+
+
+
+
 def best_clause( H, beam_size = BEAM_SIZE ) :
     beam = Beam(beam_size)
-    beam.push((False,H.newRule()) , None)
+    #beam.push((False,H.newRule()) , None)
     
-    while True :
-        print >> sys.stderr, beam
-        
-        next_beam = Beam(beam_size)
-        
-        keep = []
-        for s, h_rule in beam :
-            handled, rule = h_rule
-            if handled or (s != None and s[2] == 0) : # no need to extend rules if FP is already 0
-               keep.append((s, rule)) 
-            else :
-                H.pushRule(rule)
-                sub_beam = best_literal( H, H.refine(), lambda H : localScore(H), 5 )
-                H.popRule()
-                better_child = False
-                for score, lit in sub_beam :
-                    if s == None or score > s :
-                        better_child = True
-                        next_beam.push( (False, rule + lit), score + (-len(rule.body),) )
-            
-                if not better_child :
-                    keep.append((s, rule))
-
-        if not next_beam.content :
-            break
-        else :
-            beam = next_beam
-            for s,r in keep :
-                beam.push((True,r),s)
+    rule = H.newRule()
+    refinements = [ (0,r) for r in rule.refine(H.data) ]
     
-    return beam.content[0][1][1]
+    beam.push( rule, refinements , None )
+    
+    for score, rule, refs in beam.peak_active() :
+        H.pushRule(rule)
+        new_refs = update_refinements(H, refs, localScore)
+        for i, score_ref in enumerate(new_refs) :
+            score, ref = score_ref
+            if not beam.push( rule + ref, refs[i+1:], score ) :
+                break  # current ref does not have high enough score -> next ones will also fail
+        refs[:] = []
+        H.popRule()
+    
+    return beam.content[0][1]
 
 class Beam(object) :
     
@@ -86,27 +77,64 @@ class Beam(object) :
     def __iter__(self) :
         return iter(self.content)
         
-    def push(self, obj, score) :
-        if len(self.content) == self.size and score < self.content[-1][0] : return
+    def push(self, obj, active, score) :
+        if len(self.content) == self.size and score < self.content[-1][0] : return False
+        
+        is_last = True
         
         p = len(self.content) - 1
-        self.content.append( (score, obj) )
+        self.content.append( (score, obj, active) )
         while p >= 0 and self.content[p][0] < self.content[p+1][0] :
             self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
             p = p - 1
+            is_last = False
         
+        popped_last = False
         while len(self.content) > self.size :
             self.content.pop(-1)
+            popped_last = True
+            
+        #print is_last, popped_last, self
+            
+        return not (is_last and popped_last)
+    
+    def peak_active(self) :
+        i = 0
+        while i < len(self.content) :
+            if self.content[i][2] :
+                yield self.content[i]
+                i = 0
+            else :
+                i += 1
     
     def pop(self) :
         self.content = self.content[1:]
         
     def __str__(self) :
-        r = 'BEAM <<<\n'
-        for s, c in self.content :
-            r += str(c[1]) + ': ' + str(s) + '\n'
-        r += '>>>'
-        return r
+        res = 'BEAM <<<\n'
+        for s, c, r in self.content :
+            res += str(c) + ': ' + str(s) + '\n'
+        res += '>>>'
+        return res
+        
+def update_refinements(H, refine, score_func) :
+    literals = []
+    
+    EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
+    for s, lit in refine :
+        
+        posM, negM = H.testLiteral(lit)
+        stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
+
+        if negM > 0 and H.TP - posM > H.TP1 :
+            current_score = score_func(stats), stats.TP, stats.FP
+            print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit, negM, posM
+            literals.append( (current_score[0], lit) )
+        else :
+            # literal doesn't cover true positives or it doesn't eliminate false positives
+            print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM
+    return list(reversed(sorted(literals)))        
+        
         
 def best_literal( H, generator, score_func , beam_size) :
     beam = Beam(beam_size)

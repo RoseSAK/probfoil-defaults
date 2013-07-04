@@ -27,6 +27,9 @@ class Literal(object) :
     def __str__(self) :
         return '%s(%s)' % (self.functor, ','.join(self.args))
 
+    def __repr__(self) :
+        return '%s(%s)' % (self.functor, ','.join(self.args))
+
     def __hash__(self) :
         return hash(str(self))
 
