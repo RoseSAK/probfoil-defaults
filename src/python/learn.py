@@ -28,31 +28,18 @@ def globalScore(rs) :
     return (rs.TP + rs.TN ) / (rs.TP + rs.TN + rs.FP + rs.FN)
     
 def learn(H) :
-
     score_H = globalScore(H)
-
     while True :
         rule = best_clause( H )
-        H.pushRule(rule)
-        
-        # FIXME pruning step
-        # n = len(r.body)
-        # 
-        # i = argmax( range(1,n+1), lambda i : localScore(H, H.newRule(target,r.body[:i]), data ))
-        # 
-        # c = H.newRule( r.head, r.body[:i] )        
-        # newH = H + c
-        
+        H.pushRule(rule)        
         score_nH = globalScore(H)
         
-#        print score_H, score_nH, H.rules[-1], '\n\n\n\n\n\n\n'
         if (score_H >= score_nH) :
             H.popRule()
             break
         else :
             score_H = score_nH
     return H
-
 
 def best_clause( H, beam_size = BEAM_SIZE ) :
     beam = Beam(beam_size)
@@ -70,10 +57,8 @@ def best_clause( H, beam_size = BEAM_SIZE ) :
                keep.append((s, rule)) 
             else :
                 H.pushRule(rule)
-#                print 'XX', H.TP, H.TN, H.FP, H.FN
                 sub_beam = best_literal( H, H.refine(), lambda H : localScore(H), 5 )
                 H.popRule()
-#                print rule, sub_beam
                 better_child = False
                 for score, lit in sub_beam :
                     if s == None or score > s :
@@ -123,24 +108,15 @@ class Beam(object) :
         r += '>>>'
         return r
         
-
 def best_literal( H, generator, score_func , beam_size) :
-#  with Timer('best_literals') :
     beam = Beam(beam_size)
     
-    EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )
-    
+    EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
     for lit in generator :
         
         posM, negM = H.testLiteral(lit)
-#        print lit, posM, negM
         stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
-#        print H.NEG[0], H.NEG[-1]
-#        print lit, stats
-#        H.pushLiteral(lit)
 
-        # print stats.TP, stats.TN, stats.FP, stats.FN, stats.P, stats.N
-        # print H.TP, H.TN, H.FP, H.FN, H.P, H.N
         if negM > 0 and H.TP - posM > H.TP1 :
             current_score = score_func(stats), stats.TP, stats.FP
             print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit, negM, posM
@@ -148,12 +124,6 @@ def best_literal( H, generator, score_func , beam_size) :
             beam.push(lit, current_score)
         else :
             print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM
- #           print 'skipped', negM, posM, H.TP-posM, H.rules[-1], lit
-    
-#        print 'TEST', current_score, stats.FP, stats.FN, stats.TP + stats.FP
-#        H.popLiteral()
-#    lit = argmax(r.refine(data), lambda lt : localScore(H, r+lt, data)) 
-#    print '==>', beam
     return beam
 
 class Timer(object) :
@@ -224,23 +194,9 @@ class RuleSet(object) :
     FN1 = property(getFN1)
 
     def refine(self) :
-#         # Generate literals that are in FP of last rule
-#         TP_examples = self.POS[-1]
-#         FN_examples = self.POS[0]
-#         literals = set([])
-#         for x in TP_examples : # + FN_examples :
-# #            print self.data.literals(x)
-#             literals |= self.data.literals(x)
-            
-#        result = set()
-#        print map(str,literals)
-#        result = literals & result
-        #print len(result), 'refinements', self.TP, self.FN
         return self.rules[-1].refine(self.data)
         
     def pushRule(self, rule=None) :
-    #  with Timer('push rule') :
-        
         if rule == None : rule = self.newRule()
         
         evaluated = [[],[]]
@@ -269,7 +225,6 @@ class RuleSet(object) :
         self.rules.pop(-1)
         
     def testLiteral(self, literal) :
-    #  with Timer('test literal') :
         current_rule = self.rules[-1]
         
         new_rule = current_rule + literal
@@ -306,23 +261,4 @@ class RuleSet(object) :
         return self.Rule(self.target)
         
     def __str__(self) :
-        return '\n'.join(map(str,self.rules))
-    
-        
-def argmax( generator, score ) :
-    max_score = None
-    max_x = None
-    
-    refs = list(generator)
-    
-#    print 'ARGMAX'
-    for x in refs :
-        current_score = score(x)
-#        print 'REF', x, current_score
-        if max_score == None or max_score < current_score :
-            max_score = current_score
-            max_x = x
-#    print '==>', max_x, max_score
-    return max_x
-        
-
+        return '\n'.join(map(str,self.rules))        
