@@ -79,8 +79,7 @@ class FactDB(object) :
         
         if not identifier in self.predicates :
             index = [ defaultdict(set) for i in range(0,arity) ] 
-            values = []
-            self.predicates[identifier] = (index, values, args)
+            self.predicates[identifier] = (index, [], args, [])
             
     def add_mode(self, name, args) :
         arity = len(args)
@@ -90,14 +89,15 @@ class FactDB(object) :
     def add_learn(self, name, args) :
         self.learn.append( (name, args) )
         
-    def add_fact(self, name, args) :
+    def add_fact(self, name, args, p=1.0) :
         arity = len(args)
        # self.register_predicate(name, arity)
         identifier = (name, arity)
-        index, values, types = self.predicates[identifier]
+        index, values, types, probs = self.predicates[identifier]
         
         arg_index = len(values)
         values.append( args )
+        probs.append( p )
 
         for i, arg in enumerate(args) :
             self.types[types[i]].add(arg)
@@ -108,6 +108,33 @@ class FactDB(object) :
         identifier = (name, arity)
         return self.predicates[identifier][2]
         
+    def ground_fact(self, name, args) :
+        if name.startswith('\+') :
+           # raise NotImplementedError("No support for negative literals yet!")
+            negated = True
+            name = strip_negation(name)
+        else :
+            negated = False
+
+        arity = len(args)
+        identifier = (name, arity)
+        
+        index, values, types, probs = self.predicates[identifier]
+        
+        result = set(range(0, len(values))) 
+        for i,arg in enumerate(args) :
+            if not is_var(arg) :
+                result &= index[i][arg]
+            if not result : break        
+                
+        if negated :
+            if len(result) == 0 :
+                return [ args ]
+            else :
+                return []
+        else :
+            return [ values[i] for i in result ]
+
     def find_fact(self, name, args) :
         if name.startswith('\+') :
            # raise NotImplementedError("No support for negative literals yet!")
@@ -119,21 +146,20 @@ class FactDB(object) :
         arity = len(args)
         identifier = (name, arity)
         
-        index, values = self.predicates[identifier][:2]
+        index, values, types, probs = self.predicates[identifier]
         
         result = set(range(0, len(values))) 
         for i,arg in enumerate(args) :
             if not is_var(arg) :
                 result &= index[i][arg]
-            if not result : break
-                
+            if not result : break        
+        
+        probability = sum( probs[i] for i in result )        
         if negated :
-            if len(result) == 0 :
-                return [ args ]
-            else :
-                return []
+            return 1.0 - probability
         else :
-            return [ values[i] for i in result ]
+            return probability
+
         
     def __str__(self) :
         s = ''
@@ -174,7 +200,7 @@ class FactDB(object) :
             head, tail = literals[0], literals[1:]
             head_ground = head.assign(substitution)     # assign known variables
             
-            for match in self.find_fact(head_ground.functor, head_ground.args) :
+            for match in self.ground_fact(head_ground.functor, head_ground.args) :
                 # find match for head
                 new_substitution = dict(substitution)
                 new_substitution.update( head_ground.unify( match ) )

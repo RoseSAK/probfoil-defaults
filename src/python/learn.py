@@ -125,7 +125,7 @@ class Beam(object) :
     def __str__(self) :
         res = 'BEAM <<<\n'
         for s, c, r in self.content :
-            res += str(c) + ': ' + str(s) + ' | ' + str(r) + '\n'
+            res += str(c) + ': ' + str(s) + '\n' # ' | ' + str(r) + '\n'
         res += '>>>'
         return res
         
@@ -135,46 +135,52 @@ def update_refinements(H, refine, score_func) :
     
     literals = []
     
-    new_refine = [ (0,r) for r in H.refine(update=True) ]
+    new_refine = [ (0,r) for r in H.refine(update=False) ]
     
-    if new_refine : print >> sys.stderr, 'NEW REFINEMENTS', new_refine
+#    if new_refine : print >> sys.stderr, 'NEW REFINEMENTS', new_refine
     
-    refine += new_refine
+ #   refine += new_refine
+#    
+#    refine = set(refine)
+    refine = new_refine
     
-    
-    EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
     for s, lit in refine :
         
-        posM, negM = H.testLiteral(lit)
-        stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
+ #       posM, negM = 
+        stats = H.testLiteral(lit)
+        
+        negM = stats.TN - H.TN
+        posM = H.TP - stats.TP
+        
+#        stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
 
         if negM > 0 and H.TP - posM > H.TP1 :
             current_score = score_func(stats), stats.TP, stats.FP
-            print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit, negM, posM
+            print >> sys.stderr, 'accepted', H.rules[-1], lit, negM, posM, stats, stats[-1], current_score
             literals.append( (current_score[0], lit) )
         else :
             # literal doesn't cover true positives or it doesn't eliminate false positives
-            print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM
+            print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM, stats, stats[-1]
     return list(reversed(sorted(literals)))        
         
         
-def best_literal( H, generator, score_func , beam_size) :
-    beam = Beam(beam_size)
-    
-    EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
-    for lit in generator :
-        
-        posM, negM = H.testLiteral(lit)
-        stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
-
-        if negM > 0 and H.TP - posM > H.TP1 :
-            current_score = score_func(stats), stats.TP, stats.FP
-            print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit, negM, posM
-
-            beam.push(lit, current_score)
-        else :
-            print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM
-    return beam
+# def best_literal( H, generator, score_func , beam_size) :
+#     beam = Beam(beam_size)
+#     
+#     EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
+#     for lit in generator :
+#         
+#         posM, negM = H.testLiteral(lit)
+#         stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
+# 
+#         if negM > 0 and H.TP - posM > H.TP1 :
+#             current_score = score_func(stats), stats.TP, stats.FP
+#             print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit, negM, posM
+# 
+#             beam.push(lit, current_score)
+#         else :
+#             print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM
+#     return beam
 
 class Timer(object) :
     
@@ -188,6 +194,55 @@ class Timer(object) :
         t = time.time()
         print ( '%s: %.5fs' % (self.desc, t-self.start ))
 
+EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
+
+class Score(object) :
+    
+    def __init__(self, predictions, parent=None) :
+        # predictions = ( correct, prediction, exid )
+        self.parent = parent
+        self.TP = 0.0
+        self.FP = 0.0
+        self.FN = 0.0
+        self.TN = 0.0
+        self.P = 0.0
+        self.N = 0.0
+        self.covered = []
+        self.not_covered = []
+        for p, ph, example_id in predictions :
+            n = 1-p
+            nh = 1-ph
+            tp = min(p,ph)
+            tn = min(n,nh)
+            fp = n - tn
+            fn = p - tp
+            self.TP += tp
+            self.TN += tn
+            self.FP += fp
+            self.FN += fn
+            self.P += p
+            self.N += n
+            if ph == 0.0 :
+                self.not_covered.append( (p, ph, example_id) )
+            else :
+                self.covered.append( (p, ph, example_id) ) 
+                
+    TP1 = property(lambda s : s[-1].TP )
+    FP1 = property(lambda s : s[-1].FP )
+    TN1 = property(lambda s : s[-1].TN )
+    FN1 = property(lambda s : s[-1].FN )
+        
+    def __getitem__(self, index) :
+        if index == 0 :
+            return self
+        elif index < 0 and self.parent :
+            return self.parent[index+1]
+        else :
+            raise IndexError()
+            
+    def __str__(self) :
+        return '<Score: %s %s %s %s>' % (self.TP, self.TN, self.FP, self.FN )
+
 class RuleSet(object) :
     
     def __init__(self, RuleType, target, data) :
@@ -196,47 +251,47 @@ class RuleSet(object) :
         self.data = data
         self.Rule = RuleType
         
-        evaluated = ( [], [] )
+        examples = []
         for ex in self.data :
-            h, b = self.Rule(target).evaluate(self.data, self.data[ex])
-            evaluated[h].append( ex )
-        negatives, positives = evaluated
-        
-        self.P = float(len(positives))
-        self.N = float(len(negatives))
-        
-        self.POS = [positives]  # should be set of positive examples
-        self.NEG = [negatives]  # should be set of negative examples
-                
+            hP = self.data.find_fact(self.target.functor, self.data[ex])
+            examples.append( ( hP, 0, ex ) )
+        examples = sorted(examples)
+        self.score = Score(examples)
+        self.P = self.score.P
+        self.N = self.score.N
+                                
     def getTP(self) :
-        return float(self.P - self.FN)
+        return self.score.TP
     
     def getTN(self) :
-        return float(len(self.NEG[0]))
+        return self.score.TN
     
     def getFP(self) :
-        return float(self.N - self.TN)
+        return self.score.FP
     
     def getFN(self) :
-        return float(len(self.POS[0]))
+        return self.score.FN
 
     def getTP1(self) :
-        return float(self.P - self.FN1)
+        return self.score[-1].TP
     
     def getTN1(self) :
-        return float(len(self.NEG[0]) + len(self.NEG[-1]))
+        return self.score[-1].TN
     
     def getFP1(self) :
-        return float(self.N - self.TN1)
+        return self.score[-1].FP
     
     def getFN1(self) :
-        return float(len(self.POS[0]) + len(self.POS[-1]))
+        return self.score[-1].FN
 
         
     TP = property(getTP)    
     TN = property(getTN)
     FP = property(getFP)
     FN = property(getFN)
+    
+    COVERED = property(lambda s : s.score.covered)
+    NOT_COVERED = property(lambda s : s.score.not_covered)
 
     TP1 = property(getTP1)    
     TN1 = property(getTN1)
@@ -249,29 +304,16 @@ class RuleSet(object) :
     def pushRule(self, rule=None) :
         if rule == None : rule = self.newRule()
         
-        evaluated = [[],[]]
-        for example in self.POS[0] :
+        evaluated = [] # discard COVERED examples
+        for p, ph, example in self.NOT_COVERED :
             h, b = rule.evaluate(self.data, self.data[example])
-            evaluated[b].append(example)
-        self.POS[0] = evaluated[0]
-        self.POS.append( evaluated[1] )
-        
-        evaluated = [[],[]]
-        for example in self.NEG[0] :
-            h, b = rule.evaluate(self.data, self.data[example])
-            evaluated[b].append(example)
-        self.NEG[0] = evaluated[0]
-        self.NEG.append( evaluated[1] )                    
-        
+            evaluated.append( (p, b, example ) )
+            
+        self.score = Score( evaluated, self.score )
         self.rules.append(rule)
 
     def popRule(self) :
-        self.POS[0] = self.POS[0]+self.POS[-1]
-        self.POS.pop(-1)
-        
-        self.NEG[0] = self.NEG[0]+self.NEG[-1]
-        self.NEG.pop(-1)
-        
+        self.score = self.score[-1]
         self.rules.pop(-1)
         
     def testLiteral(self, literal) :
@@ -280,19 +322,11 @@ class RuleSet(object) :
         new_rule = current_rule + literal
         # can only move examples from self.XXX[-1] to self.XXX[0]
         
-        posMoved = 0
-        for ex in self.POS[-1] :
+        evaluated = self.NOT_COVERED[:]
+        for p, ph, ex in self.COVERED :
             h, b = new_rule.evaluate(self.data, self.data[ex])
-            if not b :
-                posMoved += 1
-
-        negMoved = 0
-        for ex in self.NEG[-1] :
-            h, b = new_rule.evaluate(self.data, self.data[ex])
-            if not b :
-                negMoved += 1
-        
-        return posMoved, negMoved
+            evaluated.append( (p, b, ex ) )
+        return Score(evaluated, self.score )
         
     def pushLiteral(self, literal) :
         # quick implementation
