@@ -1,31 +1,20 @@
 #! /usr/bin/env python3
 
+#from __future__ import print_function
+
 from collections import namedtuple
 import time, sys
 
 BEAM_SIZE = 5
 
-def localStop(H) :
-    
-    TP_p = H.TP1
-    TP_c = H.TP
-    
-    FP_p = H.FP1
-    FP_c = H.FP
-    
-    return ( TP_c - TP_p == 0 ) or ( FP_c - FP_p == 0 )
-
 def localScore(rs) :
-    m = 10
-    
-    m_estimate_c = (rs.TP + m * (rs.P / (rs.N + rs.P))) / (rs.TP + rs.FP + m) 
-    
-    m_estimate_p = (rs.TP1 + m * (rs.P / (rs.N + rs.P))) / (rs.TP1 + rs.FP1 + m) 
-    
+    m = 10    
+    m_estimate_c = rs.score.m_estimate(m)
+    m_estimate_p = rs.score[-1].m_estimate(m)
     return m_estimate_c - m_estimate_p
     
 def globalScore(rs) :
-    return (rs.TP + rs.TN ) / (rs.TP + rs.TN + rs.FP + rs.FN)
+    return rs.score.accuracy()
     
 def learn(H) :
     score_H = globalScore(H)
@@ -34,6 +23,7 @@ def learn(H) :
         H.pushRule(rule)        
         score_nH = globalScore(H)
         
+        print >> sys.stderr, 'BETTER?', score_H, score_nH
         if (score_H >= score_nH) :
             H.popRule()
             break
@@ -41,20 +31,10 @@ def learn(H) :
             score_H = score_nH
     return H
 
-        
-    
-
-
-
-
 def best_clause( H, beam_size = BEAM_SIZE ) :
-    beam = Beam(beam_size)
-    #beam.push((False,H.newRule()) , None)
-    
+    beam = Beam(beam_size)    
     rule = H.newRule()
     refinements = [ (0,r) for r in rule.refine(H.data) ]
-    
-
     beam.push( rule, refinements , None )
 
     while beam.has_active() :
@@ -101,8 +81,6 @@ class Beam(object) :
             self.content.pop(-1)
             popped_last = True
             
-        #print is_last, popped_last, self
-            
         return not (is_last and popped_last)
     
     def peak_active(self) :
@@ -125,7 +103,7 @@ class Beam(object) :
     def __str__(self) :
         res = 'BEAM <<<\n'
         for s, c, r in self.content :
-            res += str(c) + ': ' + str(s) + '\n' # ' | ' + str(r) + '\n'
+            res += str(c) + ': ' + str(s) +  ' | ' + str(r) + '\n'
         res += '>>>'
         return res
         
@@ -146,42 +124,24 @@ def update_refinements(H, refine, score_func) :
     
     for s, lit in refine :
         
- #       posM, negM = 
-        stats = H.testLiteral(lit)
+        new_score = H.testLiteral(lit)
         
-        negM = stats.TN - H.TN
-        posM = H.TP - stats.TP
-        
-#        stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
+        # H.score = score of hypothesis with rule but without literal
+        # H.score[-1] = new_score[-1] = score of hypothesis without rule
+        # new_score = score of hypothesis with rule and literal
 
-        if negM > 0 and H.TP - posM > H.TP1 :
-            current_score = score_func(stats), stats.TP, stats.FP
-            print >> sys.stderr, 'accepted', H.rules[-1], lit, negM, posM, stats, stats[-1], current_score
+        if new_score.TN > H.score.TN and new_score.TP > new_score[-1].TP :
+            # true negatives should be up because of this LITERAL (adding literals increases this)
+            # true positives should be up because of this RULE (adding literals decreases this)
+            
+            current_score = score_func(new_score), new_score.TP, new_score.FP
+            print >> sys.stderr, 'accepted', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1], current_score
             literals.append( (current_score[0], lit) )
         else :
             # literal doesn't cover true positives or it doesn't eliminate false positives
-            print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM, stats, stats[-1]
+            print >> sys.stderr, 'rejected', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
     return list(reversed(sorted(literals)))        
         
-        
-# def best_literal( H, generator, score_func , beam_size) :
-#     beam = Beam(beam_size)
-#     
-#     EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
-#     for lit in generator :
-#         
-#         posM, negM = H.testLiteral(lit)
-#         stats = EvalStats(H.TP - posM, H.TN + negM, H.FP - negM, H.FN + posM, H.P, H.N, H.TP1, H.TN1, H.FP1, H.FN1 )
-# 
-#         if negM > 0 and H.TP - posM > H.TP1 :
-#             current_score = score_func(stats), stats.TP, stats.FP
-#             print >> sys.stderr, 'accepted', current_score, H.rules[-1], lit, negM, posM
-# 
-#             beam.push(lit, current_score)
-#         else :
-#             print >> sys.stderr, 'rejected', H.rules[-1], lit, negM, posM
-#     return beam
-
 class Timer(object) :
     
     def __init__(self, desc) :
@@ -201,12 +161,18 @@ class Score(object) :
     def __init__(self, predictions, parent=None) :
         # predictions = ( correct, prediction, exid )
         self.parent = parent
+        
         self.TP = 0.0
         self.FP = 0.0
         self.FN = 0.0
         self.TN = 0.0
         self.P = 0.0
         self.N = 0.0
+        
+        if parent :
+            self.TP = parent.TP
+            self.FP = parent.FP
+        
         self.covered = []
         self.not_covered = []
         for p, ph, example_id in predictions :
@@ -226,12 +192,7 @@ class Score(object) :
                 self.not_covered.append( (p, ph, example_id) )
             else :
                 self.covered.append( (p, ph, example_id) ) 
-                
-    TP1 = property(lambda s : s[-1].TP )
-    FP1 = property(lambda s : s[-1].FP )
-    TN1 = property(lambda s : s[-1].TN )
-    FN1 = property(lambda s : s[-1].FN )
-        
+                        
     def __getitem__(self, index) :
         if index == 0 :
             return self
@@ -239,6 +200,14 @@ class Score(object) :
             return self.parent[index+1]
         else :
             raise IndexError()
+            
+    score = property(lambda s : s)
+            
+    def m_estimate(self, m) :
+        return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 
+        
+    def accuracy(self) :
+        return (self.TP + self.TN ) / (self.TP + self.TN + self.FP + self.FN)
             
     def __str__(self) :
         return '<Score: %s %s %s %s>' % (self.TP, self.TN, self.FP, self.FN )
@@ -260,43 +229,13 @@ class RuleSet(object) :
         self.P = self.score.P
         self.N = self.score.N
                                 
-    def getTP(self) :
-        return self.score.TP
-    
-    def getTN(self) :
-        return self.score.TN
-    
-    def getFP(self) :
-        return self.score.FP
-    
-    def getFN(self) :
-        return self.score.FN
-
-    def getTP1(self) :
-        return self.score[-1].TP
-    
-    def getTN1(self) :
-        return self.score[-1].TN
-    
-    def getFP1(self) :
-        return self.score[-1].FP
-    
-    def getFN1(self) :
-        return self.score[-1].FN
-
-        
-    TP = property(getTP)    
-    TN = property(getTN)
-    FP = property(getFP)
-    FN = property(getFN)
+    TP = property(lambda s : s.score.TP)    
+    TN = property(lambda s : s.score.TN)
+    FP = property(lambda s : s.score.FP)
+    FN = property(lambda s : s.score.FN)
     
     COVERED = property(lambda s : s.score.covered)
     NOT_COVERED = property(lambda s : s.score.not_covered)
-
-    TP1 = property(getTP1)    
-    TN1 = property(getTN1)
-    FP1 = property(getFP1)
-    FN1 = property(getFN1)
 
     def refine(self, update=False) :
         return self.rules[-1].refine(self.data, update)
@@ -326,7 +265,7 @@ class RuleSet(object) :
         for p, ph, ex in self.COVERED :
             h, b = new_rule.evaluate(self.data, self.data[ex])
             evaluated.append( (p, b, ex ) )
-        return Score(evaluated, self.score )
+        return Score(evaluated, self.score[-1] )
         
     def pushLiteral(self, literal) :
         # quick implementation
