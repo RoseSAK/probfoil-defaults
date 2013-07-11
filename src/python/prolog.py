@@ -36,6 +36,9 @@ class Literal(object) :
     def __eq__(self, other) :
         return str(self) == str(other)
         
+    def isNegated(self) :
+        return self.functor.startswith('\+')
+        
     def unify(self, ground_args) :
         
         result = {}
@@ -72,6 +75,11 @@ class FactDB(object) :
         self.types = defaultdict(set)
         self.modes = {}
         self.learn = []
+        self.newvar_count = 0
+        
+    def newVar(self) :
+        self.newvar_count += 1
+        return 'X_' + str(self.newvar_count)
             
     def register_predicate(self, name, args) :
         arity = len(args)
@@ -238,7 +246,7 @@ class Rule(object) :
                 yield var
         if arg_mode == '-' and positive :
             defined_vars.append(True)
-            yield 'X_' + str(self.varcount + len(defined_vars))
+            yield kb.newVar()
             defined_vars.pop(-1)
         if arg_mode == 'c' :
             if positive :
@@ -290,6 +298,12 @@ class Rule(object) :
         
     def __add__(self, lit) :
         return Rule(self.head, self.body + [lit])
+        
+    def __len__(self) :
+        return len(self.body)
+        
+    def countNegated(self) :
+        return sum( b.isNegated() for b in self.body )
         
 
 def read_file(filename, idtypes=[]) :

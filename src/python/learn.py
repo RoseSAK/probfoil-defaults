@@ -7,11 +7,11 @@ import time, sys
 
 BEAM_SIZE = 5
 
-def localScore(rs) :
-    m = 10    
-    m_estimate_c = rs.score.m_estimate(m)
-    m_estimate_p = rs.score[-1].m_estimate(m)
-    return m_estimate_c - m_estimate_p
+# def localScore(rs) :
+#     m = 10    
+#     m_estimate_c = rs.score.m_estimate(m)
+#     m_estimate_p = rs.score[-1].m_estimate(m)
+#     return m_estimate_c - m_estimate_p
     
 def globalScore(rs) :
     return rs.score.accuracy()
@@ -40,17 +40,21 @@ def best_clause( H, beam_size = BEAM_SIZE ) :
     while beam.has_active() :
         new_beam = Beam(beam_size)
         for score, rule, refs in beam :
+            print >> sys.stderr, "REFINING", score, rule, refs, '\n\n'
             new_beam.push( rule, None, score )
             H.pushRule(rule)
-            new_refs = update_refinements(H, refs, localScore)
-            print >> sys.stderr, '>>', new_refs
+            new_refs = update_refinements(H, refs)
+            print >> sys.stderr, '>>>>', new_refs
             for i, score_ref in enumerate(new_refs) :
                 new_score, ref = score_ref
-                if new_score <= score or not new_beam.push( rule + ref, new_refs, new_score ) : # was new_refs[i+1:]
+                if new_score.FP == 0 and new_score.FN == 0 :
+                    return rule + ref
+                if new_score <= score or not new_beam.push( rule + ref, new_refs[i+1:], new_score ) : # was new_refs[i+1:]
                     break  # current ref does not have high enough score -> next ones will also fail
-            print >> sys.stderr, new_beam
+            # print >> sys.stderr, new_beam
             H.popRule()
         beam = new_beam
+        print >> sys.stderr, beam
         
     print >> sys.stderr, 'FOUND RULE',beam.content[0][1]
     return beam.content[0][1]
@@ -64,6 +68,19 @@ class Beam(object) :
     def __iter__(self) :
         return iter(self.content)
         
+    def pick_best(self, rec1, rec2) :
+        if len(rec1[1]) > len(rec2[1]) :
+            return rec2
+        elif len(rec1[1]) < len(rec2[1]) :
+            return rec1
+        elif rec1[1].countNegated() < rec2[1].countNegated() :
+            return rec1
+        elif rec2[1].countNegated() < rec1[1].countNegated() :
+            return rec2
+        else :
+            return rec1
+
+        
     def push(self, obj, active, score) :
         if len(self.content) == self.size and score < self.content[-1][0] : return False
         
@@ -75,6 +92,13 @@ class Beam(object) :
             self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
             p = p - 1
             is_last = False
+        
+        if self.content[p][0] == self.content[p+1][0] :
+            self.content[p+1] = self.pick_best(self.content[p], self.content[p+1])
+#            print >> sys.stderr, 'REMOVED', self.content[p][1], self.content[p+1][1], '==>', self.content[p+1][1]
+            self.content = self.content[:p] + self.content[p+1:]    # remove p
+
+            
         
         popped_last = False
         while len(self.content) > self.size :
@@ -107,20 +131,20 @@ class Beam(object) :
         res += '>>>'
         return res
         
-def update_refinements(H, refine, score_func) :
+def update_refinements(H, refine) :
     if refine == None :
         return []
     
     literals = []
     
-    new_refine = [ (0,r) for r in H.refine(update=False) ]
+    new_refine = [ (0,r) for r in H.refine(update=True) ]
     
-#    if new_refine : print >> sys.stderr, 'NEW REFINEMENTS', new_refine
+    if new_refine : print >> sys.stderr, 'NEW REFINEMENTS', new_refine
     
- #   refine += new_refine
+    refine += new_refine
 #    
 #    refine = set(refine)
-    refine = new_refine
+#    refine = new_refine
     
     for s, lit in refine :
         
@@ -134,9 +158,9 @@ def update_refinements(H, refine, score_func) :
             # true negatives should be up because of this LITERAL (adding literals increases this)
             # true positives should be up because of this RULE (adding literals decreases this)
             
-            current_score = score_func(new_score), new_score.TP, new_score.FP
-            print >> sys.stderr, 'accepted', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1], current_score
-            literals.append( (current_score[0], lit) )
+           # current_score = score_func(new_score)
+            print >> sys.stderr, 'accepted', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
+            literals.append( (new_score, lit) )
         else :
             # literal doesn't cover true positives or it doesn't eliminate false positives
             print >> sys.stderr, 'rejected', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
@@ -192,6 +216,8 @@ class Score(object) :
                 self.not_covered.append( (p, ph, example_id) )
             else :
                 self.covered.append( (p, ph, example_id) ) 
+        self.covered = sorted(self.covered)
+        self.not_covered = sorted(self.not_covered)
                         
     def __getitem__(self, index) :
         if index == 0 :
@@ -201,7 +227,16 @@ class Score(object) :
         else :
             raise IndexError()
             
-    score = property(lambda s : s)
+#    score = property(lambda s : s)
+            
+    def value(self) :
+        m = 10    
+        m_estimate_c = self.m_estimate(m)
+        if self.parent :
+            m_estimate_p = self[-1].m_estimate(m)
+            return m_estimate_c - m_estimate_p
+        else :
+            return None
             
     def m_estimate(self, m) :
         return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 
@@ -210,7 +245,16 @@ class Score(object) :
         return (self.TP + self.TN ) / (self.TP + self.TN + self.FP + self.FN)
             
     def __str__(self) :
-        return '<Score: %s %s %s %s>' % (self.TP, self.TN, self.FP, self.FN )
+        return '<Score: %s %s %s %s | %s>' % (self.TP, self.TN, self.FP, self.FN, self.value() )
+        
+    def __repr__(self) :
+        return str(self.value())
+        
+    def __cmp__(self, other) :
+        if other :
+            return cmp(self.value(), other.value())
+        else :
+            return 1
 
 class RuleSet(object) :
     
