@@ -8,7 +8,7 @@ import time, sys
 from util import Timer, Log, Beam
 
 SettingsType = namedtuple('Settings', ['BEAM_SIZE', 'M_ESTIMATE_M', 'EQUIV_CHECK'] )
-SETTINGS = SettingsType(5,10,True)
+SETTINGS = SettingsType(5,10,False)     # TODO fix equiv_check for python 3
 
 def learn(H) :
     """Core FOIL learning algorithm.
@@ -91,7 +91,7 @@ def best_clause( H ) :
                 new_score, ref = score_ref
                 if new_score.FP == 0 and new_score.FN == 0 :
                     return rule + ref   # we found a rule with maximal score => no better rule can be found
-                if new_score <= score or not new_beam.push( rule + ref, new_refs[i+1:], new_score ) : # was new_refs[i+1:]
+                if (not score == None and new_score <= score) or not new_beam.push( rule + ref, new_refs[i+1:], new_score ) : # was new_refs[i+1:]
                     break  # current ref does not have high enough score -> next ones will also fail
 
         # Use new beam in next iteration
@@ -227,13 +227,29 @@ class Score(object) :
         return str(self.localScore)
         
     def __eq__(self, other) :
-        return self.covered == other.covered
-        
-    def __cmp__(self, other) :
-        if other :
-            return cmp(self.localScore, other.localScore)
+        if other == None :
+            return False
         else :
-            return 1
+            return self.localScore == other.localScore # and self.covered == other.covered
+        
+    def __lt__(self, other) :
+        if other == None :
+            return False
+        else :
+            return self.localScore < other.localScore
+
+    def __le__(self, other) :
+        if other == None :
+            return False
+        else :
+            return self.localScore <= other.localScore
+
+        
+    # def __cmp__(self, other) :
+    #     if other :
+    #         return cmp(self.localScore, other.localScore)
+    #     else :
+    #         return 1
             
     def extend(self, evaluated) :
         return Score(evaluated, self)
@@ -277,13 +293,13 @@ class Hypothesis(object) :
     def testLiterals(self, literals) :
         current_rule = self.rules[-1]
         
-        evaluated = []
-        for p, ph, ex in self.COVERED :
-            ex_scores = [ (p,b,ex) for b in current_rule.evaluate_extensions(self.data, self.data[ex], literals) ]
-            evaluated.append( ex_scores )
-            
-        for lit_i, lit in enumerate(literals) :
-            yield ( self.score.parent.extend( self.NOT_COVERED + [ x[lit_i] for x in evaluated ] ) , lit )
+        scores, _dummy, ex_ids = zip(*self.COVERED)
+        
+        evaluated = current_rule.evaluate_extensions(self.data, [ self.data[ex] for ex in ex_ids ], literals)
+        
+        from itertools import chain
+        for lit, new_scores in evaluated :
+            yield self.score.parent.extend( chain(self.NOT_COVERED, zip(scores, new_scores, ex_ids)) ), lit        
         
     def testLiteral(self, literal) :
         current_rule = self.rules[-1]

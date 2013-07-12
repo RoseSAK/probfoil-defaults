@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 from __future__ import print_function
 
@@ -27,6 +27,8 @@ class Literal(object) :
         self.functor = functor
         self.args = args
         self.kb = kb
+    
+    identifier = property(lambda s : (s.functor, len(s.args) ) )
                 
     def __str__(self) :
         return '%s(%s)' % (self.functor, ','.join(self.args))
@@ -39,6 +41,12 @@ class Literal(object) :
 
     def __eq__(self, other) :
         return str(self) == str(other)
+        
+    def __ne__(self, other) :
+        return str(self) != str(other)
+        
+    def __lt__(self, other) :
+        return str(self) < str(other)
         
     def __cmp__(self, other) :
         if self.isNegated() and not other.isNegated() :
@@ -89,6 +97,7 @@ class FactDB(object) :
         self.learn = []
         self.newvar_count = 0
         self.probabilistic = set([])
+        self.prolog_file = None
         
     def newVar(self) :
         self.newvar_count += 1
@@ -102,10 +111,8 @@ class FactDB(object) :
             index = [ defaultdict(set) for i in range(0,arity) ] 
             self.predicates[identifier] = (index, [], args, [])
             
-    def is_probabilistic(self, name, args) :
-        arity = len(args)
-        identifier = (name, arity)
-        return identifier in self.probabilistic
+    def is_probabilistic(self, literal) :
+        return literal.identifier in self.probabilistic
             
     def add_mode(self, name, args) :
         arity = len(args)
@@ -120,6 +127,9 @@ class FactDB(object) :
        # self.register_predicate(name, arity)
         identifier = (name, arity)
         index, values, types, probs = self.predicates[identifier]
+        
+        if p < 1.0 :
+            self.probabilistic.add(identifier)
         
         arg_index = len(values)
         values.append( args )
@@ -233,35 +243,127 @@ class FactDB(object) :
                 new_substitution.update( head_ground.unify( match ) )
                 for sol in self.query(tail, new_substitution) :
                     yield sol
+                    
+    def toPrologFile(self) :
+        if self.prolog_file == None :
+            self.prolog_file = '/tmp/pf.pl'
+            with open(self.prolog_file, 'w') as f :
+                for pred in self.predicates :
+                    index, values, types, probs = self.predicates[pred]
+                    for args in values :
+                        print('%s(%s).' % (pred[0], ', '.join(args) ), file=f)
+        return self.prolog_file                
 
 class Rule(object) :
     
-    def __init__(self, head, body=[]) :
+    def __init__(self, head, body=[], tmp=False) :
         self.head = head
         self.body = body
         
-        self.variables, dummy = self.extract_variables([self.head] + self.body)
-        self.varcount = sum(map(len,self.variables))
+        if not tmp :
+            self.variables, self.varnames = self.extract_variables([self.head] + self.body)
+#        self.varcount = sum(map(len,self.variables))
         
     def evaluate(self, kb, example) :
         subst = self.head.unify( example )
         tv_body = kb.query_single(self.body, subst)
         return tv_body
 
-    def evaluate_extensions(self, kb, example, extensions) :
-        subst = self.head.unify( example )
-        tv_body = [ False ] * len(extensions)
-        n_false = len(tv_body) 
-        for body_vars in kb.query(self.body, subst) :
+    def evaluate_extensions_non_prob(self, kb, examples, extensions) :
+        scores = [ [] for ext in extensions ]
+        for example in examples :
+            next_example = False
+            subst = self.head.unify( example )
+            tv_body = [ False ] * len(extensions)
+            n_false = len(tv_body)
+            for body_vars in kb.query(self.body, subst) :
+                for lit_i, lit in enumerate(extensions) :
+                    if tv_body[lit_i] == False :
+                        lit_val = kb.query_single([lit],body_vars)
+                        if lit_val :
+                            tv_body[lit_i] = lit_val
+                            n_false -= 1
+                            if n_false == 0 :
+                                next_example = True
+                                break
+                if next_example :
+                    break
             for lit_i, lit in enumerate(extensions) :
-                if not tv_body[lit_i] :
-                    lit_val = kb.query_single([lit],body_vars)
-                    if lit_val :
-                        tv_body[lit_i] = True
-                        n_false -= 1
-                        if n_false == 0 :
-                            return tv_body
-        return tv_body
+                scores[lit_i].append(tv_body[lit_i])
+        return zip(extensions, scores)
+        
+    def evaluate_extensions_prob(self, kb, examples, extensions) :
+        if extensions :
+            outfile = open('/tmp/pfprob.pl','w')
+            
+            # 1) Write out data
+            datafile = kb.toPrologFile()
+            print(":- consult('%s')." % (datafile), file=outfile)
+            
+            # 2) Write out current clause as Prolog clause
+            old_head = Literal(kb, 'pf_current_rule', self.varnames)
+            old_body = self.body
+            old_rule = Rule(old_head, old_body, True)
+            
+            print(old_rule, file=outfile)
+            
+            new_rules = []
+            queries = []
+            for lit_id, ext in enumerate(extensions) :
+                new_head = Literal(kb, 'pf_new_rule_' + str(lit_id), self.head.args)
+                new_body = [ old_head, ext ]
+                new_rule = Rule(new_head, new_body, True)
+
+                print(new_rule, file=outfile)
+                for ex_id, example in enumerate(examples) :
+                    subst = self.head.unify( example )
+                    queries.append( ( ext, ex_id, new_head.assign(subst) ) )
+
+            # 3) Write out queries
+            for ext, ex_id, atom in queries :
+                print('query(%s).' % (atom,), file=outfile)
+                         
+#            raise NotImplementedError('call ProbLog here...')
+            # 4) Call ProbLog
+            
+            import problog
+            
+            engine = problog.ProbLogEngine.create([])
+            logger = problog.Logger(False)
+            dir_out = '/tmp/pf/'
+            with problog.WorkEnv(dir_out,logger, persistent=problog.WorkEnv.ALWAYS_KEEP) as env :
+                probs = engine.execute(outfile, env) # TODO call problog
+            
+            print(probs)
+            
+            # 5) Read out probabilities and return for each literal (lit, [ example scores ]) 
+            score_list = []
+            prev_ext = None
+            for ext, ex_id, atom in queries :
+                p = probs.get(atom, False)
+                if prev_ext != None and prev_ext != ext :
+                    yield prev_ext, score_list
+                    score_list = []
+                prev_ext = ext
+                score_list.append(p)
+            yield prev_ext, score_list
+        else :
+            pass # return nothing
+
+    def evaluate_extensions(self, kb, examples, extensions) :
+        prob = []
+        nonprob = []
+        for ext in extensions :
+            if self.body and kb.is_probabilistic(ext) :
+                prob.append(ext)
+            else :
+                nonprob.append(ext)
+                if self.body :
+                     prob.append(ext)
+                    
+        from itertools import chain
+        # TODO this reorders extensions !!!
+        return chain(self.evaluate_extensions_non_prob(kb, examples, nonprob), self.evaluate_extensions_prob(kb, examples, prob))
         
     def extract_variables(self, literals) :
         names = set([])
@@ -316,13 +418,13 @@ class Rule(object) :
        # print 'VARS', self.variables        
         for pred_id in kb.modes :
             pred_name = pred_id[0]
-            arg_info = zip(kb.argtypes(*pred_id), kb.modes[pred_id])
+            arg_info = list(zip(kb.argtypes(*pred_id), kb.modes[pred_id]))
             for args in self._build_refine(kb, True, arg_info, [], use_vars) :
                 yield Literal(kb, pred_name, args)
 
         for pred_id in kb.modes :
             pred_name = pred_id[0]
-            arg_info = zip(kb.argtypes(*pred_id), kb.modes[pred_id])
+            arg_info = list(zip(kb.argtypes(*pred_id), kb.modes[pred_id]))
             for args in self._build_refine(kb, False, arg_info, [], use_vars) :
                 yield Literal(kb, '\+' + pred_name, args)
             
@@ -352,6 +454,8 @@ class Rule(object) :
         else :
             return 0
 
+
+
 def read_file(filename, idtypes=[]) :
 
     import re 
@@ -366,7 +470,7 @@ def read_file(filename, idtypes=[]) :
                 continue
             m = line_regex.match(line.strip())
             if m : 
-                ltype, pred, args = m.group('type'), m.group('name'), map(lambda s : s.strip(), m.group('args').split(','))
+                ltype, pred, args = m.group('type'), m.group('name'), list(map(lambda s : s.strip(), m.group('args').split(',')))
                 
                 if ltype == 'base' :
                     kb.register_predicate(pred, args)                    

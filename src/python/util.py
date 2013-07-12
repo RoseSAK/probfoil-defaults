@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 from __future__ import print_function
 
@@ -76,7 +76,7 @@ class Beam(object) :
         
         p = len(self.content) - 1
         self.content.append( (score, obj, active) )
-        while p >= 0 and self.content[p][0] < self.content[p+1][0] :
+        while p >= 0 and (self.content[p][0] == None or self.content[p][0] < self.content[p+1][0]) :
             self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
             p = p - 1
             is_last = False
