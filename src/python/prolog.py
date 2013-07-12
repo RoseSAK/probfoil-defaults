@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
+
 from collections import namedtuple, defaultdict
+from util import Timer, Log
+
 import re, os
 
 def is_var(arg) :
@@ -294,7 +298,7 @@ class Rule(object) :
                 yield Literal(kb, '\+' + pred_name, args)
             
     def __str__(self) :
-        return str(self.head) + ' :- ' + ', '.join(map(str,self.body))
+        return str(self.head) + ' :- ' + ', '.join(map(str,self.body)) + '.'
         
     def __add__(self, lit) :
         return Rule(self.head, self.body + [lit])
@@ -305,6 +309,19 @@ class Rule(object) :
     def countNegated(self) :
         return sum( b.isNegated() for b in self.body )
         
+    def __cmp__(self, other) :
+        if other == None :
+            return 1
+        elif len(self) > len(other) :
+            return -1
+        elif len(self) < len(other) :
+            return 1
+        elif self.countNegated() < other.countNegated() :
+            return 1
+        elif self.countNegated() > other.countNegated() :
+            return -1
+        else :
+            return 0
 
 def read_file(filename, idtypes=[]) :
 
@@ -338,7 +355,7 @@ def test(args=[]) :
     kb = read_file(args[0])
     from learn import learn, RuleSet
 
-    print "# loaded dataset '%s'" % (args[0])
+    print ("# loaded dataset '%s'" % (args[0]))
 #    print "# ", kb.modes
     
     stop = False
@@ -346,7 +363,7 @@ def test(args=[]) :
         try :
             s = raw_input('?- ')
             l = Literal.parse(kb, s)
-            print '\n'.join(map(str,kb.query(l, {})))
+            print ('\n'.join(map(str,kb.query(l, {}))))
         except EOFError :
             break
         except KeyboardInterrupt :
@@ -354,37 +371,44 @@ def test(args=[]) :
         
 def main(args=[]) :
 
-    kb = read_file(args[0])
 
-    from learn import learn, RuleSet, Timer, Log
 
-#    targets = [ 'mammal', 'bird', 'fish', 'reptile', 'amphibian', 'invertebrate']
+    for filename in args :
 
-    varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        kb = read_file(filename)
 
-    targets = kb.learn
+        from learn import learn, RuleSet, SETTINGS, Score
+
+    #    targets = [ 'mammal', 'bird', 'fish', 'reptile', 'amphibian', 'invertebrate']
+
+        varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+        targets = kb.learn
     
+        filename = os.path.split(filename)[1]
     
-    
-    Log.LOG_FILE=open(os.path.split(args[0])[1]+'.xml', 'w')
-#    Log.LOG_FILE = None
+        Log.LOG_FILE=open(filename+'.xml', 'w')
+    #    Log.LOG_FILE = None
 
-    with Log('log') :
-        for pred, args in targets :
-          with Timer('learning time') :
+        with Log('log') :
+            for pred, args in targets :
+              with Timer('learning time') as t :
         
-            kb.idtypes = args
-            kb.reset_examples()
+                kb.idtypes = args
+                kb.reset_examples()
         
-            target = Literal(kb, pred, varnames[:len(args)] )
+                target = Literal(kb, pred, varnames[:len(args)] )
         
-            print '==> LEARNING CONCEPT:', target 
-            with Log('learn', target=target) :
-                H = learn(RuleSet(Rule, target, kb))   
+                print('==> LEARNING CONCEPT:', target)
+                with Log('learn', input=filename, target=target, **vars(SETTINGS)) :
+                    H = learn(RuleSet(Rule, Score, target, kb))   
     
-            print H
-            print H.TP, H.TN, H.FP, H.FN
+                    print(H)
+                    print(H.score, H.score.globalScore)
     
+                    with Log('result', time=t.elapsed_time) as l :
+                        if l.file :
+                            print(H, file=l.file)
     
 if __name__ == '__main__' :
     import sys    

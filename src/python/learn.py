@@ -5,61 +5,22 @@ from __future__ import print_function
 from collections import namedtuple
 import time, sys
 
-BEAM_SIZE = 5
-#LOG_FILE = sys.stderr
+from util import Timer, Log, Beam
 
-# def localScore(rs) :
-#     m = 10    
-#     m_estimate_c = rs.score.m_estimate(m)
-#     m_estimate_p = rs.score[-1].m_estimate(m)
-#     return m_estimate_c - m_estimate_p
+SettingsType = namedtuple('Settings', ['BEAM_SIZE', 'M_ESTIMATE_M', 'EQUIV_CHECK'] )
+SETTINGS = SettingsType(5,10,True)
 
-class Log(object) :
-    
-    LOG_FILE=sys.stderr
-    
-    def __init__(self, tag, file=None, **atts) :
-        if file == None :
-            file = Log.LOG_FILE
-        self.tag = tag
-        self.atts = atts
-        self.file = file
-    
-    def get_attr_str(self, atts=None) :
-        string = ''
-        for k in self.atts :
-            v = self.atts[k]
-            #if hasattr(v,'__call__') :
-            #    v = v()
-            string += '%s="%s" ' % (k, v)
-        return string
-    
-    def logline(self) :
-        if self.file :
-            print('<%s %s/>' % (self.tag, self.get_attr_str()), file=self.file)
-    
-    def __enter__(self) :
-        if self.file :
-            print('<%s %s>' % (self.tag, self.get_attr_str()), file=self.file)
-        return self
-        
-    def __exit__(self, *args) :
-        if self.file :
-            print('</%s>' % (self.tag,), file=self.file)
-    
-    
 def learn(H) :
     score_H = H.score.globalScore
-    while True :
+    while score_H < 1.0 :
       with Log('learn_rule'):
         rule = best_clause( H )
         H.pushRule(rule)        
         score_nH = H.score.globalScore
 
         Log('rule_found', rule=rule, score=H.score).logline()
-        Log('hypothesis', H=H).logline()
-        Log('test_rule', old_score=score_H, new_score=score_nH).logline()
-#        print >> sys.stderr, 'BETTER?', score_H, score_nH
+        Log('stopping_criterium', old_score=score_H, new_score=score_nH).logline()
+
         if (score_H >= score_nH) :
             H.popRule()
             break
@@ -67,8 +28,8 @@ def learn(H) :
             score_H = score_nH
     return H
 
-def best_clause( H, beam_size = BEAM_SIZE ) :
-    beam = Beam(beam_size)    
+def best_clause( H ) :
+    beam = Beam(SETTINGS.BEAM_SIZE, not SETTINGS.EQUIV_CHECK)    
     rule = H.newRule()
     refinements = [ (0,r) for r in rule.refine(H.data) ]
     beam.push( rule, refinements , None )
@@ -76,8 +37,8 @@ def best_clause( H, beam_size = BEAM_SIZE ) :
     it=0
     while beam.has_active() :
       it += 1
-      with Log('iteration', n=it) :
-        new_beam = Beam(beam_size)
+      with Log('iteration', index=it) :
+        new_beam = beam.create()
         for score, rule, refs in beam :
           with Log('refining', rule=rule, score=score) :
             new_beam.push( rule, None, score )
@@ -98,85 +59,25 @@ def best_clause( H, beam_size = BEAM_SIZE ) :
      
     return beam.content[0][1]
 
-class Beam(object) :
+def pick_best_literal(rec1, rec2) :
+    if rec1[1].isNegated() :
+        return rec2, rec1
+    else :
+        return rec1, rec2
     
-    def __init__(self, size) :
-        self.size = size
-        self.content = []
-       
-    def __iter__(self) :
-        return iter(self.content)
-        
-    def pick_best(self, rec1, rec2) :
-        if len(rec1[1]) > len(rec2[1]) :
-            return rec2
-        elif len(rec1[1]) < len(rec2[1]) :
-            return rec1
-        elif rec1[1].countNegated() < rec2[1].countNegated() :
-            return rec1
-        elif rec2[1].countNegated() < rec1[1].countNegated() :
-            return rec2
+def remove_dups(literals) :
+    
+    prev_score = None
+    result = []
+    for score, lit in literals :
+        if result and result[-1][0] == score :
+            best, worst = pick_best_literal(result[-1], (score,lit))
+            result[-1] = best
+            Log('equivalent_literal', best=best[1], worst=worst[1]).logline()
         else :
-            return rec1
+            result.append( (score,lit) )
+    return result
 
-        
-    def push(self, obj, active, score) :
-        if len(self.content) == self.size and score < self.content[-1][0] : return False
-        
-        is_last = True
-        
-        p = len(self.content) - 1
-        self.content.append( (score, obj, active) )
-        while p >= 0 and self.content[p][0] < self.content[p+1][0] :
-            self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
-            p = p - 1
-            is_last = False
-        
-        if self.content[p][0] == self.content[p+1][0] :
-            self.content[p+1] = self.pick_best(self.content[p], self.content[p+1])
-            self.content = self.content[:p] + self.content[p+1:]    # remove p
-
-            
-        
-        popped_last = False
-        while len(self.content) > self.size :
-            self.content.pop(-1)
-            popped_last = True
-            
-        return not (is_last and popped_last)
-    
-    def peak_active(self) :
-        i = 0
-        while i < len(self.content) :
-            if self.content[i][2] :
-                yield self.content[i]
-                i = 0
-            else :
-                i += 1
-                
-    def has_active(self) :
-        for s, r, act in self :
-            if act : return True
-        return False
-    
-    def pop(self) :
-        self.content = self.content[1:]
-        
-    def __str__(self) :
-        res = ''
-        for s, c, r in self.content :
-            res += str(c) + ': ' + str(s) +  ' | ' + str(r) + '\n'
-        return res
-        
-    def toXML(self) :
-        res = ''
-        for s, c, r in self.content :
-            if r == None :
-                res +=  '<record rule="%s" score="%s" refinements="" />\n' % (c,s)
-            else :
-                res +=  '<record rule="%s" score="%s" refinements="%s" />\n' % (c,s,'|'.join(map(lambda s : str(s[1]), r)))
-        return res
-        
 def update_refinements(H, refine) :
     if refine == None :
         return []
@@ -196,10 +97,9 @@ def update_refinements(H, refine) :
 #    refine = set(refine)
 #    refine = new_refine
     
-    for s, lit in refine :
-        
-        new_score = H.testLiteral(lit)
-        
+    new_scores = H.testLiterals(refine)
+    
+    for new_score, lit in new_scores :        
         # H.score = score of hypothesis with rule but without literal
         # H.score[-1] = new_score[-1] = score of hypothesis without rule
         # new_score = score of hypothesis with rule and literal
@@ -209,31 +109,21 @@ def update_refinements(H, refine) :
             # true positives should be up because of this RULE (adding literals decreases this)
            # current_score = score_func(new_score)
             s = 'accepted'          
-#            print >> sys.stderr, 'accepted', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
             literals.append( (new_score, lit) )
         else :
-            s = 'rejected'
             # literal doesn't cover true positives or it doesn't eliminate false positives
-#            print >> sys.stderr, 'rejected', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
-        Log(s, rule=H.rules[-1], literal=lit, tn_change=new_score.TN - H.score.TN , tp_change=new_score.TP - new_score[-1].TP, score=new_score ).logline()
+            # TODO what if it introduces a new variable?
+            s = 'rejected'
+        Log(s, literal=lit, tn_change=new_score.TN - H.score.TN , tp_change=new_score.TP - new_score[-1].TP, score=new_score ).logline()
 
-    result = list(reversed(sorted(literals)))                
+    result = list(reversed(sorted(literals)))
+    
+    if SETTINGS.EQUIV_CHECK :
+        result = remove_dups(result)
+    
     Log('update_refinements', result=result).logline()
     return result
         
-class Timer(object) :
-    
-    def __init__(self, desc) :
-        self.desc = desc
-    
-    def __enter__(self) :
-        self.start = time.time()
-        
-    def __exit__(self, *args) :
-        t = time.time()
-        print ( '%s: %.5fs' % (self.desc, t-self.start ))
-
-EvalStats = namedtuple('EvalStats', ['TP', 'TN', 'FP', 'FN', 'P', 'N', 'TP1', 'TN1', 'FP1', 'FN1' ]  )    
 
 class Score(object) :
     
@@ -282,11 +172,8 @@ class Score(object) :
         else :
             raise IndexError()
             
-#    score = property(lambda s : s)
-            
-            
     def _calc_local(self) :
-        m = 10    
+        m = SETTINGS.M_ESTIMATE_M  
         m_estimate_c = self.m_estimate(m)
         if self.parent :
             m_estimate_p = self[-1].m_estimate(m)
@@ -316,15 +203,21 @@ class Score(object) :
     def __repr__(self) :
         return str(self.localScore)
         
+    def __eq__(self, other) :
+        return self.covered == other.covered
+        
     def __cmp__(self, other) :
         if other :
             return cmp(self.localScore, other.localScore)
         else :
             return 1
+            
+    def extend(self, evaluated) :
+        return Score(evaluated, self)
 
 class RuleSet(object) :
     
-    def __init__(self, RuleType, target, data) :
+    def __init__(self, RuleType, ScoreType, target, data) :
         self.target = target
         self.rules = []
         self.data = data
@@ -335,15 +228,10 @@ class RuleSet(object) :
             hP = self.data.find_fact(self.target.functor, self.data[ex])
             examples.append( ( hP, 0, ex ) )
         examples = sorted(examples)
-        self.score = Score(examples)
+        self.score = ScoreType(examples)
         self.P = self.score.P
         self.N = self.score.N
-                                
-    TP = property(lambda s : s.score.TP)    
-    TN = property(lambda s : s.score.TN)
-    FP = property(lambda s : s.score.FP)
-    FN = property(lambda s : s.score.FN)
-    
+                                    
     COVERED = property(lambda s : s.score.covered)
     NOT_COVERED = property(lambda s : s.score.not_covered)
 
@@ -359,43 +247,29 @@ class RuleSet(object) :
             evaluated.append( (p, b, example ) )
             
         self.rules.append(rule)
-        self.score = Score( evaluated, self.score )
-        
-        #print('PUSH RULE', rule)
+        self.score = self.score.extend(evaluated)
 
     def popRule(self) :
-        #print('POP RULE', self.rules[-1])
         self.score = self.score[-1]
-        self.rules.pop(-1)
+        self.rules.pop(-1)        
         
-        
+    def testLiterals(self, literals) :
+        return ( (self.testLiteral(lit), lit) for s,lit in literals )
+
     def testLiteral(self, literal) :
         current_rule = self.rules[-1]
         
         new_rule = current_rule + literal
-        # can only move examples from self.XXX[-1] to self.XXX[0]
-        
+
         evaluated = self.NOT_COVERED[:]
         for p, ph, ex in self.COVERED :
             h, b = new_rule.evaluate(self.data, self.data[ex])
             evaluated.append( (p, b, ex ) )
-        return Score(evaluated, self.score[-1] )
-        
-    def pushLiteral(self, literal) :
-        # quick implementation
-        rule = self.rules[-1]
-        self.popRule()
-        self.pushRule( rule + literal )
-    
-    def popLiteral(self) :
-        # quick implementation
-        rule = self.rules[-1]
-        self.popRule()
-        rule.body = rule.body[:-1]
-        self.pushRule( rule )
-        
+        return self.score[-1].extend(evaluated)
+                
     def newRule(self) :
         return self.Rule(self.target)
         
     def __str__(self) :
         return '\n'.join(map(str,self.rules))        
+
