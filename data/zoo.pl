@@ -57,13 +57,13 @@ base(invertebrate(animal)).
 base(amphibian(animal)).
 base(insect(animal)).
 
-%learn(mammal(animal)).
-%learn(bird(animal)).
-%learn(fish(animal)).
+learn(mammal(animal)).
+learn(bird(animal)).
+learn(fish(animal)).
 learn(reptile(animal)).
-%learn(invertebrate(animal)).
-%learn(amphibian(animal)).
-%learn(insect(animal)).
+learn(invertebrate(animal)).
+learn(amphibian(animal)).
+learn(insect(animal)).
 
 
 

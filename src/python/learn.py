@@ -1,29 +1,65 @@
 #! /usr/bin/env python3
 
-#from __future__ import print_function
+from __future__ import print_function
 
 from collections import namedtuple
 import time, sys
 
 BEAM_SIZE = 5
+#LOG_FILE = sys.stderr
 
 # def localScore(rs) :
 #     m = 10    
 #     m_estimate_c = rs.score.m_estimate(m)
 #     m_estimate_p = rs.score[-1].m_estimate(m)
 #     return m_estimate_c - m_estimate_p
+
+class Log(object) :
     
-def globalScore(rs) :
-    return rs.score.accuracy()
+    LOG_FILE=sys.stderr
+    
+    def __init__(self, tag, file=None, **atts) :
+        if file == None :
+            file = Log.LOG_FILE
+        self.tag = tag
+        self.atts = atts
+        self.file = file
+    
+    def get_attr_str(self, atts=None) :
+        string = ''
+        for k in self.atts :
+            v = self.atts[k]
+            #if hasattr(v,'__call__') :
+            #    v = v()
+            string += '%s="%s" ' % (k, v)
+        return string
+    
+    def logline(self) :
+        if self.file :
+            print('<%s %s/>' % (self.tag, self.get_attr_str()), file=self.file)
+    
+    def __enter__(self) :
+        if self.file :
+            print('<%s %s>' % (self.tag, self.get_attr_str()), file=self.file)
+        return self
+        
+    def __exit__(self, *args) :
+        if self.file :
+            print('</%s>' % (self.tag,), file=self.file)
+    
     
 def learn(H) :
-    score_H = globalScore(H)
+    score_H = H.score.globalScore
     while True :
+      with Log('learn_rule'):
         rule = best_clause( H )
         H.pushRule(rule)        
-        score_nH = globalScore(H)
-        
-        print >> sys.stderr, 'BETTER?', score_H, score_nH
+        score_nH = H.score.globalScore
+
+        Log('rule_found', rule=rule, score=H.score).logline()
+        Log('hypothesis', H=H).logline()
+        Log('test_rule', old_score=score_H, new_score=score_nH).logline()
+#        print >> sys.stderr, 'BETTER?', score_H, score_nH
         if (score_H >= score_nH) :
             H.popRule()
             break
@@ -37,26 +73,29 @@ def best_clause( H, beam_size = BEAM_SIZE ) :
     refinements = [ (0,r) for r in rule.refine(H.data) ]
     beam.push( rule, refinements , None )
 
+    it=0
     while beam.has_active() :
+      it += 1
+      with Log('iteration', n=it) :
         new_beam = Beam(beam_size)
         for score, rule, refs in beam :
-            print >> sys.stderr, "REFINING", score, rule, refs, '\n\n'
+          with Log('refining', rule=rule, score=score) :
             new_beam.push( rule, None, score )
             H.pushRule(rule)
             new_refs = update_refinements(H, refs)
-            print >> sys.stderr, '>>>>', new_refs
+            H.popRule()
             for i, score_ref in enumerate(new_refs) :
                 new_score, ref = score_ref
                 if new_score.FP == 0 and new_score.FN == 0 :
-                    return rule + ref
+                    return rule + ref   # we found a rule with maximal score => no better rule can be found
                 if new_score <= score or not new_beam.push( rule + ref, new_refs[i+1:], new_score ) : # was new_refs[i+1:]
                     break  # current ref does not have high enough score -> next ones will also fail
-            # print >> sys.stderr, new_beam
-            H.popRule()
         beam = new_beam
-        print >> sys.stderr, beam
         
-    print >> sys.stderr, 'FOUND RULE',beam.content[0][1]
+        with Log('beam') as l :
+            if l.file :
+                print(beam.toXML(), file=l.file)
+     
     return beam.content[0][1]
 
 class Beam(object) :
@@ -95,7 +134,6 @@ class Beam(object) :
         
         if self.content[p][0] == self.content[p+1][0] :
             self.content[p+1] = self.pick_best(self.content[p], self.content[p+1])
-#            print >> sys.stderr, 'REMOVED', self.content[p][1], self.content[p+1][1], '==>', self.content[p+1][1]
             self.content = self.content[:p] + self.content[p+1:]    # remove p
 
             
@@ -125,10 +163,18 @@ class Beam(object) :
         self.content = self.content[1:]
         
     def __str__(self) :
-        res = 'BEAM <<<\n'
+        res = ''
         for s, c, r in self.content :
             res += str(c) + ': ' + str(s) +  ' | ' + str(r) + '\n'
-        res += '>>>'
+        return res
+        
+    def toXML(self) :
+        res = ''
+        for s, c, r in self.content :
+            if r == None :
+                res +=  '<record rule="%s" score="%s" refinements="" />\n' % (c,s)
+            else :
+                res +=  '<record rule="%s" score="%s" refinements="%s" />\n' % (c,s,'|'.join(map(lambda s : str(s[1]), r)))
         return res
         
 def update_refinements(H, refine) :
@@ -139,7 +185,11 @@ def update_refinements(H, refine) :
     
     new_refine = [ (0,r) for r in H.refine(update=True) ]
     
-    if new_refine : print >> sys.stderr, 'NEW REFINEMENTS', new_refine
+#    if new_refine : 
+#        Log('newrefine', refinements=new_refine).logline()
+
+    Log('refinements', current='|'.join(map(lambda s : str(s[1]), refine)), new='|'.join(map(lambda s : str(s[1]), new_refine))).logline()
+
     
     refine += new_refine
 #    
@@ -157,14 +207,19 @@ def update_refinements(H, refine) :
         if new_score.TN > H.score.TN and new_score.TP > new_score[-1].TP :
             # true negatives should be up because of this LITERAL (adding literals increases this)
             # true positives should be up because of this RULE (adding literals decreases this)
-            
            # current_score = score_func(new_score)
-            print >> sys.stderr, 'accepted', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
+            s = 'accepted'          
+#            print >> sys.stderr, 'accepted', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
             literals.append( (new_score, lit) )
         else :
+            s = 'rejected'
             # literal doesn't cover true positives or it doesn't eliminate false positives
-            print >> sys.stderr, 'rejected', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
-    return list(reversed(sorted(literals)))        
+#            print >> sys.stderr, 'rejected', H.rules[-1], lit, new_score.TN - H.score.TN , new_score.TP - new_score[-1].TP, new_score, new_score[-1]
+        Log(s, rule=H.rules[-1], literal=lit, tn_change=new_score.TN - H.score.TN , tp_change=new_score.TP - new_score[-1].TP, score=new_score ).logline()
+
+    result = list(reversed(sorted(literals)))                
+    Log('update_refinements', result=result).logline()
+    return result
         
 class Timer(object) :
     
@@ -229,7 +284,8 @@ class Score(object) :
             
 #    score = property(lambda s : s)
             
-    def value(self) :
+            
+    def _calc_local(self) :
         m = 10    
         m_estimate_c = self.m_estimate(m)
         if self.parent :
@@ -237,6 +293,12 @@ class Score(object) :
             return m_estimate_c - m_estimate_p
         else :
             return None
+    
+    def _calc_global(self) : 
+        return self.accuracy()
+            
+    globalScore = property(lambda s : s._calc_global() )
+    localScore = property(lambda s : s._calc_local() )
             
     def m_estimate(self, m) :
         return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 
@@ -245,14 +307,18 @@ class Score(object) :
         return (self.TP + self.TN ) / (self.TP + self.TN + self.FP + self.FN)
             
     def __str__(self) :
-        return '<Score: %s %s %s %s | %s>' % (self.TP, self.TN, self.FP, self.FN, self.value() )
+        ls = self.localScore
+        if ls == None :
+            return '%s %s %s %s None' % (self.TP, self.TN, self.FP, self.FN )
+        else :
+            return '%s %s %s %s %.4f' % (self.TP, self.TN, self.FP, self.FN, self.localScore )
         
     def __repr__(self) :
-        return str(self.value())
+        return str(self.localScore)
         
     def __cmp__(self, other) :
         if other :
-            return cmp(self.value(), other.value())
+            return cmp(self.localScore, other.localScore)
         else :
             return 1
 
@@ -292,12 +358,16 @@ class RuleSet(object) :
             h, b = rule.evaluate(self.data, self.data[example])
             evaluated.append( (p, b, example ) )
             
-        self.score = Score( evaluated, self.score )
         self.rules.append(rule)
+        self.score = Score( evaluated, self.score )
+        
+        #print('PUSH RULE', rule)
 
     def popRule(self) :
+        #print('POP RULE', self.rules[-1])
         self.score = self.score[-1]
         self.rules.pop(-1)
+        
         
     def testLiteral(self, literal) :
         current_rule = self.rules[-1]

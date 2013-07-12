@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 from collections import namedtuple, defaultdict
-import re
+import re, os
 
 def is_var(arg) :
     return arg == None or arg[0] == '_' or (arg[0] >= 'A' and arg[0] <= 'Z')
@@ -294,7 +294,7 @@ class Rule(object) :
                 yield Literal(kb, '\+' + pred_name, args)
             
     def __str__(self) :
-        return str(self.head) + ' <- ' + ', '.join(map(str,self.body))
+        return str(self.head) + ' :- ' + ', '.join(map(str,self.body))
         
     def __add__(self, lit) :
         return Rule(self.head, self.body + [lit])
@@ -356,26 +356,35 @@ def main(args=[]) :
 
     kb = read_file(args[0])
 
-    from learn import learn, RuleSet, Timer
+    from learn import learn, RuleSet, Timer, Log
 
 #    targets = [ 'mammal', 'bird', 'fish', 'reptile', 'amphibian', 'invertebrate']
 
     varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
     targets = kb.learn
-
-    for pred, args in targets :
-      with Timer('learning time') :
-        
-        kb.idtypes = args
-        kb.reset_examples()
-        
-        target = Literal(kb, pred, varnames[:len(args)] )
-        print '==> LEARNING CONCEPT:', target 
-        H = learn(RuleSet(Rule, target, kb))   
     
-        print H
-        print H.TP, H.TN, H.FP, H.FN
+    
+    
+    Log.LOG_FILE=open(os.path.split(args[0])[1]+'.xml', 'w')
+#    Log.LOG_FILE = None
+
+    with Log('log') :
+        for pred, args in targets :
+          with Timer('learning time') :
+        
+            kb.idtypes = args
+            kb.reset_examples()
+        
+            target = Literal(kb, pred, varnames[:len(args)] )
+        
+            print '==> LEARNING CONCEPT:', target 
+            with Log('learn', target=target) :
+                H = learn(RuleSet(Rule, target, kb))   
+    
+            print H
+            print H.TP, H.TN, H.FP, H.FN
+    
     
 if __name__ == '__main__' :
     import sys    
