@@ -27,6 +27,11 @@ class Log(object) :
     def logline(self) :
         if self.file :
             print('<%s %s/>' % (self.tag, self.get_attr_str()), file=self.file)
+            
+    def logXML(self, xml) :
+        with self :
+            if self.file :
+                print(xml, file=self.file)
     
     def __enter__(self) :
         if self.file :
@@ -77,7 +82,7 @@ class Beam(object) :
             is_last = False
         
         if not self.allow_equivalent and p >= 0 and self.content[p][0] == self.content[p+1][0] :
-            best, worst = sorted( [self.content[p], self.content[p+1]] )
+            worst, best = sorted( [self.content[p], self.content[p+1]] )
             Log('beam_equivalent', best=best[1], worst=worst[1]).logline()
             self.content[p+1] = best
             self.content = self.content[:p] + self.content[p+1:]    # remove p    

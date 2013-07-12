@@ -40,6 +40,14 @@ class Literal(object) :
     def __eq__(self, other) :
         return str(self) == str(other)
         
+    def __cmp__(self, other) :
+        if self.isNegated() and not other.isNegated() :
+            return -1
+        elif other.isNegated() and not other.isNegated() :
+            return 1
+        else :
+            return 0
+        
     def isNegated(self) :
         return self.functor.startswith('\+')
         
@@ -72,7 +80,7 @@ class Literal(object) :
         
 class FactDB(object) :
     
-    def __init__(self, idtypes=[]) :
+    def __init__(self, idtypes=[]) :        
         self.predicates = {}
         self.idtypes = idtypes
         self.__examples = None
@@ -80,6 +88,7 @@ class FactDB(object) :
         self.modes = {}
         self.learn = []
         self.newvar_count = 0
+        self.probabilistic = set([])
         
     def newVar(self) :
         self.newvar_count += 1
@@ -92,6 +101,11 @@ class FactDB(object) :
         if not identifier in self.predicates :
             index = [ defaultdict(set) for i in range(0,arity) ] 
             self.predicates[identifier] = (index, [], args, [])
+            
+    def is_probabilistic(self, name, args) :
+        arity = len(args)
+        identifier = (name, arity)
+        return identifier in self.probabilistic
             
     def add_mode(self, name, args) :
         arity = len(args)
@@ -122,7 +136,6 @@ class FactDB(object) :
         
     def ground_fact(self, name, args) :
         if name.startswith('\+') :
-           # raise NotImplementedError("No support for negative literals yet!")
             negated = True
             name = strip_negation(name)
         else :
@@ -172,7 +185,6 @@ class FactDB(object) :
         else :
             return probability
 
-        
     def __str__(self) :
         s = ''
         for name, arity in self.predicates :
@@ -205,6 +217,9 @@ class FactDB(object) :
         for sol in self.query(body, subst) :
             yield sol
 
+    def query_single(self, literals, substitution) :
+        return true(self.query(literals, substitution))
+
     def query(self, literals, substitution) :
         if not literals :  # reached end of query
             yield substitution
@@ -230,9 +245,23 @@ class Rule(object) :
         
     def evaluate(self, kb, example) :
         subst = self.head.unify( example )
-        tv_head = true(kb.query([self.head],subst))
-        tv_body = true(kb.query(self.body, subst) )
-        return tv_head, tv_body
+        tv_body = kb.query_single(self.body, subst)
+        return tv_body
+
+    def evaluate_extensions(self, kb, example, extensions) :
+        subst = self.head.unify( example )
+        tv_body = [ False ] * len(extensions)
+        n_false = len(tv_body) 
+        for body_vars in kb.query(self.body, subst) :
+            for lit_i, lit in enumerate(extensions) :
+                if not tv_body[lit_i] :
+                    lit_val = kb.query_single([lit],body_vars)
+                    if lit_val :
+                        tv_body[lit_i] = True
+                        n_false -= 1
+                        if n_false == 0 :
+                            return tv_body
+        return tv_body
         
     def extract_variables(self, literals) :
         names = set([])
@@ -377,7 +406,7 @@ def main(args=[]) :
 
         kb = read_file(filename)
 
-        from learn import learn, RuleSet, SETTINGS, Score
+        from learn import learn, Hypothesis, SETTINGS, Score
 
         varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -398,7 +427,7 @@ def main(args=[]) :
         
                 print('==> LEARNING CONCEPT:', target)
                 with Log('learn', input=filename, target=target, **vars(SETTINGS)) :
-                    H = learn(RuleSet(Rule, Score, target, kb))   
+                    H = learn(Hypothesis(Rule, Score, target, kb))   
     
                     print(H)
                     print(H.score, H.score.globalScore)
