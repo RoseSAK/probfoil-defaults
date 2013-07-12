@@ -254,6 +254,14 @@ class RuleSet(object) :
         self.rules.pop(-1)        
         
     def testLiterals(self, literals) :
+        # current_rule = self.rules[-1]
+        # 
+        # evaluated = self.NOT_COVERED[:]
+        # for p, ph, ex in self.COVERED :
+        #     h, b = current_rule.evaluate(self.data, self.data[ex], extensions=literals)
+        #     evaluated.append( (p, b, ex ) )
+        # return self.score[-1].extend(evaluated)
+        
         return ( (self.testLiteral(lit), lit) for s,lit in literals )
 
     def testLiteral(self, literal) :

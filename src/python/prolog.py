@@ -379,8 +379,6 @@ def main(args=[]) :
 
         from learn import learn, RuleSet, SETTINGS, Score
 
-    #    targets = [ 'mammal', 'bird', 'fish', 'reptile', 'amphibian', 'invertebrate']
-
         varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
         targets = kb.learn
@@ -388,7 +386,6 @@ def main(args=[]) :
         filename = os.path.split(filename)[1]
     
         Log.LOG_FILE=open(filename+'.xml', 'w')
-    #    Log.LOG_FILE = None
 
         with Log('log') :
             for pred, args in targets :
