@@ -323,8 +323,8 @@ class Rule(object) :
                     queries.append(  (lit_i, ex_id, 'pfq_%s_%s' % (ex_id, lit_i)) )
                 elif score == 1.0 :  
                     # literal is deterministically true, reuse rule score
-                    score = 1.0
-#                    score = self.score.covered[ex_id][1]
+                    #score = 1.0
+                    score = self.score.covered[ex_id][1]
                 scores[lit_i].append(score)     
         
         return scores, used_facts, new_clauses, queries
@@ -339,7 +339,7 @@ class Rule(object) :
                 if literal_score[lit_i] == 1 :
                     continue    # literal was already proven to be deterministically true
                 for lit_val, lit_new in kb.query([lit],body_vars, used_facts) :
-                    if old_clause + lit_new :   # TODO remove old_clause and reuse old score
+                    if lit_new :   # TODO remove old_clause and reuse old score
                         # probabilistic query
                         new_clauses.append( Rule( Literal(kb, head, []), old_clause + lit_new , None ) )
                         literal_score[lit_i] = None  # probabilistic

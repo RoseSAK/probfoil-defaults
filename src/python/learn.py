@@ -104,7 +104,7 @@ def best_clause( H ) :
         Log('beam').logXML(beam.toXML())
 
     # Return head of beam.
-    return beam.content[0][1], beam.content[0][0]
+    return beam.content[0][1]
 
 def update_refinements(H, refine) :
     if refine == None :
