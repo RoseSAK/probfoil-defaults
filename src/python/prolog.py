@@ -342,7 +342,7 @@ class Rule(object) :
                 if literal_score[lit_i] == 1 :
                     continue    # literal was already proven to be deterministically true
                 for lit_val, lit_new in kb.query([lit],body_vars, used_facts) :
-                    if old_clause + lit_new :   # TODO remove old_clause and reuse old score
+                    if lit_new :   # TODO remove old_clause and reuse old score
                         # probabilistic query
                         new_clauses.append( Rule( Literal(kb, head, []), old_clause + lit_new , None ) )
                         literal_score[lit_i] = None  # probabilistic
