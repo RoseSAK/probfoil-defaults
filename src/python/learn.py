@@ -273,8 +273,8 @@ class Hypothesis(object) :
         
     def default_score(self) :
         examples = []
-        for ex in self.data :
-            hP = self.data.find_fact(self.target.functor, self.data[ex])
+        for hP, _, ex in self.NOT_COVERED :
+            #hP = self.data.find_fact(self.target.functor, self.data[ex])
             examples.append( ( hP, 1, ex ) )
         examples = sorted(examples)
         return self.score.extend(examples)
