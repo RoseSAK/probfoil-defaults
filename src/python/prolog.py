@@ -31,7 +31,10 @@ class Literal(object) :
     identifier = property(lambda s : (strip_negation(s.functor), len(s.args) ) )
                 
     def __str__(self) :
-        return '%s(%s)' % (self.functor, ','.join(self.args))
+        if self.args :
+            return '%s(%s)' % (self.functor, ','.join(self.args))
+        else :
+            return '%s' % (self.functor)
 
     def __repr__(self) :
         return '%s(%s)' % (self.functor, ','.join(self.args))
@@ -152,12 +155,12 @@ class FactDB(object) :
         result = set(range(0, len(values))) 
         
         # Restrict set for each argument
-        for i,arg in enumerate(args) :
+        for i,arg in enumerate(literal.args) :
             if not is_var(arg) :
                 result &= index[i][arg]
             if not result : break 
         
-        result_maybe = set( i for i in result if 0 < prob[i] < 1 )
+        result_maybe = set( i for i in result if 0 < probs[i] < 1 )
         result_exact = result - result_maybe
         
         if literal.isNegated() :
@@ -166,16 +169,16 @@ class FactDB(object) :
                 return []   # Query fails
             else :
                 # Query might succeed
-                if facts != None :
+                if used_facts != None and result_maybe :
                     # Add maybe facts to used_facts
                     used_facts[ literal.identifier ] |= result_maybe
                 if result_maybe :
                     is_det = False
                 else :
                     is_det = True
-                return [ (is_det, args) ]
+                return [ (is_det, literal.args) ]
         else :
-            if facts != None :
+            if used_facts != None and result_maybe :
                 # Add maybe facts to used_facts
                 used_facts[ literal.identifier ] |= result_maybe
             return [ (probs[i] == 1, values[i]) for i in result_maybe | result_exact ]
@@ -281,21 +284,37 @@ class FactDB(object) :
     #                 yield sol        
 
 
-
     def query(self, literals, substitution, facts_used=None) :
         if not literals :  # reached end of query
-            yield substitution
+            yield substitution, []
         else :
             head, tail = literals[0], literals[1:]
             head_ground = head.assign(substitution)     # assign known variables
             
-            for prob, match in self.ground_fact(head_ground.functor, head_ground.args, facts_used) :
+            for is_det, match in self.ground_fact(head_ground, facts_used) :
+
                 # find match for head
                 new_substitution = dict(substitution)
                 new_substitution.update( head_ground.unify( match ) )
-                for sol in self.query(tail, new_substitution, facts_used) :
-                    yield sol        
-        
+                if is_det :
+                    my_lit = []
+                else :
+                    my_lit = [ head_ground.assign(new_substitution) ]
+                for sol, sub_lit in self.query(tail, new_substitution, facts_used) :
+                    yield sol, my_lit + sub_lit
+    
+    def printFacts(self, facts, out) :
+        for identifier in facts :
+            name, arity = identifier
+            index, values, types, probs = self.predicates[identifier]
+            
+            for i in facts[identifier] :
+                args = ','.join(values[i])
+                prob = probs[i]
+                if prob == 1 :
+                    print( '%s(%s).' % (name, args),  file=out)
+                else :
+                    print( '%s::%s(%s).' % (prob, name, args),  file=out)    
                     
     def toPrologFile(self) :
         if self.prolog_file == None :
@@ -322,14 +341,55 @@ class Rule(object) :
         tv_body = kb.query_single(self.body, subst)
         return tv_body
 
+    def ground_extensions(self, kb, examples, extensions) :
+        used_facts = defaultdict(set)
+        new_clauses = []
+        
+        scores = [ [] for ext in extensions ]
+        queries = []
+        
+        for ex_id, example in enumerate(examples) :
+            literal_scores = self.ground_extensions_example(kb, ex_id, example, extensions, used_facts, new_clauses)
+            for lit_i, score in enumerate(literal_scores) :
+                if score == None :
+                    queries.append(  (lit_i, ex_id, 'pfq_%s_%s' % (ex_id, lit_i)) )
+                else :
+                    # TODO score *= current_rule_score
+                    pass
+                scores[lit_i].append(score)     
+        
+        return scores, used_facts, new_clauses, queries
+
+    def ground_extensions_example(self, kb, ex_id, example, extensions, used_facts, new_clauses) :
+        subst = self.head.unify( example )
+
+        literal_score = [ 0.0 ] * len(extensions)    # default 0
+        for body_vars, old_clause in kb.query(self.body, subst, used_facts) :
+            for lit_i, lit in enumerate(extensions) :
+                head = 'pfq_%s_%s' % (ex_id, lit_i)
+                if literal_score[lit_i] == 1 :
+                    continue    # literal was already proven to be deterministically true
+                for lit_val, lit_new in kb.query([lit],body_vars, used_facts) :
+                    if old_clause + lit_new :   # TODO remove old_clause and reuse old score
+                        # probabilistic query
+                        new_clauses.append( Rule( Literal(kb, head, []), old_clause + lit_new , True) )
+                        literal_score[lit_i] = None  # probabilistic
+                    else :
+                        # non-probabilistic => p = 1.0
+                        literal_score[lit_i] = 1.0    # deterministically true
+        return literal_score
+
     def evaluate_extensions_non_prob(self, kb, examples, extensions) :
         scores = [ [] for ext in extensions ]
+        used_facts = defaultdict(set)
+        new_clauses = []
         for example in examples :
             next_example = False
             subst = self.head.unify( example )
+            ground_head = self.head.assign(subst)
             tv_body = [ False ] * len(extensions)
             n_false = len(tv_body)
-            for body_vars in kb.query(self.body, subst) :
+            for body_vars, new_clause in kb.query(self.body, subst, used_facts) :
                 for lit_i, lit in enumerate(extensions) :
                     if tv_body[lit_i] == False :
                         lit_val = kb.query_single([lit],body_vars)
@@ -341,6 +401,8 @@ class Rule(object) :
                                 break
                 if next_example :
                     break
+                if new_clause :
+                    new_clause.append( ( ground_head, new_clause) )
             for lit_i, lit in enumerate(extensions) :
                 scores[lit_i].append(tv_body[lit_i])
         return zip(extensions, scores)
@@ -403,20 +465,50 @@ class Rule(object) :
         else :
             pass # return nothing
 
+    def callProbLog( self, kb, scores, used_facts, clauses, queries ) :
+        
+        outfile = '/tmp/pf.pl'
+        with open(outfile, 'w') as out :
+            kb.printFacts(used_facts, out)
+            print('\n'.join( map(str,clauses)), file=out)            
+            for l,e,q in queries :
+                print('query(%s).' % q, file=out)
+        
+        
+        import problog
+        engine = problog.ProbLogEngine.create([])
+        logger = problog.Logger(False)
+        dir_out = '/tmp/pf/'
+        with problog.WorkEnv(dir_out,logger, persistent=problog.WorkEnv.ALWAYS_KEEP) as env :
+            probs = engine.execute(outfile, env) # TODO call problog
+            
+        for l,e,q in queries :
+            scores[l][e] = probs[q]
+            
+       # return scores
+
     def evaluate_extensions(self, kb, examples, extensions) :
-        prob = []
-        nonprob = []
-        for ext in extensions :
-            if self.body and kb.is_probabilistic(ext) :
-                prob.append(ext)
-            else :
-                nonprob.append(ext)
-                if self.body :
-                     prob.append(ext)
-                    
-        from itertools import chain
-        # TODO this reorders extensions !!!
-        return chain(self.evaluate_extensions_non_prob(kb, examples, nonprob), self.evaluate_extensions_prob(kb, examples, prob))
+        scores, used_facts, clauses, queries = self.ground_extensions(kb, examples, extensions )         
+#        scores, used_facts, clauses, queries = self.ground_extensions(kb, examples, [ Literal(kb, 'parent', 'AB')] )
+    
+        self.callProbLog(kb, scores, used_facts, clauses, queries)
+        
+        return zip(extensions,scores)
+                # 
+        # 
+        # prob = []
+        # nonprob = []
+        # for ext in extensions :
+        #     if self.body and kb.is_probabilistic(ext) :
+        #         nonprob.append(ext)
+        #     else :
+        #         nonprob.append(ext)
+        #         # if self.body :
+        #         #      prob.append(ext)
+        #             
+        # from itertools import chain
+        # # TODO this reorders extensions !!!
+        # return chain(self.evaluate_extensions_non_prob(kb, examples, nonprob), self.evaluate_extensions_prob(kb, examples, prob))
         
     def extract_variables(self, literals) :
         names = set([])
@@ -482,7 +574,10 @@ class Rule(object) :
                 yield Literal(kb, '\+' + pred_name, args)
             
     def __str__(self) :
-        return str(self.head) + ' :- ' + ', '.join(map(str,self.body)) + '.'
+        if self.body :
+            return str(self.head) + ' :- ' + ', '.join(map(str,self.body)) + '.'
+        else :
+            return str(self.head) + '.'
         
     def __add__(self, lit) :
         return Rule(self.head, self.body + [lit])
@@ -513,7 +608,7 @@ def read_file(filename, idtypes=[]) :
 
     import re 
     
-    line_regex = re.compile( "((?P<type>(base|modes|learn))\()?\s*(?P<name>\w+)\((?P<args>[^\)]+)\)\)?." )
+    line_regex = re.compile( "((?P<type>(base|modes|learn))\()?((?P<prob>\d+[.]\d+)::)?\s*(?P<name>\w+)\((?P<args>[^\)]+)\)\)?." )
     
     kb = FactDB(idtypes)
 
@@ -524,15 +619,20 @@ def read_file(filename, idtypes=[]) :
             m = line_regex.match(line.strip())
             if m : 
                 ltype, pred, args = m.group('type'), m.group('name'), list(map(lambda s : s.strip(), m.group('args').split(',')))
+                prob = m.group('prob')
                 
                 if ltype == 'base' :
-                    kb.register_predicate(pred, args)                    
+                    kb.register_predicate(pred, args)  
                 elif ltype == 'modes' :
                     kb.add_mode(pred,args)                    
                 elif ltype == 'learn' :
                     kb.add_learn(pred,args)                
                 else :
-                    kb.add_fact(pred,args)
+                    if not prob :
+                        prob = 1.0
+                    else :
+                        prob = float(prob)
+                    kb.add_fact(pred,args,prob)
                                 
     return kb
 
@@ -571,27 +671,29 @@ def main(args=[]) :
     
         filename = os.path.split(filename)[1]
     
-        Log.LOG_FILE=open(filename+'.xml', 'w')
+    
+    
+        with open(filename+'.xml', 'w') as Log.LOG_FILE :
 
-        with Log('log') :
-            for pred, args in targets :
-              with Timer('learning time') as t :
+            with Log('log') :
+                for pred, args in targets :
+                  with Timer('learning time') as t :
         
-                kb.idtypes = args
-                kb.reset_examples()
+                    kb.idtypes = args
+                    kb.reset_examples()
         
-                target = Literal(kb, pred, varnames[:len(args)] )
+                    target = Literal(kb, pred, varnames[:len(args)] )
         
-                print('==> LEARNING CONCEPT:', target)
-                with Log('learn', input=filename, target=target, **vars(SETTINGS)) :
-                    H = learn(Hypothesis(Rule, Score, target, kb))   
+                    print('==> LEARNING CONCEPT:', target)
+                    with Log('learn', input=filename, target=target, **vars(SETTINGS)) :
+                        H = learn(Hypothesis(Rule, Score, target, kb))   
     
-                    print(H)
-                    print(H.score, H.score.globalScore)
+                        print(H)
+                        print(H.score, H.score.globalScore)
     
-                    with Log('result', time=t.elapsed_time) as l :
-                        if l.file :
-                            print(H, file=l.file)
+                        with Log('result', time=t.elapsed_time) as l :
+                            if l.file :
+                                print(H, file=l.file)
     
 if __name__ == '__main__' :
     import sys    

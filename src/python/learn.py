@@ -119,6 +119,8 @@ def update_refinements(H, refine) :
     # Update scores for all literals in batch
     new_scores = list(reversed(sorted(H.testLiterals([ lt for sc, lt in refine ]))))
     
+    Log('new_scores', scores=new_scores).logline()
+    
     # Reject / accept literals based on a local stopping criterion
     result = []
     for new_score, lit in new_scores :        

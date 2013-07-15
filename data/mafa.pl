@@ -10,7 +10,7 @@ learn(mother(person,person)).
 base(mother(person,person)).
 %modes(mother(-,-)).
 
-learn(grandmother(person,person)).
+%learn(grandmother(person,person)).
 base(grandmother(person,person)).
 
 learn(father(person,person)).
@@ -50,17 +50,17 @@ mother(rose, luc).
 mother(rose, an).
 mother(laura, esther).
 
-parent(bart,stijn).
-parent(bart,pieter).
-parent(luc,soetkin).
-parent(willem,lieve).
-parent(willem,katleen).
-parent(rene,willem).
-parent(rene,lucy).
-parent(leon,rose).
-parent(etienne,luc).
-parent(etienne,an).
-parent(prudent,esther).
+0.5::parent(bart,stijn).
+0.4::parent(bart,pieter).
+0.6::parent(luc,soetkin).
+0.7::parent(willem,lieve).
+0.5::parent(willem,katleen).
+0.4::parent(rene,willem).
+0.3::parent(rene,lucy).
+0.8::parent(leon,rose).
+0.2::parent(etienne,luc).
+0.1::parent(etienne,an).
+0.1::parent(prudent,esther).
 
 parent(katleen,stijn).
 parent(katleen,pieter).
