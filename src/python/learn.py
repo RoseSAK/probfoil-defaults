@@ -25,10 +25,10 @@ def learn(H) :
       with Log('learn_rule'):
             
         # Find best clause that refines this hypothesis
-        rule = best_clause( H )
+        rule, score = best_clause( H )
 
         # Add the clause to the hypothesis (updates score)
-        H.pushRule(rule)        
+        H.pushRule(rule, score)        
 
         # Retrieve the score for the new hypothesis
         score_nH = H.score.globalScore
@@ -60,7 +60,7 @@ def best_clause( H ) :
     refinements = [ (0,r) for r in rule.refine(H.data) ]
     
     # Add clause to beam (with empty score)
-    beam.push( rule, refinements , None )
+    beam.push( rule, refinements , H.default_score() )
 
     it=0
 
@@ -78,7 +78,7 @@ def best_clause( H ) :
             new_beam.push( rule, None, score )
             
             # Add the current rule to the hypothesis (updates scores)
-            H.pushRule(rule)
+            H.pushRule(rule, score)
             
             # Update scores of available refinements and add new refinements if a new variable was introduced.
             new_refs = update_refinements(H, refs)
@@ -90,7 +90,7 @@ def best_clause( H ) :
             for i, score_ref in enumerate(new_refs) :
                 new_score, ref = score_ref
                 if new_score.FP == 0 and new_score.FN == 0 :
-                    return rule + ref   # we found a rule with maximal score => no better rule can be found
+                    return rule + ref, new_score   # we found a rule with maximal score => no better rule can be found
                 if (not score == None and new_score <= score) or not new_beam.push( rule + ref, new_refs[i+1:], new_score ) : # was new_refs[i+1:]
                     break  # current ref does not have high enough score -> next ones will also fail
 
@@ -101,7 +101,7 @@ def best_clause( H ) :
         Log('beam').logXML(beam.toXML())
 
     # Return head of beam.
-    return beam.content[0][1]
+    return beam.content[0][1], beam.content[0][0]
 
 def update_refinements(H, refine) :
     if refine == None :
@@ -270,6 +270,14 @@ class Hypothesis(object) :
             examples.append( ( hP, 0, ex ) )
         examples = sorted(examples)
         self.score = ScoreType(examples)
+        
+    def default_score(self) :
+        examples = []
+        for ex in self.data :
+            hP = self.data.find_fact(self.target.functor, self.data[ex])
+            examples.append( ( hP, 1, ex ) )
+        examples = sorted(examples)
+        return self.score.extend(examples)
                                     
     COVERED = property(lambda s : s.score.covered)
     NOT_COVERED = property(lambda s : s.score.not_covered)
@@ -277,16 +285,17 @@ class Hypothesis(object) :
     def refine(self, update=False) :
         return self.rules[-1].refine(self.data, update)
         
-    def pushRule(self, rule=None) :
-        if rule == None : rule = self.newRule()
-        
-        evaluated = [] # discard COVERED examples
-        for p, ph, example in self.NOT_COVERED :
-            b = rule.evaluate(self.data, self.data[example])
-            evaluated.append( (p, b, example ) )
-            
+    def pushRule(self, rule, score) :
+        # if rule == None : rule = self.newRule()
+        # 
+        # evaluated = [] # discard COVERED examples
+        # for p, ph, example in self.NOT_COVERED :
+        #     b = rule.evaluate(self.data, self.data[example])
+        #     evaluated.append( (p, b, example ) )
+        #     
+        #self.score = self.score.extend(evaluated)
         self.rules.append(rule)
-        self.score = self.score.extend(evaluated)
+        self.score = score
 
     def popRule(self) :
         self.score = self.score.parent
