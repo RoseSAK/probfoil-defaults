@@ -183,32 +183,6 @@ class FactDB(object) :
                 used_facts[ literal.identifier ] |= result_maybe
             return [ (probs[i] == 1, values[i]) for i in result_maybe | result_exact ]
         
-    # def ground_fact(self, name, args) :
-    #     if name.startswith('\+') :
-    #         negated = True
-    #         name = strip_negation(name)
-    #     else :
-    #         negated = False
-    # 
-    #     arity = len(args)
-    #     identifier = (name, arity)
-    #     
-    #     index, values, types, probs = self.predicates[identifier]
-    #     
-    #     result = set(range(0, len(values))) 
-    #     for i,arg in enumerate(args) :
-    #         if not is_var(arg) :
-    #             result &= index[i][arg]
-    #         if not result : break        
-    #             
-    #     if negated :
-    #         if len(result) == 0 :
-    #             return [ args ]
-    #         else :
-    #             return []
-    #     else :
-    #         return [ values[i] for i in result ]
-
     def find_fact(self, name, args) :
         if name.startswith('\+') :
            # raise NotImplementedError("No support for negative literals yet!")
@@ -269,21 +243,6 @@ class FactDB(object) :
     def query_single(self, literals, substitution) :
         return true(self.query(literals, substitution))
 
-    # def ground(self, literals, substitution, facts_used=None) :
-    #     if not literals :  # reached end of query
-    #         yield substitution
-    #     else :
-    #         head, tail = literals[0], literals[1:]
-    #         head_ground = head.assign(substitution)     # assign known variables
-    #         
-    #         for match in self.ground_fact(head_ground.functor, head_ground.args) :
-    #             # find match for head
-    #             new_substitution = dict(substitution)
-    #             new_substitution.update( head_ground.unify( match ) )
-    #             for sol in self.query(tail, new_substitution, facts_used) :
-    #                 yield sol        
-
-
     def query(self, literals, substitution, facts_used=None) :
         if not literals :  # reached end of query
             yield substitution, []
@@ -327,21 +286,30 @@ class FactDB(object) :
         return self.prolog_file                
 
 class Rule(object) :
+    """Class representing a learned rule.
     
-    def __init__(self, head, body=[], tmp=False) :
+    It has the following parts:
+        - head  - the head literal
+        - body  - a list of body literals
+        
+        - score - scoring statistics in its current context (data and hypothesis)
+    """
+    
+    variables = property(lambda s : s._get_varinfo()[0])
+    varnames = property(lambda s : s._get_varinfo()[1])
+
+    def __init__(self, head, body, score) :
         self.head = head
         self.body = body
-        
-        if not tmp :
-            self.variables, self.varnames = self.extract_variables([self.head] + self.body)
-#        self.varcount = sum(map(len,self.variables))
-        
-    def evaluate(self, kb, example) :
-        subst = self.head.unify( example )
-        tv_body = kb.query_single(self.body, subst)
-        return tv_body
+        self.varinfo = None
+        self.score = score
 
-    def ground_extensions(self, kb, examples, extensions) :
+    def _get_varinfo(self) :
+        if self.varinfo == None :
+            self.varinfo = self._extract_variables([self.head] + self.body)
+        return self.varinfo
+        
+    def _ground_extensions(self, kb, examples, extensions) :
         used_facts = defaultdict(set)
         new_clauses = []
         
@@ -349,18 +317,19 @@ class Rule(object) :
         queries = []
         
         for ex_id, example in enumerate(examples) :
-            literal_scores = self.ground_extensions_example(kb, ex_id, example, extensions, used_facts, new_clauses)
+            literal_scores = self._ground_extensions_example(kb, ex_id, example, extensions, used_facts, new_clauses)
             for lit_i, score in enumerate(literal_scores) :
                 if score == None :
                     queries.append(  (lit_i, ex_id, 'pfq_%s_%s' % (ex_id, lit_i)) )
-                else :
-                    # TODO score *= current_rule_score
-                    pass
+                elif score == 1.0 :  
+                    # literal is deterministically true, reuse rule score
+                    score = 1.0
+#                    score = self.score.covered[ex_id][1]
                 scores[lit_i].append(score)     
         
         return scores, used_facts, new_clauses, queries
 
-    def ground_extensions_example(self, kb, ex_id, example, extensions, used_facts, new_clauses) :
+    def _ground_extensions_example(self, kb, ex_id, example, extensions, used_facts, new_clauses) :
         subst = self.head.unify( example )
 
         literal_score = [ 0.0 ] * len(extensions)    # default 0
@@ -372,100 +341,16 @@ class Rule(object) :
                 for lit_val, lit_new in kb.query([lit],body_vars, used_facts) :
                     if old_clause + lit_new :   # TODO remove old_clause and reuse old score
                         # probabilistic query
-                        new_clauses.append( Rule( Literal(kb, head, []), old_clause + lit_new , True) )
+                        new_clauses.append( Rule( Literal(kb, head, []), old_clause + lit_new , None ) )
                         literal_score[lit_i] = None  # probabilistic
                     else :
                         # non-probabilistic => p = 1.0
                         literal_score[lit_i] = 1.0    # deterministically true
         return literal_score
-
-    def evaluate_extensions_non_prob(self, kb, examples, extensions) :
-        scores = [ [] for ext in extensions ]
-        used_facts = defaultdict(set)
-        new_clauses = []
-        for example in examples :
-            next_example = False
-            subst = self.head.unify( example )
-            ground_head = self.head.assign(subst)
-            tv_body = [ False ] * len(extensions)
-            n_false = len(tv_body)
-            for body_vars, new_clause in kb.query(self.body, subst, used_facts) :
-                for lit_i, lit in enumerate(extensions) :
-                    if tv_body[lit_i] == False :
-                        lit_val = kb.query_single([lit],body_vars)
-                        if lit_val :
-                            tv_body[lit_i] = lit_val
-                            n_false -= 1
-                            if n_false == 0 :
-                                next_example = True
-                                break
-                if next_example :
-                    break
-                if new_clause :
-                    new_clause.append( ( ground_head, new_clause) )
-            for lit_i, lit in enumerate(extensions) :
-                scores[lit_i].append(tv_body[lit_i])
-        return zip(extensions, scores)
         
-    def evaluate_extensions_prob(self, kb, examples, extensions) :
-        if extensions :
-            outfile = open('/tmp/pfprob.pl','w')
-            
-            # 1) Write out data
-            datafile = kb.toPrologFile()
-            print(":- consult('%s')." % (datafile), file=outfile)
-            
-            # 2) Write out current clause as Prolog clause
-            old_head = Literal(kb, 'pf_current_rule', self.varnames)
-            old_body = self.body
-            old_rule = Rule(old_head, old_body, True)
-            
-            print(old_rule, file=outfile)
-            
-            new_rules = []
-            queries = []
-            for lit_id, ext in enumerate(extensions) :
-                new_head = Literal(kb, 'pf_new_rule_' + str(lit_id), self.head.args)
-                new_body = [ old_head, ext ]
-                new_rule = Rule(new_head, new_body, True)
-
-                print(new_rule, file=outfile)
-                for ex_id, example in enumerate(examples) :
-                    subst = self.head.unify( example )
-                    queries.append( ( ext, ex_id, new_head.assign(subst) ) )
-
-            # 3) Write out queries
-            for ext, ex_id, atom in queries :
-                print('query(%s).' % (atom,), file=outfile)
-                         
-#            raise NotImplementedError('call ProbLog here...')
-            # 4) Call ProbLog
-            
-            import problog
-            
-            engine = problog.ProbLogEngine.create([])
-            logger = problog.Logger(False)
-            dir_out = '/tmp/pf/'
-            with problog.WorkEnv(dir_out,logger, persistent=problog.WorkEnv.ALWAYS_KEEP) as env :
-                probs = engine.execute(outfile, env) # TODO call problog
-            
-            print(probs)
-            
-            # 5) Read out probabilities and return for each literal (lit, [ example scores ]) 
-            score_list = []
-            prev_ext = None
-            for ext, ex_id, atom in queries :
-                p = probs.get(atom, False)
-                if prev_ext != None and prev_ext != ext :
-                    yield prev_ext, score_list
-                    score_list = []
-                prev_ext = ext
-                score_list.append(p)
-            yield prev_ext, score_list
-        else :
-            pass # return nothing
-
-    def callProbLog( self, kb, scores, used_facts, clauses, queries ) :
+    def _callProbLog( self, kb, scores, used_facts, clauses, queries ) :
+        
+        print('Calling problog', len(queries))
         
         outfile = '/tmp/pf.pl'
         with open(outfile, 'w') as out :
@@ -473,7 +358,6 @@ class Rule(object) :
             print('\n'.join( map(str,clauses)), file=out)            
             for l,e,q in queries :
                 print('query(%s).' % q, file=out)
-        
         
         import problog
         engine = problog.ProbLogEngine.create([])
@@ -488,29 +372,14 @@ class Rule(object) :
        # return scores
 
     def evaluate_extensions(self, kb, examples, extensions) :
-        scores, used_facts, clauses, queries = self.ground_extensions(kb, examples, extensions )         
-#        scores, used_facts, clauses, queries = self.ground_extensions(kb, examples, [ Literal(kb, 'parent', 'AB')] )
-    
-        self.callProbLog(kb, scores, used_facts, clauses, queries)
+        scores, used_facts, clauses, queries = self._ground_extensions(kb, examples, extensions )         
+        
+        if queries :
+            self._callProbLog(kb, scores, used_facts, clauses, queries)
         
         return zip(extensions,scores)
-                # 
-        # 
-        # prob = []
-        # nonprob = []
-        # for ext in extensions :
-        #     if self.body and kb.is_probabilistic(ext) :
-        #         nonprob.append(ext)
-        #     else :
-        #         nonprob.append(ext)
-        #         # if self.body :
-        #         #      prob.append(ext)
-        #             
-        # from itertools import chain
-        # # TODO this reorders extensions !!!
-        # return chain(self.evaluate_extensions_non_prob(kb, examples, nonprob), self.evaluate_extensions_prob(kb, examples, prob))
         
-    def extract_variables(self, literals) :
+    def _extract_variables(self, literals) :
         names = set([])
         result = defaultdict(set)
         for lit in literals :
@@ -551,8 +420,8 @@ class Rule(object) :
     def refine(self, kb, update=False) :
         if update :
             if not self.body : return
-            d, old_vars = self.extract_variables([self.head] + self.body[:-1])
-            d, new_vars = self.extract_variables([self.body[-1]])
+            d, old_vars = self._extract_variables([self.head] + self.body[:-1])
+            d, new_vars = self._extract_variables([self.body[-1]])
             use_vars = new_vars - old_vars
             if not use_vars : return
             #use_vars = None
@@ -579,30 +448,11 @@ class Rule(object) :
         else :
             return str(self.head) + '.'
         
-    def __add__(self, lit) :
-        return Rule(self.head, self.body + [lit])
-        
     def __len__(self) :
         return len(self.body)
         
     def countNegated(self) :
-        return sum( b.isNegated() for b in self.body )
-        
-    def __cmp__(self, other) :
-        if other == None :
-            return 1
-        elif len(self) > len(other) :
-            return -1
-        elif len(self) < len(other) :
-            return 1
-        elif self.countNegated() < other.countNegated() :
-            return 1
-        elif self.countNegated() > other.countNegated() :
-            return -1
-        else :
-            return 0
-
-
+        return sum( b.isNegated() for b in self.body )    
 
 def read_file(filename, idtypes=[]) :
 

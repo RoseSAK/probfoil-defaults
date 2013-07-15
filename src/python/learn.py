@@ -7,6 +7,8 @@ import time, sys
 
 from util import Timer, Log, Beam
 
+from prolog import Rule
+
 SettingsType = namedtuple('Settings', ['BEAM_SIZE', 'M_ESTIMATE_M', 'EQUIV_CHECK'] )
 SETTINGS = SettingsType(5,10,False)     # TODO fix equiv_check for python 3
 
@@ -25,10 +27,10 @@ def learn(H) :
       with Log('learn_rule'):
             
         # Find best clause that refines this hypothesis
-        rule, score = best_clause( H )
+        rule = best_clause( H )
 
         # Add the clause to the hypothesis (updates score)
-        H.pushRule(rule, score)        
+        H.pushRule(rule, rule.score)        
 
         # Retrieve the score for the new hypothesis
         score_nH = H.score.globalScore
@@ -60,7 +62,7 @@ def best_clause( H ) :
     refinements = [ (0,r) for r in rule.refine(H.data) ]
     
     # Add clause to beam (with empty score)
-    beam.push( rule, refinements , H.default_score() )
+    beam.push( rule, refinements )
 
     it=0
 
@@ -75,7 +77,7 @@ def best_clause( H ) :
           with Log('refining', rule=rule, score=score) :
               
             # Add current rule to beam and mark it as tested (refinements=None)
-            new_beam.push( rule, None, score )
+            new_beam.push( rule, None )
             
             # Add the current rule to the hypothesis (updates scores)
             H.pushRule(rule, score)
@@ -89,9 +91,10 @@ def best_clause( H ) :
             # Add rules to new beam (new_refs are ordered by score, descending)
             for i, score_ref in enumerate(new_refs) :
                 new_score, ref = score_ref
+                new_rule = Rule(rule.head, rule.body + [ref], new_score)
                 if new_score.FP == 0 and new_score.FN == 0 :
-                    return rule + ref, new_score   # we found a rule with maximal score => no better rule can be found
-                if (not score == None and new_score <= score) or not new_beam.push( rule + ref, new_refs[i+1:], new_score ) : # was new_refs[i+1:]
+                    return new_rule   # we found a rule with maximal score => no better rule can be found
+                if (not score == None and new_score <= score) or not new_beam.push( new_rule , new_refs[i+1:] ) : # was new_refs[i+1:]
                     break  # current ref does not have high enough score -> next ones will also fail
 
         # Use new beam in next iteration
@@ -245,13 +248,6 @@ class Score(object) :
             return False
         else :
             return self.localScore <= other.localScore
-
-        
-    # def __cmp__(self, other) :
-    #     if other :
-    #         return cmp(self.localScore, other.localScore)
-    #     else :
-    #         return 1
             
     def extend(self, evaluated) :
         return Score(evaluated, self)
@@ -295,6 +291,7 @@ class Hypothesis(object) :
         #     
         #self.score = self.score.extend(evaluated)
         self.rules.append(rule)
+        score.parent = self.score
         self.score = score
 
     def popRule(self) :
@@ -324,7 +321,7 @@ class Hypothesis(object) :
         return self.score.parent.extend(evaluated)
                 
     def newRule(self) :
-        return self.Rule(self.target)
+        return self.Rule(self.target, [], self.default_score())  # classify all as positive
         
     def __str__(self) :
         return '\n'.join(map(str,self.rules))        

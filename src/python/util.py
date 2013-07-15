@@ -69,7 +69,8 @@ class Beam(object) :
     def __iter__(self) :
         return iter(self.content)
         
-    def push(self, obj, active, score) :
+    def push(self, obj, active) :
+        score = obj.score
         if len(self.content) == self.size and score < self.content[-1][0] : return False
         
         is_last = True
