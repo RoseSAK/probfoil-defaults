@@ -316,15 +316,18 @@ class Rule(object) :
         scores = [ [] for ext in extensions ]
         queries = []
         
-        for ex_id, example in enumerate(examples) :
-            literal_scores = self._ground_extensions_example(kb, ex_id, example, extensions, used_facts, new_clauses)
+        for ex_i, example in enumerate(examples) :
+            p, ph, ex_id = example
+            literal_scores = self._ground_extensions_example(kb, ex_id, kb[ex_id], extensions, used_facts, new_clauses)
             for lit_i, score in enumerate(literal_scores) :
                 if score == None :
-                    queries.append(  (lit_i, ex_id, 'pfq_%s_%s' % (ex_id, lit_i)) )
-                elif score == 1.0 :  
+                    queries.append(  (lit_i, ex_i, 'pfq_%s_%s' % (ex_id, lit_i)) )
+                elif score == 1.0 :
                     # literal is deterministically true, reuse rule score
                     #score = 1.0
-                    score = self.score.covered[ex_id][1]
+                    my_score = ph
+#                    print ('REUSING:', my_score)
+                    score = my_score
                 scores[lit_i].append(score)     
         
         return scores, used_facts, new_clauses, queries

@@ -303,23 +303,12 @@ class Hypothesis(object) :
         
         scores, _dummy, ex_ids = zip(*self.COVERED)
         
-        evaluated = current_rule.evaluate_extensions(self.data, [ self.data[ex] for ex in ex_ids ], literals)
+        evaluated = current_rule.evaluate_extensions(self.data, self.COVERED , literals)
         
         from itertools import chain
         for lit, new_scores in evaluated :
             yield self.score.parent.extend( chain(self.NOT_COVERED, zip(scores, new_scores, ex_ids)) ), lit        
-        
-    def testLiteral(self, literal) :
-        current_rule = self.rules[-1]
-        
-        new_rule = current_rule + literal
-
-        evaluated = self.NOT_COVERED[:]
-        for p, ph, ex in self.COVERED :
-            b = new_rule.evaluate(self.data, self.data[ex])
-            evaluated.append( (p, b, ex ) )
-        return self.score.parent.extend(evaluated)
-                
+                        
     def newRule(self) :
         return self.Rule(self.target, [], self.default_score())  # classify all as positive
         
