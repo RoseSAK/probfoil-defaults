@@ -326,7 +326,7 @@ class Rule(object) :
                     # literal is deterministically true, reuse rule score
                     #score = 1.0
                     my_score = ph
-#                    print ('REUSING:', my_score)
+                    print ('REUSING:', my_score)
                     score = my_score
                 scores[lit_i].append(score)     
         
