@@ -28,7 +28,7 @@ class Literal(object) :
         self.args = args
         self.kb = kb
     
-    identifier = property(lambda s : (s.functor, len(s.args) ) )
+    identifier = property(lambda s : (strip_negation(s.functor), len(s.args) ) )
                 
     def __str__(self) :
         return '%s(%s)' % (self.functor, ','.join(self.args))
@@ -143,32 +143,68 @@ class FactDB(object) :
     def argtypes(self, name, arity) :
         identifier = (name, arity)
         return self.predicates[identifier][2]
+      
+    def ground_fact(self, literal, used_facts=None) :
         
-    def ground_fact(self, name, args) :
-        if name.startswith('\+') :
-            negated = True
-            name = strip_negation(name)
-        else :
-            negated = False
-
-        arity = len(args)
-        identifier = (name, arity)
+        index, values, types, probs = self.predicates[ literal.identifier ]
         
-        index, values, types, probs = self.predicates[identifier]
-        
+        # Initial result set = all literals for this predicate
         result = set(range(0, len(values))) 
+        
+        # Restrict set for each argument
         for i,arg in enumerate(args) :
             if not is_var(arg) :
                 result &= index[i][arg]
-            if not result : break        
-                
-        if negated :
-            if len(result) == 0 :
-                return [ args ]
+            if not result : break 
+        
+        result_maybe = set( i for i in result if 0 < prob[i] < 1 )
+        result_exact = result - result_maybe
+        
+        if literal.isNegated() :
+            if result_exact : 
+                # There are facts that are definitely true
+                return []   # Query fails
             else :
-                return []
+                # Query might succeed
+                if facts != None :
+                    # Add maybe facts to used_facts
+                    used_facts[ literal.identifier ] |= result_maybe
+                if result_maybe :
+                    is_det = False
+                else :
+                    is_det = True
+                return [ (is_det, args) ]
         else :
-            return [ values[i] for i in result ]
+            if facts != None :
+                # Add maybe facts to used_facts
+                used_facts[ literal.identifier ] |= result_maybe
+            return [ (probs[i] == 1, values[i]) for i in result_maybe | result_exact ]
+        
+    # def ground_fact(self, name, args) :
+    #     if name.startswith('\+') :
+    #         negated = True
+    #         name = strip_negation(name)
+    #     else :
+    #         negated = False
+    # 
+    #     arity = len(args)
+    #     identifier = (name, arity)
+    #     
+    #     index, values, types, probs = self.predicates[identifier]
+    #     
+    #     result = set(range(0, len(values))) 
+    #     for i,arg in enumerate(args) :
+    #         if not is_var(arg) :
+    #             result &= index[i][arg]
+    #         if not result : break        
+    #             
+    #     if negated :
+    #         if len(result) == 0 :
+    #             return [ args ]
+    #         else :
+    #             return []
+    #     else :
+    #         return [ values[i] for i in result ]
 
     def find_fact(self, name, args) :
         if name.startswith('\+') :
@@ -230,19 +266,36 @@ class FactDB(object) :
     def query_single(self, literals, substitution) :
         return true(self.query(literals, substitution))
 
-    def query(self, literals, substitution) :
+    # def ground(self, literals, substitution, facts_used=None) :
+    #     if not literals :  # reached end of query
+    #         yield substitution
+    #     else :
+    #         head, tail = literals[0], literals[1:]
+    #         head_ground = head.assign(substitution)     # assign known variables
+    #         
+    #         for match in self.ground_fact(head_ground.functor, head_ground.args) :
+    #             # find match for head
+    #             new_substitution = dict(substitution)
+    #             new_substitution.update( head_ground.unify( match ) )
+    #             for sol in self.query(tail, new_substitution, facts_used) :
+    #                 yield sol        
+
+
+
+    def query(self, literals, substitution, facts_used=None) :
         if not literals :  # reached end of query
             yield substitution
         else :
             head, tail = literals[0], literals[1:]
             head_ground = head.assign(substitution)     # assign known variables
             
-            for match in self.ground_fact(head_ground.functor, head_ground.args) :
+            for prob, match in self.ground_fact(head_ground.functor, head_ground.args, facts_used) :
                 # find match for head
                 new_substitution = dict(substitution)
                 new_substitution.update( head_ground.unify( match ) )
-                for sol in self.query(tail, new_substitution) :
-                    yield sol
+                for sol in self.query(tail, new_substitution, facts_used) :
+                    yield sol        
+        
                     
     def toPrologFile(self) :
         if self.prolog_file == None :
