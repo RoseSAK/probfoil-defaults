@@ -35,7 +35,7 @@ def learn(H) :
 
         # Log progress
         Log('rule_found', rule=rule, score=H.score).logline()
-        Log('stopping_criterion', old_score=score_H, new_score=score_nH).logline()
+        Log('stopping_criterion', old_score=score_H, new_score=score_nH, full_score=H.score).logline()
 
         # Check stopping criterion
         if (score_H >= score_nH) :
