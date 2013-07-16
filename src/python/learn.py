@@ -7,7 +7,7 @@ import time, sys
 
 from util import Timer, Log, Beam
 
-from prolog import Rule
+from prolog import Rule, Literal
 
 SettingsType = namedtuple('Settings', ['BEAM_SIZE', 'M_ESTIMATE_M', 'EQUIV_CHECK'] )
 SETTINGS = SettingsType(5,10,False)     # TODO fix equiv_check for python 3
@@ -36,8 +36,10 @@ def learn(H) :
         score_nH = H.score.globalScore
 
         # Log progress
-        Log('rule_found', rule=rule, score=H.score).logline()
-        Log('stopping_criterion', old_score=score_H, new_score=score_nH, full_score=H.score).logline()
+        with Log('rule_found', rule=rule, score=H.score) : 
+            pass
+        with Log('stopping_criterion', old_score=score_H, new_score=score_nH, full_score=H.score) : 
+            pass
 
         # Check stopping criterion
         if (score_H >= score_nH) :
@@ -101,7 +103,8 @@ def best_clause( H ) :
         beam = new_beam
         
         # Write beam to log
-        Log('beam').logXML(beam.toXML())
+        with Log('beam', _child=beam.toXML()) :
+            pass
 
     # Return head of beam.
     return beam.content[0][1]
@@ -114,15 +117,14 @@ def update_refinements(H, refine) :
     new_refine = [ (0,r) for r in H.refine(update=True) ]
     
     # Log
-    Log('refinements', current='|'.join(map(lambda s : str(s[1]), refine)), new='|'.join(map(lambda s : str(s[1]), new_refine))).logline()
+    with Log('refinements', current='|'.join(map(lambda s : str(s[1]), refine)), new='|'.join(map(lambda s : str(s[1]), new_refine))) : 
+        pass
 
     # Add new refinements
     refine += new_refine
     
     # Update scores for all literals in batch
     new_scores = list(reversed(sorted(H.testLiterals([ lt for sc, lt in refine ]))))
-    
-    Log('new_scores', scores=new_scores).logline()
     
     # Reject / accept literals based on a local stopping criterion
     result = []
@@ -135,19 +137,22 @@ def update_refinements(H, refine) :
             # true negatives should be up because of this LITERAL (adding literals increases this)
             # true positives should be up because of this RULE (adding literals decreases this)
             # current_score = score_func(new_score)
-            Log('accepted', literal=lit, tn_change=new_score.TN - H.score.TN , tp_change=new_score.TP - new_score.parent.TP, score=new_score ).logline()
+            with Log('accepted', literal=lit, tn_change=new_score.TN - H.score.TN , tp_change=new_score.TP - new_score.parent.TP, score=new_score ) : 
+                pass
             
             # Check whether this literal is equivalent to previous (covers exactly the same examples with the same score)
             if SETTINGS.EQUIV_CHECK and result and result[-1][0] == new_score :
                 worst, best = sorted( (result[-1][1], lit) )
                 result[-1] = new_score, best
-                Log('equivalent_literal', best=best, worst=worst).logline()
+                with Log('equivalent_literal', best=best, worst=worst) : 
+                    pass
             else :
                 result.append( (new_score, lit) )
         else :
             # literal doesn't cover true positives or it doesn't eliminate false positives
             # TODO what if it introduces a new variable?
-            Log('rejected', literal=lit, tn_change=new_score.TN - H.score.TN , tp_change=new_score.TP - new_score.parent.TP, score=new_score ).logline()
+            with Log('rejected', literal=lit, tn_change=new_score.TN - H.score.TN , tp_change=new_score.TP - new_score.parent.TP, score=new_score ) : 
+                pass
         
     return result
 
@@ -262,7 +267,7 @@ class Hypothesis(object) :
         
         examples = []
         for ex in self.data :
-            hP = self.data.find_fact(self.target.functor, self.data[ex])
+            hP = self.data.find_fact( Literal(data, self.target.functor, self.data[ex] ) )
             examples.append( ( hP, 0, ex ) )
         examples = sorted(examples)
         self.score = ScoreType(examples)
@@ -282,14 +287,6 @@ class Hypothesis(object) :
         return self.rules[-1].refine(self.data, update)
         
     def pushRule(self, rule, score) :
-        # if rule == None : rule = self.newRule()
-        # 
-        # evaluated = [] # discard COVERED examples
-        # for p, ph, example in self.NOT_COVERED :
-        #     b = rule.evaluate(self.data, self.data[example])
-        #     evaluated.append( (p, b, example ) )
-        #     
-        #self.score = self.score.extend(evaluated)
         self.rules.append(rule)
         score.parent = self.score
         self.score = score
@@ -303,7 +300,7 @@ class Hypothesis(object) :
         
         scores, _dummy, ex_ids = zip(*self.COVERED)
         
-        evaluated = current_rule.evaluate_extensions(self.data, self.COVERED , literals)
+        evaluated = current_rule.evaluate_extensions(self, self.COVERED , literals)
         
         from itertools import chain
         for lit, new_scores in evaluated :

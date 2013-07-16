@@ -8,12 +8,18 @@ class Log(object) :
     
     LOG_FILE=sys.stderr
     
-    def __init__(self, tag, file=None, **atts) :
+    def __init__(self, tag, file=None, _child=None, _timer=False, **atts) :
         if file == None :
             file = Log.LOG_FILE
         self.tag = tag
         self.atts = atts
         self.file = file
+        self._child = _child
+        if _timer :
+            self._timer = time.time()            
+        else :
+            self._timer = None
+
     
     def get_attr_str(self, atts=None) :
         string = ''
@@ -23,23 +29,17 @@ class Log(object) :
             #    v = v()
             string += '%s="%s" ' % (k, v)
         return string
-    
-    def logline(self) :
-        if self.file :
-            print('<%s %s/>' % (self.tag, self.get_attr_str()), file=self.file)
-            
-    def logXML(self, xml) :
-        with self :
-            if self.file :
-                print(xml, file=self.file)
-    
+                    
     def __enter__(self) :
         if self.file :
             print('<%s %s>' % (self.tag, self.get_attr_str()), file=self.file)
+            if self._child != None : print(self._child, file=self.file)
         return self
         
     def __exit__(self, *args) :
         if self.file :
+            if self._timer != None :
+                print('<runtime time="%.5f"/>' % (time.time() - self._timer), file=self.file )
             print('</%s>' % (self.tag,), file=self.file)
             
 class Timer(object) :
