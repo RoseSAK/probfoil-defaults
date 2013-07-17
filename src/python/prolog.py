@@ -404,7 +404,7 @@ class QueryPack(object) :
         for l,e,q,b in queries :
             p = probs[q]
             scores[l][e] = p
-            #self.query_cache[b] = p
+            self.query_cache[b] = p
  
          
 class Query(object) :
@@ -479,14 +479,17 @@ class Rule(object) :
         
         for ex_i, example in enumerate(examples) :
             p, ph, ex_id = example
+            
             subst = self.head.unify( kb[ex_id] )
+            
+            with Log('example', example=kb[ex_id], exid=ex_id, exi = ex_i) :
+                pass
             
             previous_query = Query(ex_i, None)
             previous_rules = H.rules[:-1]
             for prev_rule in previous_rules :
                 for body_vars, old_clause in kb.query(prev_rule.body, subst, queries.used_facts) :
                     previous_query += old_clause
-            if previous_rules : print (previous_query.clauses, kb[ex_id])
         
             literal_scores = self._ground_extensions_example(kb, ex_i, ph, subst, extensions, queries, previous_query)
             for lit_i, score in enumerate(literal_scores) :
@@ -496,7 +499,6 @@ class Rule(object) :
 
     def _ground_extensions_example(self, kb, ex_id, ph, subst, extensions, queries, previous_query) :
         
-
         literal_score = [ 0.0 ] * len(extensions)    # default 0
         literal_ext = []
 
@@ -525,7 +527,7 @@ class Rule(object) :
                 current_literal_restricts = True
                 new_query = Query(ex_id, lit_i)
                 for lit_val, lit_new in kb.query([lit],body_vars, queries.used_facts) :
-                    current_literal_restricts = False
+                    
                                         
                     if old_clause + lit_new : 
                         # probabilistic query
@@ -534,8 +536,10 @@ class Rule(object) :
                             valid = old_rule.valid_extension(lit_new[0])
                         
                         if valid == -1 :    # new literal is negation of another literal in the body
+                            #print(old_rule, lit_new, literal_query[lit_i].clauses)
                             pass    # clause = False
                         else :
+                            current_literal_restricts = False
                             if valid == 1 :
                                 lit_new = []
                                 # we remove the new literal => ALL other clauses for this literal are subsumed !
@@ -545,6 +549,7 @@ class Rule(object) :
                                 literal_score[lit_i] = None  # probabilistic
                             literal_query[lit_i] += (old_clause + lit_new)
                     else :
+                        current_literal_restricts = False
                         # non-probabilistic => p = 1.0
                         literal_score[lit_i] = 1.0    # deterministically true
                 literal_restricts[ lit_i ] |= current_literal_restricts

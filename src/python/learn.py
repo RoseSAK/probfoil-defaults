@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 from collections import namedtuple
+from functools import total_ordering
 import time, sys
 
 from util import Timer, Log, Beam
@@ -156,6 +157,7 @@ def update_refinements(H, refine) :
         
     return result
 
+@total_ordering     # makes objects comparable from __lt__ and __eq__
 class Score(object) :
     
     def __init__(self, predictions, parent=None) :
@@ -172,13 +174,29 @@ class Score(object) :
         # Examples covered by previous clauses are eliminated,
         # so we should keep statistics of positive predictions of these previous rules.
         if parent :
-            self.TP = parent.TP
-            self.FP = parent.FP
+            for p, ph, example_id in self.parent.covered :
+                # note: ph == 1
+                n = 1-p     
+                nh = 1-ph   # == 0
+                tp = min(p,ph)  # == p
+                tn = min(n,nh) # == 0
+                fp = n - tn   # == n  
+                fn = p - tp     # == 0
+            
+                self.TP += tp
+                #self.TN += tn
+                self.FP += fp
+                #self.FN += fn
+                
+            
+            #self.TP = parent.TP
+            #self.FP = parent.FP
             self.P = parent.P
             self.N = parent.N
         
         self.covered = []
         self.not_covered = []
+        self.partially_covered = []
         
         for p, ph, example_id in predictions :
             n = 1-p
@@ -197,13 +215,16 @@ class Score(object) :
                 self.N += n
             if ph == 0.0 :
                 self.not_covered.append( (p, ph, example_id) )
-            else :
+            elif ph == 1.0 :
                 self.covered.append( (p, ph, example_id) ) 
+            else :
+                self.partially_covered.append( (p, ph, example_id) ) 
 
         # Sort to make scores fully comparable
         if SETTINGS.EQUIV_CHECK :
             self.covered = sorted(self.covered)
             self.not_covered = sorted(self.not_covered)
+            self.partially_covered = sorted(self.partially_covered)
                                     
     def _calc_local(self) :
         m = SETTINGS.M_ESTIMATE_M  
@@ -237,22 +258,16 @@ class Score(object) :
         return str(self.localScore)
         
     def __eq__(self, other) :
-        if other == None :
-            return False
-        else :
-            return self.localScore == other.localScore # and self.covered == other.covered
+        return other != None and self.localScore == other.localScore
         
     def __lt__(self, other) :
-        if other == None :
-            return False
-        else :
-            return self.localScore < other.localScore
+        return other != None and self.localScore < other.localScore
 
-    def __le__(self, other) :
-        if other == None :
-            return False
-        else :
-            return self.localScore <= other.localScore
+    # def __le__(self, other) :
+    #     if other == None :
+    #         return False
+    #     else :
+    #         return self.localScore <= other.localScore
             
     def extend(self, evaluated) :
         return Score(evaluated, self)
@@ -269,12 +284,13 @@ class Hypothesis(object) :
         for ex in self.data :
             hP = self.data.find_fact( Literal(data, self.target.functor, self.data[ex] ) )
             examples.append( ( hP, 0, ex ) )
+        #self.examples = sorted(examples)
         examples = sorted(examples)
         self.score = ScoreType(examples)
         
     def default_score(self) :
         examples = []
-        for hP, _, ex in self.NOT_COVERED :
+        for hP, _, ex in self.NOT_COVERED + self.PART_COVERED :
             #hP = self.data.find_fact(self.target.functor, self.data[ex])
             examples.append( ( hP, 1, ex ) )
         examples = sorted(examples)
@@ -282,6 +298,7 @@ class Hypothesis(object) :
                                     
     COVERED = property(lambda s : s.score.covered)
     NOT_COVERED = property(lambda s : s.score.not_covered)
+    PART_COVERED = property(lambda s : s.score.partially_covered)
 
     def refine(self, update=False) :
         return self.rules[-1].refine(self.data, update)
@@ -298,13 +315,25 @@ class Hypothesis(object) :
     def testLiterals(self, literals) :
         current_rule = self.rules[-1]
         
-        scores, _dummy, ex_ids = zip(*self.COVERED)
-        
-        evaluated = current_rule.evaluate_extensions(self, self.COVERED , literals)
+        scores, _dummy, ex_ids = zip(*(self.COVERED + self.PART_COVERED))
+        #scores, _dummy, ex_ids = zip(*self.examples)
+                    
+        evaluated = current_rule.evaluate_extensions(self, self.COVERED + self.PART_COVERED , literals)
+        #evaluated = current_rule.evaluate_extensions(self, self.examples , literals)
         
         from itertools import chain
         for lit, new_scores in evaluated :
-            yield self.score.parent.extend( chain(self.NOT_COVERED, zip(scores, new_scores, ex_ids)) ), lit        
+            
+            predictions = list(chain(self.NOT_COVERED, zip(scores, new_scores, ex_ids)))
+            
+            with Log('predictions', literal=lit, _child=predictions) :
+                pass
+            
+#            yield self.score.parent.extend( chain(zip(scores, new_scores, ex_ids)) ), lit        
+            res = self.score.parent.extend( predictions ), lit
+            with Log('new_score', score=res[0]) :
+                pass
+            yield res
                         
     def newRule(self) :
         return self.Rule(self.target, [], self.default_score())  # classify all as positive

@@ -6,11 +6,11 @@ modes(male(+)).
 base(female(person)).
 modes(female(+)).
 
-learn(mother(person,person)).
+%learn(mother(person,person)).
 base(mother(person,person)).
 %modes(mother(-,-)).
 
-learn(grandmother(person,person)).
+%learn(grandmother(person,person)).
 base(grandmother(person,person)).
 
 learn(father(person,person)).
@@ -26,17 +26,17 @@ base(female_ancestor(person,person)).
 % modes(female_ancestor(-,-)).
 
 
-father(bart, stijn).
-father(bart, pieter).
-father(luc, soetkin).
-father(willem, lieve).
-father(willem, katleen).
-father(rene, willem).
-father(rene, lucy).
-father(leon, rose).
-father(etienne, luc).
-father(etienne, an).
-father(prudent, esther).
+0.7::father(bart, stijn).
+0.9::father(bart, pieter).
+0.6::father(luc, soetkin).
+0.7::father(willem, lieve).
+0.8::father(willem, katleen).
+0.9::father(rene, willem).
+0.7::father(rene, lucy).
+0.8::father(leon, rose).
+0.8::father(etienne, luc).
+0.9::father(etienne, an).
+0.7::father(prudent, esther).
 
 mother(katleen, stijn).
 mother(katleen, pieter).
