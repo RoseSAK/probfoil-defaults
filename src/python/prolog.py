@@ -27,13 +27,16 @@ def test_fail(clause) :
         if -literal in clause[i+1:] :
             return True
     return False
+    
+def distinct_values(subst) :
+    return len(subst.values()) == len(set(subst.values())) 
 
 
 class Literal(object) :
     
     def __init__(self, kb, functor, args, sign=True) :
         self.functor = functor
-        self.args = args
+        self.args = list(args)
         self.sign = sign
         self.kb = kb
     
@@ -83,10 +86,16 @@ class Literal(object) :
         """Creates a new literal where the variables are assigned according to the given substitution."""
         return Literal(self.kb, self.functor, [ subst.get(arg, arg) for arg in self.args ], self.sign)
         
-    def variables(self) :
+    def get_vars(self, kb) :
+        return [ (arg, typ) for arg,typ in zip(self.args, kb.argtypes_l(self)) if is_var(arg) and not arg == '_' ]
+        
+        
+        
+    def variables(self, kb=None) :
         """Creates a dictionary of variables in the literal by variable type."""
+        if kb == None : kb = self.kb
         result = defaultdict(set)
-        types = self.kb.argtypes(strip_negation(self.functor), len(self.args))
+        types = kb.argtypes(strip_negation(self.functor), len(self.args))
         for tp, arg in zip(types, self.args) :
             if is_var(arg) and not arg == '_' :
                 result[tp].add(arg)
@@ -163,6 +172,9 @@ class FactDB(object) :
             self.types[types[i]].add(arg)
             index[i][arg].add(arg_index)
         #index[-1][tuple(arg)].add(arg_index)
+
+    def argtypes_l(self, literal) :
+        return self.predicates[literal.identifier][2]
             
     def argtypes(self, name, arity) :
         identifier = (name, arity)
@@ -255,7 +267,7 @@ class FactDB(object) :
     def query_single(self, literals, substitution) :
         return true(self.query(literals, substitution))
 
-    def query(self, literals, substitution, facts_used=None) :
+    def query(self, literals, substitution, facts_used=None, distinct=False) :
         if not literals :  # reached end of query
             yield substitution, []
         else :
@@ -266,6 +278,10 @@ class FactDB(object) :
                 # find match for head
                 new_substitution = dict(substitution)
                 new_substitution.update( head_ground.unify( match ) )
+                
+                if distinct and not distinct_values(new_substitution) :
+                    continue
+                    
                 if is_det :
                     my_lit = []
                 else :
@@ -593,7 +609,7 @@ class Rule(object) :
                 yield var
         if arg_mode == '-' and positive :
             defined_vars.append(True)
-            yield kb.newVar()
+            yield '#'
             defined_vars.pop(-1)
         if arg_mode == 'c' :
             if positive :
@@ -610,7 +626,10 @@ class Rule(object) :
                 else :
                     use_vars1 = use_vars 
                 for argN in self._build_refine(kb, positive, arg_info[1:], defined_vars, use_vars1) :
-                    yield [arg0] + argN
+                    if arg0 == '#' :
+                        yield [kb.newVar()] + argN
+                    else :
+                        yield [arg0] + argN
         else :
             if use_vars == None :
                 yield []

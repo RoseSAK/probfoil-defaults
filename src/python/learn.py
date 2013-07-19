@@ -262,12 +262,6 @@ class Score(object) :
         
     def __lt__(self, other) :
         return other != None and self.localScore < other.localScore
-
-    # def __le__(self, other) :
-    #     if other == None :
-    #         return False
-    #     else :
-    #         return self.localScore <= other.localScore
             
     def extend(self, evaluated) :
         return Score(evaluated, self)

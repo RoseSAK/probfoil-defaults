@@ -6,11 +6,11 @@ modes(male(+)).
 base(female(person)).
 modes(female(+)).
 
-%learn(mother(person,person)).
+learn(mother(person,person)).
 base(mother(person,person)).
 %modes(mother(-,-)).
 
-%learn(grandmother(person,person)).
+learn(grandmother(person,person)).
 base(grandmother(person,person)).
 
 learn(father(person,person)).
