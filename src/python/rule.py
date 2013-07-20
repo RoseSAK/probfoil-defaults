@@ -8,6 +8,8 @@ from functools import total_ordering
 
 from util import Log, Timer
 
+import problog
+
 import os, sys
 
 SettingsType = namedtuple('Settings', ['BEAM_SIZE', 'M_ESTIMATE_M', 'EQUIV_CHECK'] )
@@ -31,13 +33,13 @@ def learn(H) :
             
         # Find best clause that refines this hypothesis
         new_H = best_clause( H )
-
+        
         # Log progress
         with Log('rule_found', rule=new_H, score=new_H.score) : 
             pass
         with Log('stopping_criterion', old_score=H.globalScore, new_score=new_H.globalScore, full_score=new_H.score) : 
             pass
-
+        
         # Check stopping criterion
         if (H.globalScore >= new_H.globalScore) :
             # Clause does not improve hypothesis => remove it and stop
@@ -61,13 +63,10 @@ def best_clause( current_rule ) :
     
     # Add clause to beam (with empty score)
     beam.push( rule, refinements )
-
-    it=0
-
+    
     # While there are untested refinements in the beam.
     while beam.has_active() :
-      it += 1
-      with Log('iteration', index=it) :
+      with Log('iteration') :
           
         # Create the next beam
         new_beam = beam.create()
@@ -87,7 +86,7 @@ def best_clause( current_rule ) :
                     return new_rule   # we found a rule with maximal score => no better rule can be found
                 if (not score == None and new_rule <= score) or not new_beam.push( new_rule , new_refs[i+1:] ) : # was new_refs[i+1:]
                     break  # current ref does not have high enough score -> next ones will also fail
-
+            
         # Use new beam in next iteration
         beam = new_beam
         
@@ -95,7 +94,7 @@ def best_clause( current_rule ) :
         # # Write beam to log
         with Log('beam', _child=beam.toXML()) :
             pass
-
+    
     # Return head of beam.
     return beam.content[0][1]
 
@@ -105,7 +104,7 @@ def update_refinements( rule, refine) :
     
     # Calculate new refinements in case a variable was added by the previous literal
     new_refine = list(rule.refine(update=True))
-  
+    
     # Add new refinements
     refine += new_refine
     
@@ -123,7 +122,7 @@ def update_refinements( rule, refine) :
         # H.score = score of hypothesis with rule but without literal
         # H.score.parent = new_score.parent = score of hypothesis without rule
         # new_score = score of hypothesis with rule and literal
-
+        
         if new_score.TN > parent_score.TN and new_score.TP > prev_score.TP :
             # true negatives should be up because of this LITERAL (adding literals increases this)
             # true positives should be up because of this RULE (adding literals decreases this)
@@ -137,18 +136,16 @@ def update_refinements( rule, refine) :
             # # TODO what if it introduces a new variable?
             with Log('rejected', literal=r.literal, score=r.score, localScore=r.localScore ) : 
                  pass
-
+    
     return result
-
 
 ##############################################################################
 ###                          RULES AND EXTENSIONS                          ###
 ##############################################################################
 
-
 @total_ordering
 class Rule(object) :
-
+    
     # literal   (Literal)               => current literal
     # parent    (Rule)                  => parent rule (i.e. without current literal)
     # previous  (Rule)                  => previous rule in the ruleset
@@ -160,7 +157,7 @@ class Rule(object) :
         self.parent = parent
         self.literal = literal
         self._score = None
-
+    
         if parent :
             self.previous = parent.previous
             self.kb = parent.kb
@@ -169,32 +166,33 @@ class Rule(object) :
             old_vars = parent.variables
         else :
             old_vars = set([])
-
+        
         self._evaluation_cache = None
-
+        
         current_vars = set(literal.get_vars(self.kb))
         self._all_vars = old_vars | current_vars
         self._new_vars = current_vars - old_vars
-
-    variables = property(lambda self : self._all_vars)
-    language = property(lambda self : Language(self.kb) )
-    score = property(lambda self: self._get_score())
-    localScore = property(lambda self: self._calc_local())
-    globalScore = property(lambda self: self.score.accuracy())
-
+    
+    
     def _calc_local(self) :
         m = 10  # TODO eliminate magic constant
         m_estimate_c = self.score.m_estimate(m)
         m_estimate_p = self.previous.score.m_estimate(m)
         return m_estimate_c - m_estimate_p
-
+    
     def _get_score(self) :
         if self._score == None :
             predict = [ x[0] for x in self.evaluate() ]
             correct = [ x[0] for x in self.examples]
             self._score = Score(correct, predict)
         return self._score
-
+    
+    variables = property(lambda self : self._all_vars)
+    language = property(lambda self : Language(self.kb) )
+    score = property(_get_score)
+    localScore = property(_calc_local)
+    globalScore = property(lambda self: self.score.accuracy())
+    
     def _toString(self) :
         parent_string, parent_sep = self.parent._toString()
         return parent_string + parent_sep + str(self.literal), ', '
@@ -263,17 +261,18 @@ class Rule(object) :
         else :
             use_vars = None
         return [ literal for literal in self.language.refinements( self.variables, use_vars ) ]
-
-    def _update_scores(self, cache) :
-        
+    
+    def _update_scores(self, cache) : 
+      with Log('scoreupdate', rule=self)   :
         queries = QueryPack(self.kb)
         
         for ex, cache_ex in enumerate(cache) :
             score, clauses, used_facts = cache_ex
             if score == None :
                 # we need to call problog
-#                queries.update_used_facts(used_facts)
                 query = Query(ex)
+                query.update_used_facts(used_facts)
+                
                 previous_rules = [self.previous]
                 while previous_rules[-1] != None :
                     previous_rules.append( previous_rules[-1].previous )
@@ -285,19 +284,20 @@ class Rule(object) :
                         query += clause
                 for _v, clause in clauses :
                     query += clause
-
+                
                 queries += query
-            queries.update_used_facts(used_facts)
             
-        # scores = {}
-        # for qp in queries.split() :
-        #      scores_qp = qp.execute()
-        #      scores.update(scores_qp)
         scores = queries.execute()
         
         for ex in scores :
             score, current, used_facts = cache[ex]
             cache[ex] = scores[ex], current, used_facts
+            
+        # with Log( 'rulecache' ) :
+        #     for i, c in enumerate(cache) :
+        #         ex = self.examples[i]
+        #         with Log( 'entry', i=i, score=c[0], example=ex[1], example_score=ex[0]) :
+        #             pass
             
     def __len__(self) :
         if self.parent :
@@ -325,9 +325,9 @@ class Rule(object) :
         
 
 class RuleHead(Rule) :
-
+    
     # examples
-
+    
     def __init__(self, literal, previous) :
         self.previous = previous
         self.examples = previous.examples
@@ -337,14 +337,14 @@ class RuleHead(Rule) :
         
     def _toString(self) :
         return str(self.literal), ' :- '
-
+        
     def refine(self, update=False) :
         if update :
             return []
         else :
             return [ literal for literal in self.language.refinements( self.variables, None ) ]
         
-
+    
     def evaluate(self) :
         if self._evaluation_cache == None :
             self._evaluation_cache = [None] * len(self.examples)
@@ -431,7 +431,7 @@ class Language(object) :
                     yield val
             else :
                 yield '_'
-
+    
     def _build_refine(self, existing_variables, positive, arg_info, use_vars) :
         if arg_info :
             for arg0 in self._build_refine_one(existing_variables, positive, arg_info[0][0], arg_info[0][1]) :
@@ -512,6 +512,7 @@ class QueryPack(object) :
             self.__queries[key] = (query, [])
         
         self.__queries[key][1].append(val)
+        self.update_used_facts(query.used_facts)
         
     def __iadd__(self, query) :
         """Add a query."""
@@ -529,7 +530,7 @@ class QueryPack(object) :
         
     def __delitem__(self, key) :
         del self.__queries[key]
-
+        
     def facts(self) :
         result = set([])
         for queries in self.__queries.values() :
@@ -555,9 +556,6 @@ class QueryPack(object) :
         
      
     def _to_dependency_graph(self) :
-
-        # TODO Make and-nodes for all clauses first ! => optimal reuse
-        
         import core
         
         GN = namedtuple('GraphNode', ['type', 'content'])
@@ -600,13 +598,20 @@ class QueryPack(object) :
                 args = ','.join(values[i])
                 prob = probs[i]
          
-                result[ '%s(%s)' % (name, args) ] = prob
+                lit =  '%s(%s)' % (name, args)
+                result[ lit ] = prob
+                self.query_cache[lit] = prob
+                self.query_cache['\+' + lit] = 1-prob
         return result
         
      
     def execute( self ) :
-
         scores = {}
+        
+        if not len(self) :
+            return scores
+        
+        probabilities = self.get_probs()     # get from used facts
         
         # Lookup queries in cache
         cnt_cache = 0
@@ -620,20 +625,31 @@ class QueryPack(object) :
                 skipped.append(key)
         for key in skipped :
             del self[key]
-        
-        import core
-        
-        create_dependency_graph = lambda *s : self._to_dependency_graph()        
+                
+        dependency_graph = self._to_dependency_graph() 
+        create_dependency_graph = lambda *s : dependency_graph
         ground_program = None
         queries = [ QueryPack.lit_to_problog_lit(Literal('pfq_%s' % i, [])) for i, _q in enumerate(self) ]
         evidence = []
-        probabilities = self.get_probs()     # get from used facts
-     
+        
+        
         q_cnt = len(self)
         with Log('problog', nr_of_queries=q_cnt, cache_hits=cnt_cache, _timer=True) as l :
+            
             if q_cnt == 0 :
-                return scores                
-        
+                return scores
+                
+            with Log('dpgraph', _child=dependency_graph, size=len(dependency_graph)) :
+                pass
+                
+            with Log('probs', _child=probabilities) :
+                pass
+                
+            with Log('queries', _child=queries) :
+                pass
+                
+                        
+            
             import problog
             engine_base = problog.ProbLogEngine.create([])
                 
@@ -647,7 +663,7 @@ class QueryPack(object) :
             )
             
             engine.converter._create_dependency_graph = create_dependency_graph
-        
+            
             logger = problog.Logger(0)
             dir_out = '/tmp/pf/'
             with problog.WorkEnv(dir_out,logger, persistent=problog.WorkEnv.ALWAYS_KEEP) as env :
@@ -659,14 +675,13 @@ class QueryPack(object) :
             for e, _x in self[b] :
                 scores[e] = p
                 self.query_cache[b] = p
- 
+                
         return scores
          
 class Query(object) :
      
     def __init__(self, example_id, parent=None) :
         self.example_id = example_id
-#        self.extension_id = extension_id
         self.used_facts = defaultdict(set)
         if parent :
             self.clauses = parent.clauses[:]
@@ -701,26 +716,22 @@ class Query(object) :
                 i += 1
         self.clauses.append( new_clause )
         self.clauses = sorted(self.clauses)
-
+        
     def _test_subsume(self, clause1, clause2) :
         return clause1 <= clause2
         
     def __str__(self) :
         return ';'.join( ','.join( map(str, clause) ) for clause in self.clauses )
-
+        
     def facts(self) :
         result = set([])
         for clause in self.clauses :
             result |= clause
         return result
-
         
-
-
 ##############################################################################
 ###                              PROLOG CORE                               ###
 ##############################################################################
-
 
 class KnowledgeBase(object) :
     
@@ -771,19 +782,18 @@ class KnowledgeBase(object) :
         arg_index = len(values)
         values.append( args )
         probs.append( p )
-
+        
         for i, arg in enumerate(args) :
             self.types[types[i]].add(arg)
             index[i][arg].add(arg_index)
-        #index[-1][tuple(arg)].add(arg_index)
-
+        
     def argtypes_l(self, literal) :
         return self.predicates[literal.identifier][2]
-            
+        
     def argtypes(self, name, arity) :
         identifier = (name, arity)
         return self.predicates[identifier][2]
-      
+        
     def ground_fact(self, literal, used_facts=None) :
         
         index, values, types, probs = self.predicates[ literal.identifier ]
@@ -835,7 +845,7 @@ class KnowledgeBase(object) :
             return 1.0 - probability
         else :
             return probability
-
+            
     def __str__(self) :
         s = ''
         for name, arity in self.predicates :
@@ -866,10 +876,10 @@ class KnowledgeBase(object) :
         subst = head.unify( args )
         for sol in self.query(body, subst) :
             yield sol
-
+            
     def query_single(self, literals, substitution) :
         return true(self.query(literals, substitution))
-
+        
     def query(self, literals, substitution, facts_used=None, distinct=False) :
         if not literals :  # reached end of query
             yield substitution, []
@@ -921,21 +931,19 @@ class KnowledgeBase(object) :
                     for args in values :
                         print('%s(%s).' % (pred[0], ', '.join(args) ), file=f)
         return self.prolog_file
-
-
+        
 
 def is_var(arg) :
     return arg == None or arg[0] == '_' or (arg[0] >= 'A' and arg[0] <= 'Z')
 
 
 def read_file(filename, idtypes=[]) :
-
     import re 
     
     line_regex = re.compile( "((?P<type>(base|modes|learn))\()?((?P<prob>\d+[.]\d+)::)?\s*(?P<name>\w+)\((?P<args>[^\)]+)\)\)?." )
     
     kb = KnowledgeBase(idtypes)
-
+    
     with open(filename) as f :
         for line in f :        
             if line.strip().startswith('%') :
@@ -977,13 +985,13 @@ class Literal(object) :
         sign = '\+' if not self.sign else ''
         args = '(%s)' % ','.join(self.args) if self.args else ''
         return '%s%s%s' % (sign, self.functor, args)
-
+        
     def __neg__(self) :
         return Literal(self.functor, self.args, not self.sign)
-
+        
     def __hash__(self) :
         return hash(str(self))
-
+        
     def __eq__(self, other) :
         return self.functor == other.functor and self.args == other.args and self.sign == other.sign
                 
@@ -1033,11 +1041,6 @@ class Literal(object) :
                 sign = True
             result.append( Literal( name , map(lambda s : s.strip(), args.split(',')), sign) )
         return result
-
-
-
-
-
 
 ##############################################################################
 ###                               UTILITIES                                ###
@@ -1114,114 +1117,46 @@ class Beam(object) :
                 res +=  '<record rule="%s" score="%s" localScore="%s" refine="%s" />\n' % (c,c.score, c.localScore, '|'.join(map(str,r)))
         return res
 
-
-
-
-
 ##############################################################################
 ###                            SCRIPT EXECUTION                            ###
 ##############################################################################
 
 def main(args=[]) :
-
+    
     for filename in args :
-
+        
         kb = read_file(filename)
-
+        
         varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-
+        
         targets = kb.learn
-    
+        
         filename = os.path.split(filename)[1]
-    
-    
-        #if True:
+        
         with open(filename+'.xml', 'w') as Log.LOG_FILE :
-
+            
             with Log('log') :
                 for pred, args in targets :
                   with Timer('learning time') as t :
-        
+                    
                     kb.idtypes = args
                     kb.reset_examples()
-        
+                    
                     target = Literal(pred, varnames[:len(args)] )
-        
+                    
                     print('==> LEARNING CONCEPT:', target)
                     with Log('learn', input=filename, target=target, _timer=True ) : #, **vars(SETTINGS)) :
                         H = learn(FalseRule(kb, target))   
-    
-                        print (H.strAll())
                         
-#                        print(H)
+                        print (H.strAll())
                         print(H.score, H.globalScore)
-    
+                        
                         with Log('result') as l :
                             if l.file :
                                 print(H.strAll(), file=l.file)
-    
+                                
 
 
-
-
-def test() :
-
-    
-    filename = '../../data/mafa_prob.pl'
-
-    kb = read_file(filename)    
-    kb.idtypes = [ 'person', 'person' ]
-
-    # r = RuleHead( H, Literal(kb,'grandmother','XY') ) + Literal(kb, 'parent', 'XZ') + Literal(kb, 'parent', 'ZY')
-    #     
-    # r_ground = r.evaluate()
-    # 
-    # for x in r_ground :
-    #     if r_ground[x][1] :
-    #         print (kb[x], r_ground[x])
-    # 
-    # 
-    # print()
-    # r = RuleHead( H, Literal(kb,'father','XY') ) + Literal(kb, 'parent', 'XY') + Literal(kb, 'male', 'X')
-    #     
-    # r_ground = r.evaluate()
-    # 
-    # for x in r_ground :
-    #     if r_ground[x][1] :
-    #         print (kb[x], r_ground[x])
-
-    
-    r1 = RuleHead( kb, Literal('father','XY' ) ) + Literal('parent', 'XY') + Literal('male', 'X') + Literal('female', 'Y')
-    
-    # r_ground = r1.evaluate()
-    # for x in r_ground :
-    #     if r_ground[x][1] :
-    #         print (kb[x], r_ground[x])
-    
-    r2 = RuleHead( kb, Literal('father','XY' ), r1 ) + Literal('parent', 'XY') + Literal('male', 'X') + Literal('male', 'Y')
-    
-    r_ground = r2.evaluate()
-  
-    for ex, xx in enumerate(r_ground) :
-        
-        if xx[0] > 0 :
-          print (kb[ex], xx)
-    
-            
-    #         
-    # r = RuleHead( H, Literal(kb,'mother', 'XY'))
-    # for ref in r.refine(False) :
-    #     print(ref)
-    #     for ref2 in ref.refine(True) :
-    #         print ('    ', ref2)
-        
-    
 if __name__ == '__main__' :
-    import sys    
-    if len(sys.argv) > 1 and sys.argv[1] == 'test' :
-        test(sys.argv[2:])
-    else :
-        main(sys.argv[1:])
-    
-
+    main(sys.argv[1:])
   
