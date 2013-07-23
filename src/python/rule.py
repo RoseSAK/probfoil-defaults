@@ -8,13 +8,25 @@ from functools import total_ordering
 
 from util import Log, Timer
 
-import problog
-
 import os, sys
 
-SettingsType = namedtuple('Settings', ['BEAM_SIZE', 'M_ESTIMATE_M', 'EQUIV_CHECK'] )
-SETTINGS = SettingsType(5,10,False)     # TODO fix equiv_check for python 3
+SettingsType = namedtuple('Settings', ['BEAM_SIZE', 'M_ESTIMATE_M', 'EQUIV_CHECK', 'DISTINCT_VARS'] )
+SETTINGS = SettingsType(5,10,False,False) 
 
+import math
+chi2_cdf = lambda x : math.erf(math.sqrt(x/2))
+def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
+    v = (low+high)/2
+    r = chi2_cdf(v)
+    if -precision < r - s < precision :
+        return v
+    elif r > s :
+        return calc_significance(s, low, v)
+    else :
+        return calc_significance(s, v, high)
+
+SIGNIFICANCE=calc_significance(0.99)
+VERBOSE=0
 
 ##############################################################################
 ###                           LEARNING ALGORITHM                           ###
@@ -56,57 +68,63 @@ def best_clause( current_rule ) :
     beam = Beam(SETTINGS.BEAM_SIZE)    
     
     # Create the new rule ( target <- )
-    rule = RuleHead(current_rule.target, current_rule)
+    init_rule = RuleHead(current_rule.target, current_rule)
     
     # Calculate initial set of refinements
-    refinements = list(rule.refine())
+    refinements = list(init_rule.refine())
     
     # Add clause to beam (with empty score)
-    beam.push( rule, refinements )
+    beam.push( init_rule, refinements )
     
     # While there are untested refinements in the beam.
     while beam.has_active() :
-      with Log('iteration') :
+      with Log('iteration', _timer=True) :
           
         # Create the next beam
         new_beam = beam.create()
-        for score, rule, refs in beam :
+        
+        
+        for old_rule, refs in beam :
             
-          with Log('refining', rule=rule, score=rule.score) :
+          with Log('refining', rule=old_rule, score=old_rule.score, localScore=old_rule.localScore, _timer=True) :
             # Add current rule to beam and mark it as tested (refinements=None)
-            new_beam.push( rule, None )
+            new_beam.push( old_rule, None )
                         
             # Update scores of available refinements and add new refinements if a new variable was introduced.
-            new_rules = update_refinements(rule, refs)
+            new_rules = update_refinements(old_rule, refs)
             new_refs = [ r.literal for r in new_rules ]
-                        
+            
             # Add rules to new beam (new_refs are ordered by score, descending)
             for i, new_rule in enumerate(new_rules) :
+                if VERBOSE : print (new_rule, new_rule.score)
+                
                 if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
-                    return new_rule   # we found a rule with maximal score => no better rule can be found
-                if (not score == None and new_rule <= score) or not new_beam.push( new_rule , new_refs[i+1:] ) : # was new_refs[i+1:]
+                   return new_rule   # we found a rule with maximal score => no better rule can be found
+                elif (new_rule.localScore <= old_rule.localScore) or not new_beam.push( new_rule , new_refs[i+1:] ) : # was new_refs[i+1:]
                     break  # current ref does not have high enough score -> next ones will also fail
             
         # Use new beam in next iteration
         beam = new_beam
         
-        #print ([ str(x[1]) for x in beam.content ])
-        # # Write beam to log
-        with Log('beam', _child=beam.toXML()) :
-            pass
+        # Write beam to log
+        with Log('beam', _child=beam.toXML()) : pass
     
     # Return head of beam.
-    return beam.content[0][1]
+    return beam.content[0][0]
 
 def update_refinements( rule, refine) :
+    #with Log('ref', rule=rule, refine=refine) : pass
     if refine == None :
         return []
     
-    # Calculate new refinements in case a variable was added by the previous literal
-    new_refine = list(rule.refine(update=True))
-    
-    # Add new refinements
-    refine += new_refine
+    if SETTINGS.DISTINCT_VARS :
+        new_refine = list(rule.refine(update=False))
+        refine = new_refine
+    else :
+        # Calculate new refinements in case a variable was added by the previous literal
+        new_refine = list(rule.refine(update=True))
+        # Add new refinements
+        refine += new_refine
     
     # Update scores for all literals in batch
     refine = sorted((rule + ref for ref in refine), reverse = True)
@@ -119,23 +137,22 @@ def update_refinements( rule, refine) :
         parent_score = r.parent.score
         new_score = r.score
                 
-        # H.score = score of hypothesis with rule but without literal
-        # H.score.parent = new_score.parent = score of hypothesis without rule
-        # new_score = score of hypothesis with rule and literal
-        
-        if new_score.TN > parent_score.TN and new_score.TP > prev_score.TP :
-            # true negatives should be up because of this LITERAL (adding literals increases this)
-            # true positives should be up because of this RULE (adding literals decreases this)
-            # current_score = score_func(new_score)
-            with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore ) : 
-                 pass
-            
-            result.append( r )
+        # true negatives should be up because of this LITERAL (adding literals increases this)
+        # true positives should be up because of this RULE (adding literals decreases this)
+        if new_score.TP <= prev_score.TP :
+            with Log('rejected', reason="TP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+        elif r.max_significance < SIGNIFICANCE :
+          with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
+        elif new_score.TN <= parent_score.TN :
+            if SETTINGS.DISTINCT_VARS and r._new_vars :
+                # introduces a new variable
+                with Log('accepted_too', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+                result.append( r )
+            else :
+                with Log('rejected', reason="TN", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
         else :
-            # # literal doesn't cover true positives or it doesn't eliminate false positives
-            # # TODO what if it introduces a new variable?
-            with Log('rejected', literal=r.literal, score=r.score, localScore=r.localScore ) : 
-                 pass
+            with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+            result.append( r )
     
     return result
 
@@ -157,6 +174,7 @@ class Rule(object) :
         self.parent = parent
         self.literal = literal
         self._score = None
+        self._scoreX = None
     
         if parent :
             self.previous = parent.previous
@@ -175,10 +193,55 @@ class Rule(object) :
     
     
     def _calc_local(self) :
-        m = 10  # TODO eliminate magic constant
+        m = SETTINGS.M_ESTIMATE_M 
         m_estimate_c = self.score.m_estimate(m)
-        m_estimate_p = self.previous.score.m_estimate(m)
-        return m_estimate_c - m_estimate_p
+#        m_estimate_p = self.previous.score.m_estimate(m)
+        return m_estimate_c #- m_estimate_p
+        
+    def _calc_max_significance(self) :
+        s = self.score
+        M = s.P + s.N
+        
+        dTP = s.TP
+        if self.previous :
+            dTP -= self.previous.score.TP
+        
+        ms = 2 * dTP * ( -math.log( s.P / M ) )
+        #print (ms, self)
+        return ms
+    
+    def _calc_significance(self) :
+        s = self.score
+        C = s.TP + s.FP
+        if C == 0 : return 0
+            
+        M = s.P + s.N
+        p_pos_c = s.TP / C
+        p_neg_c = 1 - p_pos_c
+
+        p_pos = s.P / M
+        p_neg = s.N / M
+
+        pos_log = math.log(p_pos_c/p_pos) if p_pos_c > 0 else 0
+        neg_log = math.log(p_neg_c/p_neg) if p_neg_c > 0 else 0
+        
+        
+        l = 2*C * (p_pos_c * pos_log  + p_neg_c * neg_log  )
+        
+        #print (self, l)
+        return l
+
+    def _get_scoreX(self) :
+        if self._scoreX == None :
+            predict = [ x[0] for x in self.evaluate() ]
+            correct = [ x[0] for x in self.examples]
+            if  self.previous :
+                predict_prev = [ x[0] for x in self.previous.evaluate() ]
+            else :
+                predict_prev = [ 0 for x in self.examples ]
+            self._scoreX = ScoreX(correct, predict, predict_prev)
+        return self._scoreX
+
     
     def _get_score(self) :
         if self._score == None :
@@ -191,7 +254,10 @@ class Rule(object) :
     language = property(lambda self : Language(self.kb) )
     score = property(_get_score)
     localScore = property(_calc_local)
+    significance = property(_calc_significance)
+    max_significance = property(_calc_max_significance)
     globalScore = property(lambda self: self.score.accuracy())
+    probability = property(lambda self: self.score.max_x )
     
     def _toString(self) :
         parent_string, parent_sep = self.parent._toString()
@@ -224,7 +290,7 @@ class Rule(object) :
                 used_facts.update(parent_used)
                 for parent_subst, query in parent_matches :
                     local_restricts = True
-                    for subst, lit in self.kb.query([self.literal], parent_subst, used_facts) :
+                    for subst, lit in self.kb.query([self.literal], parent_subst, used_facts, distinct=SETTINGS.DISTINCT_VARS) :
                         if query or lit :
                             if lit and -lit[0] in query :
                                 pass
@@ -312,7 +378,9 @@ class Rule(object) :
             return self.literal.is_negated
             
     def __lt__(self, other) :
-        return (self.localScore, -len(self), -self.count_negated(), str(self)) < (other.localScore, -len(other), -other.count_negated(), str(other))
+       # return self.localScore < other.localScore
+        
+        return (self.localScore, len(self._new_vars), -len(self), -self.count_negated(), str(self)) < (other.localScore, len(other._new_vars), -len(other), -other.count_negated(), str(other))
              
         
     def __eq__(self, other) :
@@ -320,7 +388,10 @@ class Rule(object) :
         
     def strAll(self) :
         r = self.previous.strAll() 
-        r += str(self) + '\n'
+        if self.probability != 1 :
+            r += str(self) + '(%.4g)\n' % self.probability
+        else :
+            r += str(self) + '\n' 
         return r
         
 
@@ -423,7 +494,7 @@ class Language(object) :
         if arg_mode in ['+','-'] :
             for var in existing_variables[arg_type] :
                 yield var
-        if arg_mode == '-' and positive :
+        if arg_mode == '-' and (positive or SETTINGS.DISTINCT_VARS) :
             yield '#'
         if arg_mode == 'c' :
             if positive :
@@ -453,6 +524,7 @@ class Language(object) :
 class Score(object) :
     
     def __init__(self, correct, predict) :
+        self.max_x = 1
         self.TP = 0.0
         self.FP = 0.0
         self.FN = 0.0
@@ -483,7 +555,192 @@ class Score(object) :
         return (self.TP + self.TN ) / (self.TP + self.TN + self.FP + self.FN)
             
     def __str__(self) :
-        return '%s %s %s %s' % (self.TP, self.TN, self.FP, self.FN )
+        return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
+        
+class ScoreX(Score) :
+    
+    def _calc_y(p,l,u) :
+        if l == u :
+            return 0
+        else :
+            v = (p-l) / (u-l)
+            if v < 0 :
+                return 0
+            elif v > 1 :
+                return 1
+            else :
+                return v
+    
+    
+    def __init__(self, correct, predict, predict_prev) :
+      values = sorted( (ScoreX._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
+      with Log('calcscore') :
+        with Log('values', _child=values) : pass
+        
+        P = 0.0
+        N = 0.0
+        ys = set([])
+        for y, p, l, u in values :
+            ys.add(y)
+            P += p
+            N += (1-p)
+        m = SETTINGS.M_ESTIMATE_M
+        
+        def score(x) :
+            r = [ ((u-l)*x + l, p) for y,p,l,u in values ]
+            TP = sum( ri for ri, pi in r if ri < pi ) + sum( pi for ri, pi in r if ri >= pi )
+            FP = sum( ri - pi for ri, pi in r if ri > pi )
+            TN = sum( 1 - pi for ri, pi in r if ri <= pi ) + sum ( 1-ri for ri, pi in r if ri > pi )
+            FN = sum( pi - ri for ri, pi in r if ri <= pi )
+            return TP, FP, TN, FN
+        
+        max_s = None
+        max_x = None
+        for x in sorted(ys) :
+
+            TP, FP, TN, FN = score(x)
+            s = ScoreX._m_estimate(m, TP, TN, FP, FN, P, N)
+            with Log('candidate', x=x, score=s, TP=TP, FP=FP, TN=TN, FN=FN) : pass
+            if max_s == None or s > max_s :
+                max_s = s
+                max_x = x
+
+
+        self.max_s = max_s
+        self.max_x = max_x
+        self.TP, self.FP, self.TN, self.FN = score(max_x)
+        self.P = P
+        self.N = N
+        with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
+        
+        
+                # 
+        # TP_base = 0.0
+        # FP_base = 0.0
+        # TN_base = 0.0
+        # FN_base = 0.0
+        # P = 0.0
+        # N = 0.0
+        # 
+        # tl = 0.0
+        # tu = 0.0
+        # tp = 0.0
+        # i = 0
+        # j = 0
+        # for y,p,l,u in values :
+        #     n = 1-p
+        #     P += p
+        #     N += n
+        # 
+        #     if y < 0 :
+        #         i += 1
+        #         nh = 1-l
+        #         tp1 = min(p,l)
+        #         tn1 = min(n,nh)
+        #         fp1 = n - tn1
+        #         fn1 = p - tp1
+        #     
+        #         TP_base += tp1
+        #         TN_base += tn1
+        #         FP_base += fp1
+        #         FN_base += fn1                
+        #     else :
+        #         tl += l
+        #         tu += u
+        #         tp += p
+        #         
+        # 
+        # print ('VALUES:', values)
+        # print ('BASE:', TP_base, TN_base, FP_base, FN_base, i)
+        # values = values[i:]
+        #     
+        # slx = 0.0
+        # sux = 0.0
+        # spx = 0.0
+        # 
+        # TP = 0.0
+        # FP = 0.0
+        # TN = 0.0
+        # FN = 0.0
+        # 
+        # m = 10
+        # M = len(values)
+        # 
+        # x = None
+        # 
+        # TP = (tu - tl - sux + slx)*x + tl - slx + spx
+        # FP = (sux-slx)*x + slx - spx
+        # TN = M - tp + spx - (sux - slx)*x - slx
+        # FN = tp - spx - (tu - tl - sux + slx)*x - tl + slx
+        
+         
+        
+        
+        
+        
+        
+        # 
+#         # max_s = ScoreX.m_estimate(m, TP, TN, FP, FN)
+#         max_s = None
+#         max_x = 1
+#         max_sc = (TP_base, TN_base, FP_base, FN_base)
+#         
+#         if values :
+#             for y,p,l,u in values :
+#                 if y > 1 : break
+#                 slx += l
+#                 sux += u
+#                 spx += p
+#                 if y != x and x != None :
+#                     # check score
+#                     TP = TP_base + (tu - tl - sux + slx)*x + tl - slx + spx
+#                     TN = TN_base + M - tp + spx - (sux - slx)*x - slx
+#                     FP = FP_base + (sux-slx)*x + max(0,slx - spx)
+#                     print ('FP:', FP)
+#                     FN = FN_base + tp - spx - (tu - tl - sux + slx)*x - tl + slx
+#                     s = ScoreX._m_estimate(m, TP, TN, FP, FN, P, N)
+#                     if max_s == None or max_s < s :
+#                         max_s = s
+#                         max_x = x
+#                         max_sc = (TP, FP, TN, FN)
+#                 x = y
+#                 # check score
+#         
+#             TP = TP_base + (tu - tl - sux + slx)*x + tl - slx + spx
+#             FP = FP_base + (sux-slx)*x + max(0,slx - spx)
+#             TN = TN_base + M - tp + spx - (sux - slx)*x - slx
+#             print ('FP2:', FP)
+#             FN = FN_base + tp - spx - (tu - tl - sux + slx)*x - tl + slx
+#             s = ScoreX._m_estimate(m, TP, TN, FP, FN, P, N)
+#             if max_s == None or max_s < s :
+#                 max_s = s
+#                 max_x = x
+#                 max_sc = (TP, FP, TN, FN)
+#         # if max_s == None :
+#         #     max_x = 1
+#         # TP = (tu - tl - sux + slx)*x + tl - slx + spx
+#         # FP = (sux-slx)*x + slx - spx
+#         # TN = M - tp + spx - (sux - slx)*x - slx
+#         # FN = tp - spx - (tu - tl - sux + slx)*x - tl + slx
+#         
+#         
+#         # max_s = ScoreX.m_estimate(m, TP, TN, FP, FN)
+#         # print ('MIN',min([ v[0] for v in values]))
+#         # print ('MAX',max([ v[0] for v in values]))
+# #        print (max_x, max_s, M)
+#         
+#         print('MAX:', max_sc)
+#         
+#         self.max_s = max_s
+#         self.max_x = max_x
+#         self.TP, self.FP, self.TN, self.FN = max_sc
+#         self.P = P
+#         self.N = N
+# #        print(self.max_x, self)
+    
+    def _m_estimate(m, TP, TN, FP, FN, P, N) :
+        return (TP + m * (P / (N + P))) / (TP + FP + m) 
+    
 
 
 ##############################################################################
@@ -634,7 +891,7 @@ class QueryPack(object) :
         
         
         q_cnt = len(self)
-        with Log('problog', nr_of_queries=q_cnt, cache_hits=cnt_cache, _timer=True) as l :
+        with Log('problog', nr_of_queries=q_cnt+cnt_cache, cache_hits=cnt_cache, _timer=(q_cnt > 0)) as l :
             
             if q_cnt == 0 :
                 return scores
@@ -794,7 +1051,7 @@ class KnowledgeBase(object) :
         identifier = (name, arity)
         return self.predicates[identifier][2]
         
-    def ground_fact(self, literal, used_facts=None) :
+    def ground_fact(self, literal, used_facts=None, restricts=[]) :
         
         index, values, types, probs = self.predicates[ literal.identifier ]
         
@@ -805,6 +1062,10 @@ class KnowledgeBase(object) :
         for i,arg in enumerate(literal.args) :
             if not is_var(arg) :
                 result &= index[i][arg]
+            elif restricts and literal.is_negated :
+                # value of argument should not be one of restricts
+                for r in restricts :
+                    result -= index[i][r]
             if not result : break 
         
         result_maybe = set( i for i in result if 0 < probs[i] < 1 )
@@ -872,13 +1133,13 @@ class KnowledgeBase(object) :
     def __iter__(self) :
         return iter(range(0,len(self.examples)))
         
-    def clause(self, head, body, args) :
-        subst = head.unify( args )
-        for sol in self.query(body, subst) :
-            yield sol
+    # def clause(self, head, body, args) :
+    #     subst = head.unify( args )
+    #     for sol in self.query(body, subst) :
+    #         yield sol
             
-    def query_single(self, literals, substitution) :
-        return true(self.query(literals, substitution))
+    # def query_single(self, literals, substitution) :
+    #     return true(self.query(literals, substitution))
         
     def query(self, literals, substitution, facts_used=None, distinct=False) :
         if not literals :  # reached end of query
@@ -887,7 +1148,12 @@ class KnowledgeBase(object) :
             head, tail = literals[0], literals[1:]
             head_ground = head.assign(substitution)     # assign known variables
             
-            for is_det, match in self.ground_fact(head_ground, facts_used) :
+            if distinct :
+                distincts = substitution.values()
+            else :
+                distincts = []
+            
+            for is_det, match in self.ground_fact(head_ground, facts_used, distincts) :
                 # find match for head
                 new_substitution = dict(substitution)
                 new_substitution.update( head_ground.unify( match ) )
@@ -936,6 +1202,8 @@ class KnowledgeBase(object) :
 def is_var(arg) :
     return arg == None or arg[0] == '_' or (arg[0] >= 'A' and arg[0] <= 'Z')
 
+def distinct_values(subst) :
+    return len(subst.values()) == len(set(subst.values()))
 
 def read_file(filename, idtypes=[]) :
     import re 
@@ -1060,23 +1328,39 @@ class Beam(object) :
         return iter(self.content)
         
     def push(self, obj, active) :
-        score = obj
-        if len(self.content) == self.size and score < self.content[-1][0] : return False
+        if len(self.content) == self.size and obj < self.content[-1][0] : return False
         
         is_last = True
         
         p = len(self.content) - 1
-        self.content.append( (score, obj, active) )
+        self.content.append( (obj, active) )
         while p >= 0 and (self.content[p][0] == None or self.content[p][0] < self.content[p+1][0]) :
             self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
             p = p - 1
             is_last = False
         
-        if not self.allow_equivalent and p >= 0 and self.content[p][0] == self.content[p+1][0] :
-            worst, best = sorted( [self.content[p], self.content[p+1]] )
-            Log('beam_equivalent', best=best[1], worst=worst[1]).logline()
-            self.content[p+1] = best
-            self.content = self.content[:p] + self.content[p+1:]    # remove p    
+        if SETTINGS.EQUIV_CHECK and len(self.content) > 1 :
+            r1, rf1 = self.content[p]
+            r2, rf2 = self.content[p+1]
+            
+            r1scores = list(zip(*r1.evaluate()))[0]
+            r2scores = list(zip(*r2.evaluate()))[0]
+            
+            # print (r1, r1.localScore, r1scores)
+            # print (r2, r2.localScore, r2scores)
+            # print ('==>', r1.localScore == r2.localScore, r1scores == r2scores)
+            if r1.localScore == r2.localScore and r1scores == r2scores :
+                if rf1 != None and rf2 != None and len(rf1) > len(rf2) : #len(r1.variables) > len(r2.variables) :                
+                    best, worst = r1, r2
+                    self.content[p+1] = self.content[p]
+                else :
+                    best, worst = r2, r1
+                with Log('beam_equivalent', best=best, worst=worst) : pass
+                #print ('beam_equivalent', best, worst)
+                
+                self.content.pop(p)
+                
+#                self.content = self.content[:p] + self.content[p+1:]    # remove p                    
         
         popped_last = False
         while len(self.content) > self.size :
@@ -1088,15 +1372,15 @@ class Beam(object) :
     def peak_active(self) :
         i = 0
         while i < len(self.content) :
-            if self.content[i][2] :
+            if self.content[i][-1] :
                 yield self.content[i]
                 i = 0
             else :
                 i += 1
                 
     def has_active(self) :
-        for s, r, act in self :
-            if act : return True
+        for r, act in self :
+            if act != None : return True
         return False
     
     def pop(self) :
@@ -1104,15 +1388,15 @@ class Beam(object) :
         
     def __str__(self) :
         res = ''
-        for s, c, r in self.content :
-            res += str(c) + ': ' + str(s) +  ' | ' + str(r) + '\n'
+        for c, r in self.content :
+            res += str(c) + ': ' + str(c.score) +  ' | ' + str(r) + '\n'
         return res
         
     def toXML(self) :
         res = ''
-        for s, c, r in self.content :
+        for c, r in self.content :
             if r == None :
-                res +=  '<record rule="%s" score="%s" localScore="%s" refine="" />\n' % (c,c.score, c.localScore)
+                res +=  '<record rule="%s" score="%s" localScore="%s" refine="NO" />\n' % (c,c.score, c.localScore)
             else :
                 res +=  '<record rule="%s" score="%s" localScore="%s" refine="%s" />\n' % (c,c.score, c.localScore, '|'.join(map(str,r)))
         return res
