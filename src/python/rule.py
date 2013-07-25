@@ -10,8 +10,27 @@ from util import Log, Timer
 
 import os, sys
 
-SettingsType = namedtuple('Settings', ['BEAM_SIZE', 'M_ESTIMATE_M', 'EQUIV_CHECK', 'DISTINCT_VARS'] )
-SETTINGS = SettingsType(5,10,False,False) 
+
+##############################################################################
+###                      PARSE COMMAND LINE ARGUMENTS                      ###
+##############################################################################
+
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('files', nargs='+')
+parser.add_argument('--beamsize', type=int, default=5, dest='BEAM_SIZE', help='size of search beam')
+parser.add_argument('-m', type=int, dest='M_ESTIMATE_M',  default=10, help='value of m for m-estimate')
+parser.add_argument('--distinct_vars', action='store_true', dest='DISTINCT_VARS', help='enable distinct variables (EXPERIMENTAL)')
+parser.add_argument('--pvalue', type=float, dest='SIGNIFICANCE_P', default=0.99, help='minimal rule significance (p-value)')
+parser.add_argument('-v', action='count', dest='VERBOSE', help='increase verbosity level')
+parser.add_argument('--probfoil1', action='store_false', dest='PROBFOIL2', help='use traditional ProbFOIL scoring')
+parser.add_argument('--min_rule_prob', type=float, dest='MIN_RULE_PROB', default=0.01, help='minimal probability of rule in Prob2FOIL')
+parser.add_argument('--equiv_check', action='store_true', dest='EQUIV_CHECK', help='enable elimination of equivalent results in beam')
+
+
+SETTINGS = parser.parse_args()
 
 import math
 chi2_cdf = lambda x : math.erf(math.sqrt(x/2))
@@ -25,8 +44,8 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
     else :
         return calc_significance(s, v, high)
 
-SIGNIFICANCE=calc_significance(0.99)
-VERBOSE=0
+SETTINGS.SIGNIFICANCE= calc_significance(SETTINGS.SIGNIFICANCE_P)
+
 
 ##############################################################################
 ###                           LEARNING ALGORITHM                           ###
@@ -68,7 +87,7 @@ def best_clause( current_rule ) :
     beam = Beam(SETTINGS.BEAM_SIZE)    
     
     # Create the new rule ( target <- )
-    init_rule = RuleHead(current_rule.target, current_rule)
+    init_rule = RuleHead(current_rule.target, previous=current_rule)
     
     # Calculate initial set of refinements
     refinements = list(init_rule.refine())
@@ -96,7 +115,7 @@ def best_clause( current_rule ) :
             
             # Add rules to new beam (new_refs are ordered by score, descending)
             for i, new_rule in enumerate(new_rules) :
-                if VERBOSE : print (new_rule, new_rule.score)
+                if SETTINGS.VERBOSE : print (new_rule, new_rule.score)
                 
                 if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
                    return new_rule   # we found a rule with maximal score => no better rule can be found
@@ -125,6 +144,8 @@ def update_refinements( rule, refine) :
         new_refine = list(rule.refine(update=True))
         # Add new refinements
         refine += new_refine
+        
+    
     
     # Update scores for all literals in batch
     refine = sorted((rule + ref for ref in refine), reverse = True)
@@ -141,15 +162,19 @@ def update_refinements( rule, refine) :
         # true positives should be up because of this RULE (adding literals decreases this)
         if new_score.TP <= prev_score.TP :
             with Log('rejected', reason="TP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
-        elif r.max_significance < SIGNIFICANCE :
+        elif r.max_significance < SETTINGS.SIGNIFICANCE :
           with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
-        elif new_score.TN <= parent_score.TN :
-            if SETTINGS.DISTINCT_VARS and r._new_vars :
-                # introduces a new variable
-                with Log('accepted_too', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
-                result.append( r )
-            else :
-                with Log('rejected', reason="TN", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+        elif prev_score.FP > 0 and new_score.FP == prev_score.FP :
+            print('FP')
+            with Log('rejected', reason="FP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+
+        # elif new_score.TN <= parent_score.TN :
+        #     if SETTINGS.DISTINCT_VARS and r._new_vars :
+        #         # introduces a new variable
+        #         with Log('accepted_too', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+        #         result.append( r )
+        #     else :
+        #         with Log('rejected', reason="TN", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
         else :
             with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
             result.append( r )
@@ -174,7 +199,6 @@ class Rule(object) :
         self.parent = parent
         self.literal = literal
         self._score = None
-        self._scoreX = None
     
         if parent :
             self.previous = parent.previous
@@ -195,19 +219,20 @@ class Rule(object) :
     def _calc_local(self) :
         m = SETTINGS.M_ESTIMATE_M 
         m_estimate_c = self.score.m_estimate(m)
-#        m_estimate_p = self.previous.score.m_estimate(m)
         return m_estimate_c #- m_estimate_p
         
     def _calc_max_significance(self) :
         s = self.score
         M = s.P + s.N
         
-        dTP = s.TP
+        dTP = s.maxTP
+        dM = M
+        dP = s.P
         if self.previous :
             dTP -= self.previous.score.TP
+            dP -= self.previous.score.TP
         
-        ms = 2 * dTP * ( -math.log( s.P / M ) )
-        #print (ms, self)
+        ms = 2 * dTP * ( -math.log( dP / dM ) )
         return ms
     
     def _calc_significance(self) :
@@ -228,19 +253,18 @@ class Rule(object) :
         
         l = 2*C * (p_pos_c * pos_log  + p_neg_c * neg_log  )
         
-        #print (self, l)
         return l
 
-    def _get_scoreX(self) :
-        if self._scoreX == None :
+    def _get_score2(self) :
+        if self._score == None :
             predict = [ x[0] for x in self.evaluate() ]
             correct = [ x[0] for x in self.examples]
             if  self.previous :
-                predict_prev = [ x[0] for x in self.previous.evaluate() ]
+                predict_prev = [ x[0] * self.previous.probability for x in self.previous.evaluate() ]
             else :
                 predict_prev = [ 0 for x in self.examples ]
-            self._scoreX = ScoreX(correct, predict, predict_prev)
-        return self._scoreX
+            self._score = Score2(correct, predict, predict_prev)
+        return self._score
 
     
     def _get_score(self) :
@@ -252,7 +276,11 @@ class Rule(object) :
     
     variables = property(lambda self : self._all_vars)
     language = property(lambda self : Language(self.kb) )
-    score = property(_get_score)
+    
+    if SETTINGS.PROBFOIL2 :
+        score = property(_get_score2)
+    else :
+        score = property(_get_score)
     localScore = property(_calc_local)
     significance = property(_calc_significance)
     max_significance = property(_calc_max_significance)
@@ -283,7 +311,7 @@ class Rule(object) :
                 score = 0.0
                 
                 if self.previous != None :
-                    score = self.previous.evaluate()[ex][0]
+                    score = self.previous.evaluate()[ex][0] * self.previous.probability
                                 
                 parent_score, parent_matches, parent_used = parent_eval 
                 used_facts = defaultdict(set)
@@ -343,10 +371,14 @@ class Rule(object) :
                 while previous_rules[-1] != None :
                     previous_rules.append( previous_rules[-1].previous )
                 previous_rules = previous_rules[:-1]
-                for prev_rule in previous_rules :
+                for prev_rule_i, prev_rule in enumerate(previous_rules) :
                     _a, prev_clauses, prev_used_facts = prev_rule.evaluate()[ex]
+                    if prev_rule.probability < 1 and prev_rule.probability > 0 :
+                        prev_used_facts[ (None, prev_rule_i) ].add(prev_rule.probability)
                     query.update_used_facts(prev_used_facts)
                     for _v, clause in prev_clauses :
+                        if 0 < prev_rule.probability < 1 :
+                            clause.add( Literal('prob_' + str(prev_rule_i), []))
                         query += clause
                 for _v, clause in clauses :
                     query += clause
@@ -388,8 +420,8 @@ class Rule(object) :
         
     def strAll(self) :
         r = self.previous.strAll() 
-        if self.probability != 1 :
-            r += str(self) + '(%.4g)\n' % self.probability
+        if self.probability < 0.9999 :
+            r += str(self) + ' %% (p=%.4g)\n' % self.probability
         else :
             r += str(self) + '\n' 
         return r
@@ -422,7 +454,7 @@ class RuleHead(Rule) :
             for i, ex_p in enumerate(self.examples) :
                 p, ex = ex_p
                 subst = self.literal.unify( ex )
-                self._evaluation_cache[i] =  (1.0, [( subst, set([]) )], {} )
+                self._evaluation_cache[i] =  (1.0, [( subst, set([]) )], defaultdict(set) )
         return self._evaluation_cache
         
 class FalseRule(Rule) :
@@ -546,7 +578,7 @@ class Score(object) :
             self.FN += fn
             self.P += p
             self.N += n
-                                                
+        self.maxTP = self.TP                                    
             
     def m_estimate(self, m) :
         return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 
@@ -557,7 +589,7 @@ class Score(object) :
     def __str__(self) :
         return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
         
-class ScoreX(Score) :
+class Score2(Score) :
     
     def _calc_y(p,l,u) :
         if l == u :
@@ -573,7 +605,7 @@ class ScoreX(Score) :
     
     
     def __init__(self, correct, predict, predict_prev) :
-      values = sorted( (ScoreX._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
+      values = sorted( (Score2._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
       with Log('calcscore') :
         with Log('values', _child=values) : pass
         
@@ -585,10 +617,12 @@ class ScoreX(Score) :
             P += p
             N += (1-p)
         m = SETTINGS.M_ESTIMATE_M
-        
+
+        # TODO incremental computation
         def score(x) :
             r = [ ((u-l)*x + l, p) for y,p,l,u in values ]
             TP = sum( ri for ri, pi in r if ri < pi ) + sum( pi for ri, pi in r if ri >= pi )
+            #with Log('fp', lst=r, x=x) : pass
             FP = sum( ri - pi for ri, pi in r if ri > pi )
             TN = sum( 1 - pi for ri, pi in r if ri <= pi ) + sum ( 1-ri for ri, pi in r if ri > pi )
             FN = sum( pi - ri for ri, pi in r if ri <= pi )
@@ -596,149 +630,35 @@ class ScoreX(Score) :
         
         max_s = None
         max_x = None
+        
+        # for x1 in range(0,101) :
+        #     x = float(x1) / 100.0
         for x in sorted(ys) :
 
             TP, FP, TN, FN = score(x)
-            s = ScoreX._m_estimate(m, TP, TN, FP, FN, P, N)
+            s = Score2._m_estimate(m, TP, TN, FP, FN, P, N)
             with Log('candidate', x=x, score=s, TP=TP, FP=FP, TN=TN, FN=FN) : pass
-            if max_s == None or s > max_s :
+            if x >= SETTINGS.MIN_RULE_PROB and ( max_s == None or s > max_s ) :
                 max_s = s
                 max_x = x
-
+        if max_x == None :
+            max_x = 1
+            TP, FP, TN, FN = score(max_x)
+            max_s = Score2._m_estimate(m, TP, TN, FP, FN, P, N)
 
         self.max_s = max_s
         self.max_x = max_x
         self.TP, self.FP, self.TN, self.FN = score(max_x)
         self.P = P
         self.N = N
+        
+        self.maxTP = score(1.0)[0]
+        
         with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
         
-        
-                # 
-        # TP_base = 0.0
-        # FP_base = 0.0
-        # TN_base = 0.0
-        # FN_base = 0.0
-        # P = 0.0
-        # N = 0.0
-        # 
-        # tl = 0.0
-        # tu = 0.0
-        # tp = 0.0
-        # i = 0
-        # j = 0
-        # for y,p,l,u in values :
-        #     n = 1-p
-        #     P += p
-        #     N += n
-        # 
-        #     if y < 0 :
-        #         i += 1
-        #         nh = 1-l
-        #         tp1 = min(p,l)
-        #         tn1 = min(n,nh)
-        #         fp1 = n - tn1
-        #         fn1 = p - tp1
-        #     
-        #         TP_base += tp1
-        #         TN_base += tn1
-        #         FP_base += fp1
-        #         FN_base += fn1                
-        #     else :
-        #         tl += l
-        #         tu += u
-        #         tp += p
-        #         
-        # 
-        # print ('VALUES:', values)
-        # print ('BASE:', TP_base, TN_base, FP_base, FN_base, i)
-        # values = values[i:]
-        #     
-        # slx = 0.0
-        # sux = 0.0
-        # spx = 0.0
-        # 
-        # TP = 0.0
-        # FP = 0.0
-        # TN = 0.0
-        # FN = 0.0
-        # 
-        # m = 10
-        # M = len(values)
-        # 
-        # x = None
-        # 
-        # TP = (tu - tl - sux + slx)*x + tl - slx + spx
-        # FP = (sux-slx)*x + slx - spx
-        # TN = M - tp + spx - (sux - slx)*x - slx
-        # FN = tp - spx - (tu - tl - sux + slx)*x - tl + slx
-        
-         
-        
-        
-        
-        
-        
-        # 
-#         # max_s = ScoreX.m_estimate(m, TP, TN, FP, FN)
-#         max_s = None
-#         max_x = 1
-#         max_sc = (TP_base, TN_base, FP_base, FN_base)
-#         
-#         if values :
-#             for y,p,l,u in values :
-#                 if y > 1 : break
-#                 slx += l
-#                 sux += u
-#                 spx += p
-#                 if y != x and x != None :
-#                     # check score
-#                     TP = TP_base + (tu - tl - sux + slx)*x + tl - slx + spx
-#                     TN = TN_base + M - tp + spx - (sux - slx)*x - slx
-#                     FP = FP_base + (sux-slx)*x + max(0,slx - spx)
-#                     print ('FP:', FP)
-#                     FN = FN_base + tp - spx - (tu - tl - sux + slx)*x - tl + slx
-#                     s = ScoreX._m_estimate(m, TP, TN, FP, FN, P, N)
-#                     if max_s == None or max_s < s :
-#                         max_s = s
-#                         max_x = x
-#                         max_sc = (TP, FP, TN, FN)
-#                 x = y
-#                 # check score
-#         
-#             TP = TP_base + (tu - tl - sux + slx)*x + tl - slx + spx
-#             FP = FP_base + (sux-slx)*x + max(0,slx - spx)
-#             TN = TN_base + M - tp + spx - (sux - slx)*x - slx
-#             print ('FP2:', FP)
-#             FN = FN_base + tp - spx - (tu - tl - sux + slx)*x - tl + slx
-#             s = ScoreX._m_estimate(m, TP, TN, FP, FN, P, N)
-#             if max_s == None or max_s < s :
-#                 max_s = s
-#                 max_x = x
-#                 max_sc = (TP, FP, TN, FN)
-#         # if max_s == None :
-#         #     max_x = 1
-#         # TP = (tu - tl - sux + slx)*x + tl - slx + spx
-#         # FP = (sux-slx)*x + slx - spx
-#         # TN = M - tp + spx - (sux - slx)*x - slx
-#         # FN = tp - spx - (tu - tl - sux + slx)*x - tl + slx
-#         
-#         
-#         # max_s = ScoreX.m_estimate(m, TP, TN, FP, FN)
-#         # print ('MIN',min([ v[0] for v in values]))
-#         # print ('MAX',max([ v[0] for v in values]))
-# #        print (max_x, max_s, M)
-#         
-#         print('MAX:', max_sc)
-#         
-#         self.max_s = max_s
-#         self.max_x = max_x
-#         self.TP, self.FP, self.TN, self.FN = max_sc
-#         self.P = P
-#         self.N = N
-# #        print(self.max_x, self)
     
     def _m_estimate(m, TP, TN, FP, FN, P, N) :
+        #if (TP == 0 and FP == 0 and m == 0) : m = 1
         return (TP + m * (P / (N + P))) / (TP + FP + m) 
     
 
@@ -849,17 +769,40 @@ class QueryPack(object) :
         result = {}
         for identifier in facts :
             name, arity = identifier
-            index, values, types, probs = self.__kb.predicates[identifier]
+            if name == None :
+                values = []
+                for p in facts[identifier] :
+                    result[ 'prob_' + str(arity) ] = p
+            else :
+                _index, values, _types, probs = self.__kb.predicates[identifier]
     
-            for i in facts[identifier] :
-                args = ','.join(values[i])
-                prob = probs[i]
+                for i in facts[identifier] :
+                    args = ','.join(values[i])
+                    prob = probs[i]
          
-                lit =  '%s(%s)' % (name, args)
-                result[ lit ] = prob
-                self.query_cache[lit] = prob
-                self.query_cache['\+' + lit] = 1-prob
+                    lit =  '%s(%s)' % (name, args)
+                    result[ lit ] = prob
+                    self.query_cache[lit] = prob
+                    self.query_cache['\+' + lit] = 1-prob
         return result
+        
+    def toProbLog(self) :
+        r = ''
+        probs = self.get_probs()
+        
+        for at in probs :
+            r += '%s::%s.\n' % (at, probs[at]) 
+         
+        for qi, key in enumerate(self) :
+            query, _ids = self.__queries[key]
+            
+            query_head = 'pfq_' + str(qi)
+            for clause in query.clauses :
+                
+                r += '%s :- %s.\n' % (query_head, ','.join(map(str,clause)))
+                
+            r += 'query(%s).\n' % query_head
+        return r
         
      
     def execute( self ) :
@@ -892,9 +835,12 @@ class QueryPack(object) :
         
         q_cnt = len(self)
         with Log('problog', nr_of_queries=q_cnt+cnt_cache, cache_hits=cnt_cache, _timer=(q_cnt > 0)) as l :
+        
             
             if q_cnt == 0 :
                 return scores
+        
+            with Log('program', _child=self.toProbLog()) : pass
                 
             with Log('dpgraph', _child=dependency_graph, size=len(dependency_graph)) :
                 pass
@@ -905,8 +851,6 @@ class QueryPack(object) :
             with Log('queries', _child=queries) :
                 pass
                 
-                        
-            
             import problog
             engine_base = problog.ProbLogEngine.create([])
                 
@@ -1405,9 +1349,13 @@ class Beam(object) :
 ###                            SCRIPT EXECUTION                            ###
 ##############################################################################
 
-def main(args=[]) :
+def main(files=[]) :
+
+    LSETTINGS = dict(vars(SETTINGS))
+    del LSETTINGS['files']
+
     
-    for filename in args :
+    for filename in files :
         
         kb = read_file(filename)
         
@@ -1429,7 +1377,7 @@ def main(args=[]) :
                     target = Literal(pred, varnames[:len(args)] )
                     
                     print('==> LEARNING CONCEPT:', target)
-                    with Log('learn', input=filename, target=target, _timer=True ) : #, **vars(SETTINGS)) :
+                    with Log('learn', input=filename, target=target, _timer=True, **LSETTINGS ) :
                         H = learn(FalseRule(kb, target))   
                         
                         print (H.strAll())
@@ -1442,5 +1390,6 @@ def main(args=[]) :
 
 
 if __name__ == '__main__' :
-    main(sys.argv[1:])
+    
+    main(SETTINGS.files)
   
