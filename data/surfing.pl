@@ -33,9 +33,6 @@ learn(surfing(day)).
 0.9314::windok(5).
 0.9002::sunshine(5).
 
-
-
-
 0.2629::pop(6).
 0.1726::windok(6).
 0.8117::sunshine(6).

@@ -1,0 +1,91 @@
+\documentclass{article}
+
+\title{Description of Prob2FOIL implementation}
+\author{Anton Dries}
+
+\begin{document}
+
+\section{Introduction}
+
+This implementation covers three algorithms:
+\begin{itemize}
+	\item mFOIL
+	\item ProbFOIL
+	\item Prob2FOIL
+\end{itemize}
+
+Prob2FOIL is implemented in Python. 
+It is compatible with Python 2 and Python 3.
+However, in a probabilistic settings it must be run with Python 3 (due to ProbLog2 dependency).
+
+\subsection{Dependencies}
+
+\begin{itemize}
+	\item ProbLog2 ( and its dependency dsharp )
+	\item It does NOT require Yap or any other Prolog system	
+\end{itemize}
+
+
+\subsection{Known limitations}
+
+\begin{itemize}
+	\item no support for background knowledge, data can only consist of facts
+	\item no support for learning recursive concepts
+\end{itemize}
+
+\subsection{Known points for improvement}
+
+\begin{itemize}
+	\item Prob2FOIL scoring does not use incremental computation
+	\item better language bias for working with distinct variables (e.g. cards dataset)
+\end{itemize}
+
+\section{Implementation details}
+
+\subsection{Significance calculation}
+
+Like mFOIL, this algorithm uses a significance criterion to eliminate insignificant clauses.
+
+A clause is eliminated if it's maximal achievable significance is below a given threshold.
+
+\newcommand{\TP}{\ensuremath{\mathit{TP}}}
+The maximal significance, $S_\mathit{max}$ of a clause $c$ is calculated as follows.
+Let 
+\[ \Delta_\TP = \TP_{H \wedge c}(1.0) - \TP_{H} \] 
+then \[ S_\mathit{max} = -2 \Delta_\TP \log\frac{P}{N+P}.  \]
+If $S_\mathit{max} < p$ then it can not be refined into a clause with significance higher than $p$.
+
+\subsection{Local stopping criterion}
+
+A refinement $r'$ of clause $r$ is rejected iff any of these conditions is met:
+\begin{itemize}
+	\item $\TP_H = \TP_{H \wedge r'}$, signifying that the clause $r'$ does not cover any true positive examples not covered by $H$.
+	\item $S_\mathit{max}(r') < S_\mathit{t}$, signifying that the clause $r'$ will not lead to a significant rule.
+%	\item $\mathit{localScore}(r') <= \mathit{localScore}(r)$, signifying that the current rule does not improve its parent (this is different from ProbFOIL, and may be too strict).
+	\item there exist $\mathit{beamsize}$ other clauses with a better local score.
+\end{itemize}
+
+\subsection{Order of refinements and symmetry breaking}
+
+Refinements are ordered based on their local score.
+For each clause in the beam, possible refinements are also stored.
+These are the refinements that have a lower local score and that were not rejected by the first two conditions in the previous clause.
+
+\subsection{Beam management}
+
+We keep a beam of the best clauses explored so far.
+This means we also keep already examined clauses on the beam.
+
+
+\subsection{Calls to ProbLog}
+
+Avoiding calls to ProbLog by reasoning and caching and query packs.
+
+Bypass grounding and dependency calculations stages (the ones that use Yap).
+
+\subsection{Data storage}
+
+Builtin \emph{Prolog-style} database.
+No clauses. 
+
+\end{document}

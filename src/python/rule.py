@@ -71,6 +71,7 @@ def learn(H) :
         with Log('stopping_criterion', old_score=H.globalScore, new_score=new_H.globalScore, full_score=new_H.score) : 
             pass
         
+        # TODO check significance level?
         # Check stopping criterion
         if (H.globalScore >= new_H.globalScore) :
             # Clause does not improve hypothesis => remove it and stop
@@ -119,7 +120,7 @@ def best_clause( current_rule ) :
                 
                 if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
                    return new_rule   # we found a rule with maximal score => no better rule can be found
-                elif (new_rule.localScore <= old_rule.localScore) or not new_beam.push( new_rule , new_refs[i+1:] ) : # was new_refs[i+1:]
+                elif (False and new_rule.localScore <= old_rule.localScore) or not new_beam.push( new_rule , new_refs[i+1:] ) : # was new_refs[i+1:]
                     break  # current ref does not have high enough score -> next ones will also fail
             
         # Use new beam in next iteration
@@ -164,9 +165,9 @@ def update_refinements( rule, refine) :
             with Log('rejected', reason="TP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
         elif r.max_significance < SETTINGS.SIGNIFICANCE :
           with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
-        elif prev_score.FP > 0 and new_score.FP == prev_score.FP :
-            print('FP')
-            with Log('rejected', reason="FP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+        # elif prev_score.FP > 0 and new_score.FP == prev_score.FP :
+        #     print('FP')
+        #     with Log('rejected', reason="FP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
 
         # elif new_score.TN <= parent_score.TN :
         #     if SETTINGS.DISTINCT_VARS and r._new_vars :
@@ -230,7 +231,7 @@ class Rule(object) :
         dP = s.P
         if self.previous :
             dTP -= self.previous.score.TP
-            dP -= self.previous.score.TP
+           # dP -= self.previous.score.TP
         
         ms = 2 * dTP * ( -math.log( dP / dM ) )
         return ms
@@ -412,7 +413,7 @@ class Rule(object) :
     def __lt__(self, other) :
        # return self.localScore < other.localScore
         
-        return (self.localScore, len(self._new_vars), -len(self), -self.count_negated(), str(self)) < (other.localScore, len(other._new_vars), -len(other), -other.count_negated(), str(other))
+        return (self.localScore, -len(self), -self.count_negated(), str(self)) < (other.localScore, -len(other), -other.count_negated(), str(other))
              
         
     def __eq__(self, other) :
@@ -591,7 +592,7 @@ class Score(object) :
         
 class Score2(Score) :
     
-    def _calc_y(p,l,u) :
+    def _calc_y(self, p,l,u) :
         if l == u :
             return 0
         else :
@@ -605,7 +606,7 @@ class Score2(Score) :
     
     
     def __init__(self, correct, predict, predict_prev) :
-      values = sorted( (Score2._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
+      values = sorted( (self._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
       with Log('calcscore') :
         with Log('values', _child=values) : pass
         
@@ -636,7 +637,7 @@ class Score2(Score) :
         for x in sorted(ys) :
 
             TP, FP, TN, FN = score(x)
-            s = Score2._m_estimate(m, TP, TN, FP, FN, P, N)
+            s = self._m_estimate(m, TP, TN, FP, FN, P, N)
             with Log('candidate', x=x, score=s, TP=TP, FP=FP, TN=TN, FN=FN) : pass
             if x >= SETTINGS.MIN_RULE_PROB and ( max_s == None or s > max_s ) :
                 max_s = s
@@ -644,7 +645,7 @@ class Score2(Score) :
         if max_x == None :
             max_x = 1
             TP, FP, TN, FN = score(max_x)
-            max_s = Score2._m_estimate(m, TP, TN, FP, FN, P, N)
+            max_s = self._m_estimate(m, TP, TN, FP, FN, P, N)
 
         self.max_s = max_s
         self.max_x = max_x
@@ -657,7 +658,7 @@ class Score2(Score) :
         with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
         
     
-    def _m_estimate(m, TP, TN, FP, FN, P, N) :
+    def _m_estimate(self, m, TP, TN, FP, FN, P, N) :
         #if (TP == 0 and FP == 0 and m == 0) : m = 1
         return (TP + m * (P / (N + P))) / (TP + FP + m) 
     
@@ -723,7 +724,8 @@ class QueryPack(object) :
             yield qp
      
      
-    def lit_to_problog_lit(lit) :
+    @classmethod
+    def lit_to_problog_lit(cls, lit) :
         import core
         
         if lit.is_negated :
