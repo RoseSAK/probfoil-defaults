@@ -834,16 +834,16 @@ class QueryPack(object) :
             if q_cnt == 0 :
                 return scores
         
-            with Log('program', _child=self.toProbLog()) : pass
-                
-            with Log('dpgraph', _child=dependency_graph, size=len(dependency_graph)) :
-                pass
-                
-            with Log('probs', _child=probabilities) :
-                pass
-                
-            with Log('queries', _child=queries) :
-                pass
+            # with Log('program', _child=self.toProbLog()) : pass
+            #     
+            # with Log('dpgraph', _child=dependency_graph, size=len(dependency_graph)) :
+            #     pass
+            #     
+            # with Log('probs', _child=probabilities) :
+            #     pass
+            #     
+            # with Log('queries', _child=queries) :
+            #     pass
                 
             import problog
             engine_base = problog.ProbLogEngine.create([])
