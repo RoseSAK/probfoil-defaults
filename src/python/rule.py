@@ -1,36 +1,18 @@
 #! /usr/bin/env python3
 
-from __future__ import print_function
+from __future__ import print_function               # for compatibility with Python 2
 
 from collections import defaultdict, namedtuple
 from itertools import product
 from functools import total_ordering
-
 from util import Log, Timer
-
 import os, sys
-
 
 ##############################################################################
 ###                      PARSE COMMAND LINE ARGUMENTS                      ###
 ##############################################################################
 
-import argparse
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument('files', nargs='+')
-parser.add_argument('--beamsize', type=int, default=5, dest='BEAM_SIZE', help='size of search beam')
-parser.add_argument('-m', type=int, dest='M_ESTIMATE_M',  default=10, help='value of m for m-estimate')
-parser.add_argument('--distinct_vars', action='store_true', dest='DISTINCT_VARS', help='enable distinct variables (EXPERIMENTAL)')
-parser.add_argument('--pvalue', type=float, dest='SIGNIFICANCE_P', default=0.99, help='minimal rule significance (p-value)')
-parser.add_argument('-v', action='count', dest='VERBOSE', help='increase verbosity level')
-parser.add_argument('--probfoil1', action='store_false', dest='PROBFOIL2', help='use traditional ProbFOIL scoring')
-parser.add_argument('--min_rule_prob', type=float, dest='MIN_RULE_PROB', default=0.01, help='minimal probability of rule in Prob2FOIL')
-parser.add_argument('--equiv_check', action='store_true', dest='EQUIV_CHECK', help='enable elimination of equivalent results in beam')
-
-
-SETTINGS = parser.parse_args()
+from argparse import ArgumentParser
 
 import math
 chi2_cdf = lambda x : math.erf(math.sqrt(x/2))
@@ -44,8 +26,19 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
     else :
         return calc_significance(s, v, high)
 
-SETTINGS.SIGNIFICANCE= calc_significance(SETTINGS.SIGNIFICANCE_P)
+parser = ArgumentParser()
+parser.add_argument('files', nargs='+')
+parser.add_argument('--beamsize', type=int, default=5, dest='BEAM_SIZE', help='size of search beam')
+parser.add_argument('-m', type=int, dest='M_ESTIMATE_M',  default=10, help='value of m for m-estimate')
+parser.add_argument('--distinct_vars', action='store_true', dest='DISTINCT_VARS', help='enable distinct variables (EXPERIMENTAL)')
+parser.add_argument('--pvalue', type=float, dest='SIGNIFICANCE_P', default=0.99, help='minimal rule significance (p-value)')
+parser.add_argument('-v', action='count', dest='VERBOSE', help='increase verbosity level')
+parser.add_argument('--probfoil1', action='store_false', dest='PROBFOIL2', help='use traditional ProbFOIL scoring')
+parser.add_argument('--min_rule_prob', type=float, dest='MIN_RULE_PROB', default=0.01, help='minimal probability of rule in Prob2FOIL')
+parser.add_argument('--equiv_check', action='store_true', dest='EQUIV_CHECK', help='enable elimination of equivalent results in beam')
 
+SETTINGS = parser.parse_args()
+SETTINGS.SIGNIFICANCE= calc_significance(SETTINGS.SIGNIFICANCE_P)
 
 ##############################################################################
 ###                           LEARNING ALGORITHM                           ###
@@ -64,6 +57,8 @@ def learn(H) :
             
         # Find best clause that refines this hypothesis
         new_H = best_clause( H )
+        
+        if SETTINGS.VERBOSE : print ('RULE FOUND:', new_H, new_rule.score, new_H.globalScore)
         
         # Log progress
         with Log('rule_found', rule=new_H, score=new_H.score) : 
@@ -103,24 +98,31 @@ def best_clause( current_rule ) :
         # Create the next beam
         new_beam = beam.create()
         
-        
+        # Run through old beam and process its content
         for old_rule, refs in beam :
             
           with Log('refining', rule=old_rule, score=old_rule.score, localScore=old_rule.localScore, _timer=True) :
+            
             # Add current rule to beam and mark it as tested (refinements=None)
             new_beam.push( old_rule, None )
                         
             # Update scores of available refinements and add new refinements if a new variable was introduced.
             new_rules = update_refinements(old_rule, refs)
+            
+            # Extract refinement literals
             new_refs = [ r.literal for r in new_rules ]
             
             # Add rules to new beam (new_refs are ordered by score, descending)
             for i, new_rule in enumerate(new_rules) :
+                
                 if SETTINGS.VERBOSE : print (new_rule, new_rule.score)
                 
                 if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
                    return new_rule   # we found a rule with maximal score => no better rule can be found
-                elif (False and new_rule.localScore <= old_rule.localScore) or not new_beam.push( new_rule , new_refs[i+1:] ) : # was new_refs[i+1:]
+                # elif new_rule.localScore <= old_rule.localScore) :
+                #     break
+                # Attempt to add rule to beam
+                elif not new_beam.push( new_rule , new_refs[i+1:] ) : 
                     break  # current ref does not have high enough score -> next ones will also fail
             
         # Use new beam in next iteration
@@ -147,7 +149,6 @@ def update_refinements( rule, refine) :
         refine += new_refine
         
     
-    
     # Update scores for all literals in batch
     refine = sorted((rule + ref for ref in refine), reverse = True)
         
@@ -159,24 +160,15 @@ def update_refinements( rule, refine) :
         parent_score = r.parent.score
         new_score = r.score
                 
-        # true negatives should be up because of this LITERAL (adding literals increases this)
-        # true positives should be up because of this RULE (adding literals decreases this)
+                
         if new_score.TP <= prev_score.TP :
+            # Rule doesn't cover any true positive examples => it's useless
             with Log('rejected', reason="TP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
         elif r.max_significance < SETTINGS.SIGNIFICANCE :
-          with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
-        # elif prev_score.FP > 0 and new_score.FP == prev_score.FP :
-        #     print('FP')
-        #     with Log('rejected', reason="FP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
-
-        # elif new_score.TN <= parent_score.TN :
-        #     if SETTINGS.DISTINCT_VARS and r._new_vars :
-        #         # introduces a new variable
-        #         with Log('accepted_too', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
-        #         result.append( r )
-        #     else :
-        #         with Log('rejected', reason="TN", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+            # Rule cannot reach required significance => it's useless
+            with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
         else :
+            # Accept the extension and add it to the output
             with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
             result.append( r )
     
@@ -192,9 +184,10 @@ class Rule(object) :
     # literal   (Literal)               => current literal
     # parent    (Rule)                  => parent rule (i.e. without current literal)
     # previous  (Rule)                  => previous rule in the ruleset
-    # kb        (KnowledgeBase)                => knowledge base
+    # kb        (KnowledgeBase)         => knowledge base
     # language  (Language)              => language specifier
     # variables {(name, type)}          => set of variables in the rule
+    # examples
     
     def __init__(self, literal, parent) :
         self.parent = parent
@@ -216,12 +209,13 @@ class Rule(object) :
         self._all_vars = old_vars | current_vars
         self._new_vars = current_vars - old_vars
     
-    
+    # Calculate the local score
     def _calc_local(self) :
         m = SETTINGS.M_ESTIMATE_M 
         m_estimate_c = self.score.m_estimate(m)
         return m_estimate_c #- m_estimate_p
         
+    # Calculate maximal achievable significance
     def _calc_max_significance(self) :
         s = self.score
         M = s.P + s.N
@@ -236,6 +230,7 @@ class Rule(object) :
         ms = 2 * dTP * ( -math.log( dP / dM ) )
         return ms
     
+    # Calculate actual significance
     def _calc_significance(self) :
         s = self.score
         C = s.TP + s.FP
@@ -244,18 +239,18 @@ class Rule(object) :
         M = s.P + s.N
         p_pos_c = s.TP / C
         p_neg_c = 1 - p_pos_c
-
+        
         p_pos = s.P / M
         p_neg = s.N / M
-
+        
         pos_log = math.log(p_pos_c/p_pos) if p_pos_c > 0 else 0
         neg_log = math.log(p_neg_c/p_neg) if p_neg_c > 0 else 0
-        
         
         l = 2*C * (p_pos_c * pos_log  + p_neg_c * neg_log  )
         
         return l
-
+        
+    # Calculate the Prob2FOIL score
     def _get_score2(self) :
         if self._score == None :
             predict = [ x[0] for x in self.evaluate() ]
@@ -266,8 +261,8 @@ class Rule(object) :
                 predict_prev = [ 0 for x in self.examples ]
             self._score = Score2(correct, predict, predict_prev)
         return self._score
-
-    
+        
+    # Calculate the ProbFOIL score
     def _get_score(self) :
         if self._score == None :
             predict = [ x[0] for x in self.evaluate() ]
@@ -298,8 +293,8 @@ class Rule(object) :
     def __add__(self, literal) :
         return Rule(literal, self)
         
+    # Evaluate rule
     def evaluate(self) :
-        # calculate score
         if self._evaluation_cache == None :
             self._evaluation_cache = [None] * len(self.examples)
             parent_evaluation = self.parent.evaluate()
@@ -347,6 +342,7 @@ class Rule(object) :
         
         return self._evaluation_cache
         
+    # Generate refinement literals 
     def refine(self, update=False) :
         # generate refined clauses
         if update :
@@ -357,6 +353,7 @@ class Rule(object) :
             use_vars = None
         return [ literal for literal in self.language.refinements( self.variables, use_vars ) ]
     
+    # Score evaluation using ProbLog
     def _update_scores(self, cache) : 
       with Log('scoreupdate', rule=self)   :
         queries = QueryPack(self.kb)
@@ -392,18 +389,13 @@ class Rule(object) :
             score, current, used_facts = cache[ex]
             cache[ex] = scores[ex], current, used_facts
             
-        # with Log( 'rulecache' ) :
-        #     for i, c in enumerate(cache) :
-        #         ex = self.examples[i]
-        #         with Log( 'entry', i=i, score=c[0], example=ex[1], example_score=ex[0]) :
-        #             pass
-            
     def __len__(self) :
         if self.parent :
             return len(self.parent) + 1
         else :
             return 1
-            
+    
+    # Count number of negative literals
     def count_negated(self) :
         if self.parent :
             return self.parent.count_negated() + self.literal.is_negated
@@ -411,14 +403,12 @@ class Rule(object) :
             return self.literal.is_negated
             
     def __lt__(self, other) :
-       # return self.localScore < other.localScore
-        
-        return (self.localScore, -len(self), -self.count_negated(), str(self)) < (other.localScore, -len(other), -other.count_negated(), str(other))
-             
+        return (self.localScore, -len(self), -self.count_negated(), str(self)) < (other.localScore, -len(other), -other.count_negated(), str(other))             
         
     def __eq__(self, other) :
         return str(self) == str(other)
         
+    # Return a string representation of the entire ruleset
     def strAll(self) :
         r = self.previous.strAll() 
         if self.probability < 0.9999 :
@@ -426,11 +416,9 @@ class Rule(object) :
         else :
             r += str(self) + '\n' 
         return r
-        
 
+# A rule with an empty body.
 class RuleHead(Rule) :
-    
-    # examples
     
     def __init__(self, literal, previous) :
         self.previous = previous
@@ -458,6 +446,7 @@ class RuleHead(Rule) :
                 self._evaluation_cache[i] =  (1.0, [( subst, set([]) )], defaultdict(set) )
         return self._evaluation_cache
         
+# A rule with a false body (base rule in a ruleset)
 class FalseRule(Rule) :
     
     def __init__(self, kb, target) :
@@ -492,6 +481,7 @@ class FalseRule(Rule) :
     def strAll(self) :
         return ''
 
+# Language definition, defines refinement operator
 class Language(object) :
     
     def __init__(self, kb) :
@@ -553,7 +543,7 @@ class Language(object) :
                 yield []
 
 
-
+# ProbFOIL/mFOIL score calculation
 class Score(object) :
     
     def __init__(self, correct, predict) :
@@ -589,7 +579,8 @@ class Score(object) :
             
     def __str__(self) :
         return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
-        
+     
+# Prob2FOIL score calculation   
 class Score2(Score) :
     
     def _calc_y(self, p,l,u) :
@@ -606,9 +597,9 @@ class Score2(Score) :
     
     
     def __init__(self, correct, predict, predict_prev) :
-      values = sorted( (self._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
-      with Log('calcscore') :
-        with Log('values', _child=values) : pass
+        values = sorted( (self._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
+      # with Log('calcscore') :
+      #   with Log('values', _child=values) : pass
         
         P = 0.0
         N = 0.0
@@ -638,7 +629,7 @@ class Score2(Score) :
 
             TP, FP, TN, FN = score(x)
             s = self._m_estimate(m, TP, TN, FP, FN, P, N)
-            with Log('candidate', x=x, score=s, TP=TP, FP=FP, TN=TN, FN=FN) : pass
+            # with Log('candidate', x=x, score=s, TP=TP, FP=FP, TN=TN, FN=FN) : pass
             if x >= SETTINGS.MIN_RULE_PROB and ( max_s == None or s > max_s ) :
                 max_s = s
                 max_x = x
@@ -655,7 +646,7 @@ class Score2(Score) :
         
         self.maxTP = score(1.0)[0]
         
-        with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
+        # with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
         
     
     def _m_estimate(self, m, TP, TN, FP, FN, P, N) :
@@ -668,6 +659,7 @@ class Score2(Score) :
 ###                           PROBLOG EVALUATION                           ###
 ##############################################################################
 
+# Query pack for ProbLog queries
 class QueryPack(object) :
      
     # This field is shared by all objects for this class!
@@ -881,6 +873,7 @@ class QueryPack(object) :
                 
         return scores
          
+# Query for ProbLog
 class Query(object) :
      
     def __init__(self, example_id, parent=None) :
@@ -1078,15 +1071,7 @@ class KnowledgeBase(object) :
         
     def __iter__(self) :
         return iter(range(0,len(self.examples)))
-        
-    # def clause(self, head, body, args) :
-    #     subst = head.unify( args )
-    #     for sol in self.query(body, subst) :
-    #         yield sol
-            
-    # def query_single(self, literals, substitution) :
-    #     return true(self.query(literals, substitution))
-        
+    
     def query(self, literals, substitution, facts_used=None, distinct=False) :
         if not literals :  # reached end of query
             yield substitution, []
@@ -1150,37 +1135,6 @@ def is_var(arg) :
 
 def distinct_values(subst) :
     return len(subst.values()) == len(set(subst.values()))
-
-def read_file(filename, idtypes=[]) :
-    import re 
-    
-    line_regex = re.compile( "((?P<type>(base|modes|learn))\()?((?P<prob>\d+[.]\d+)::)?\s*(?P<name>\w+)\((?P<args>[^\)]+)\)\)?." )
-    
-    kb = KnowledgeBase(idtypes)
-    
-    with open(filename) as f :
-        for line in f :        
-            if line.strip().startswith('%') :
-                continue
-            m = line_regex.match(line.strip())
-            if m : 
-                ltype, pred, args = m.group('type'), m.group('name'), list(map(lambda s : s.strip(), m.group('args').split(',')))
-                prob = m.group('prob')
-                
-                if ltype == 'base' :
-                    kb.register_predicate(pred, args)  
-                elif ltype == 'modes' :
-                    kb.add_mode(pred,args)                    
-                elif ltype == 'learn' :
-                    kb.add_learn(pred,args)                
-                else :
-                    if not prob :
-                        prob = 1.0
-                    else :
-                        prob = float(prob)
-                    kb.add_fact(pred,args,prob)
-                                
-    return kb
 
 class Literal(object) :
     
@@ -1292,21 +1246,14 @@ class Beam(object) :
             r1scores = list(zip(*r1.evaluate()))[0]
             r2scores = list(zip(*r2.evaluate()))[0]
             
-            # print (r1, r1.localScore, r1scores)
-            # print (r2, r2.localScore, r2scores)
-            # print ('==>', r1.localScore == r2.localScore, r1scores == r2scores)
             if r1.localScore == r2.localScore and r1scores == r2scores :
                 if rf1 != None and rf2 != None and len(rf1) > len(rf2) : #len(r1.variables) > len(r2.variables) :                
                     best, worst = r1, r2
                     self.content[p+1] = self.content[p]
                 else :
                     best, worst = r2, r1
-                with Log('beam_equivalent', best=best, worst=worst) : pass
-                #print ('beam_equivalent', best, worst)
-                
+                with Log('beam_equivalent', best=best, worst=worst) : pass                
                 self.content.pop(p)
-                
-#                self.content = self.content[:p] + self.content[p+1:]    # remove p                    
         
         popped_last = False
         while len(self.content) > self.size :
@@ -1350,6 +1297,73 @@ class Beam(object) :
 ##############################################################################
 ###                            SCRIPT EXECUTION                            ###
 ##############################################################################
+
+def read_file(filename) :
+    if filename.endswith('.arff') :
+        return read_arff(filename)
+    else :
+        return read_prolog(filename)
+
+def read_prolog(filename) :
+    import re 
+    
+    line_regex = re.compile( "((?P<type>(base|modes|learn))\()?((?P<prob>\d+[.]\d+)::)?\s*(?P<name>\w+)\((?P<args>[^\)]+)\)\)?." )
+    
+    kb = KnowledgeBase([])
+    
+    with open(filename) as f :
+        for line in f :        
+            if line.strip().startswith('%') :
+                continue
+            m = line_regex.match(line.strip())
+            if m : 
+                ltype, pred, args = m.group('type'), m.group('name'), list(map(lambda s : s.strip(), m.group('args').split(',')))
+                prob = m.group('prob')
+                
+                if ltype == 'base' :
+                    kb.register_predicate(pred, args)  
+                elif ltype == 'modes' :
+                    kb.add_mode(pred,args)                    
+                elif ltype == 'learn' :
+                    kb.add_learn(pred,args)                
+                else :
+                    if not prob :
+                        prob = 1.0
+                    else :
+                        prob = float(prob)
+                    kb.add_fact(pred,args,prob)
+                                
+    return kb
+    
+def read_arff(filename) :
+    kb = KnowledgeBase([])
+    
+    atts = []
+    with open(filename) as f :
+        reading_data = False
+        i = 0
+        for line in f :
+            line = line.strip()
+            if line.startswith('#') :
+                continue    # comment
+            elif line.startswith('@attribute') :
+                _a, name, tp = line.split()
+                assert(tp == 'numeric')
+                atts.append( name )
+                kb.register_predicate(name, ['ex'])
+            elif line.startswith('@data') :
+                reading_data = True
+            elif line and reading_data :
+                data = map(float,line.split(','))
+                
+                for a,v in zip(atts,data) :
+                    kb.add_fact(a,[str(i)],v)
+                i += 1
+
+        for a in atts[:-1] :
+            kb.add_mode(a, ['+'])
+        kb.add_learn(atts[-1], ['ex'])
+    return kb
 
 def main(files=[]) :
 
