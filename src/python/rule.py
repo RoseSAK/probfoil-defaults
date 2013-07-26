@@ -115,7 +115,7 @@ def best_clause( current_rule ) :
             # Add rules to new beam (new_refs are ordered by score, descending)
             for i, new_rule in enumerate(new_rules) :
                 
-                if SETTINGS.VERBOSE : print (new_rule, new_rule.score)
+                if SETTINGS.VERBOSE : print (new_rule, new_rule.score, new_rule.localScore)
                 
                 if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
                    return new_rule   # we found a rule with maximal score => no better rule can be found
