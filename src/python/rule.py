@@ -575,7 +575,8 @@ class Score(object) :
         return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 
         
     def accuracy(self) :
-        return (self.TP + self.TN ) / (self.TP + self.TN + self.FP + self.FN)
+        M = self.P + self.N
+        return (self.TP + self.TN ) / M
             
     def __str__(self) :
         return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
