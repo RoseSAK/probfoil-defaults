@@ -58,7 +58,7 @@ def learn(H) :
         # Find best clause that refines this hypothesis
         new_H = best_clause( H )
         
-        if SETTINGS.VERBOSE : print ('RULE FOUND:', new_H, new_rule.score, new_H.globalScore)
+        if SETTINGS.VERBOSE : print ('RULE FOUND:', new_H, new_H.globalScore)
         
         # Log progress
         with Log('rule_found', rule=new_H, score=new_H.score) : 
