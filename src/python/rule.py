@@ -26,19 +26,20 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
     else :
         return calc_significance(s, v, high)
 
-parser = ArgumentParser()
-parser.add_argument('files', nargs='+')
-parser.add_argument('--beamsize', type=int, default=5, dest='BEAM_SIZE', help='size of search beam')
-parser.add_argument('-m', type=int, dest='M_ESTIMATE_M',  default=10, help='value of m for m-estimate')
-parser.add_argument('--distinct_vars', action='store_true', dest='DISTINCT_VARS', help='enable distinct variables (EXPERIMENTAL)')
-parser.add_argument('--pvalue', type=float, dest='SIGNIFICANCE_P', default=0.99, help='minimal rule significance (p-value)')
-parser.add_argument('-v', action='count', dest='VERBOSE', help='increase verbosity level')
-parser.add_argument('--probfoil1', action='store_false', dest='PROBFOIL2', help='use traditional ProbFOIL scoring')
-parser.add_argument('--min_rule_prob', type=float, dest='MIN_RULE_PROB', default=0.01, help='minimal probability of rule in Prob2FOIL')
-parser.add_argument('--equiv_check', action='store_true', dest='EQUIV_CHECK', help='enable elimination of equivalent results in beam')
+if __name__ == '__main__' :
+    parser = ArgumentParser()
+    parser.add_argument('files', nargs='+')
+    parser.add_argument('--beamsize', type=int, default=5, dest='BEAM_SIZE', help='size of search beam')
+    parser.add_argument('-m', type=int, dest='M_ESTIMATE_M',  default=10, help='value of m for m-estimate')
+    parser.add_argument('--distinct_vars', action='store_true', dest='DISTINCT_VARS', help='enable distinct variables (EXPERIMENTAL)')
+    parser.add_argument('--pvalue', type=float, dest='SIGNIFICANCE_P', default=0.99, help='minimal rule significance (p-value)')
+    parser.add_argument('-v', action='count', dest='VERBOSE', help='increase verbosity level')
+    parser.add_argument('--probfoil1', action='store_false', dest='PROBFOIL2', help='use traditional ProbFOIL scoring')
+    parser.add_argument('--min_rule_prob', type=float, dest='MIN_RULE_PROB', default=0.01, help='minimal probability of rule in Prob2FOIL')
+    parser.add_argument('--equiv_check', action='store_true', dest='EQUIV_CHECK', help='enable elimination of equivalent results in beam')
 
-SETTINGS = parser.parse_args()
-SETTINGS.SIGNIFICANCE= calc_significance(SETTINGS.SIGNIFICANCE_P)
+    SETTINGS = parser.parse_args()
+    SETTINGS.SIGNIFICANCE= calc_significance(SETTINGS.SIGNIFICANCE_P)
 
 ##############################################################################
 ###                           LEARNING ALGORITHM                           ###
@@ -255,11 +256,15 @@ class Rule(object) :
         if self._score == None :
             predict = [ x[0] for x in self.evaluate() ]
             correct = [ x[0] for x in self.examples]
-            if  self.previous :
-                predict_prev = [ x[0] * self.previous.probability for x in self.previous.evaluate() ]
+            
+            if SETTINGS.PROBFOIL2 :
+                if self.previous :
+                    predict_prev = [ x[0] * self.previous.probability for x in self.previous.evaluate() ]
+                else :
+                    predict_prev = [ 0 for x in self.examples ]
+                self._score = Score2(correct, predict, predict_prev)
             else :
-                predict_prev = [ 0 for x in self.examples ]
-            self._score = Score2(correct, predict, predict_prev)
+                self._score = Score(correct, predict, predict_prev)
         return self._score
         
     # Calculate the ProbFOIL score
@@ -273,10 +278,8 @@ class Rule(object) :
     variables = property(lambda self : self._all_vars)
     language = property(lambda self : Language(self.kb) )
     
-    if SETTINGS.PROBFOIL2 :
-        score = property(_get_score2)
-    else :
-        score = property(_get_score)
+
+    score = property(_get_score2)
     localScore = property(_calc_local)
     significance = property(_calc_significance)
     max_significance = property(_calc_max_significance)
@@ -1407,6 +1410,5 @@ def main(files=[]) :
 
 
 if __name__ == '__main__' :
-    
     main(SETTINGS.files)
   
