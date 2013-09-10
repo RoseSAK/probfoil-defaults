@@ -825,7 +825,7 @@ class QueryPack(object) :
             del self[key]
                 
         dependency_graph = self._to_dependency_graph() 
-        create_dependency_graph = lambda *s : dependency_graph
+        create_dependency_graph = lambda *s : (dependency_graph, probabilities)
         ground_program = None
         queries = [ QueryPack.lit_to_problog_lit(Literal('pfq_%s' % i, [])) for i, _q in enumerate(self) ]
         evidence = []
