@@ -1,10 +1,10 @@
 
 base(parent(person,person)).
-modes(parent(-,-)).
+modes(parent('-','-')).
 base(male(person)).
-modes(male(+)). 
+modes(male('+')). 
 base(female(person)).
-modes(female(+)).
+modes(female('+')).
 
 %learn(mother(person,person)).
 base(mother(person,person)).
@@ -151,7 +151,7 @@ female_ancestor(laura,lieve).
 female_ancestor(laura,katleen).
 female_ancestor(laura,soetkin).
 female_ancestor(laura,stijn).
-female_ancestor(laura,pieter)
+female_ancestor(laura,pieter).
 
 grandmother(esther,soetkin).
 grandmother(esther,stijn).
