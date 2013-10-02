@@ -407,6 +407,7 @@ class PrologInterface(object) :
         self.engine = prolog.PrologEngine()
         self.last_id = 0
         self.__queue = []
+        self.__prob_cache = {}
                 
     def _getRuleQuery(self, identifier) :
         return 'query_' + str(identifier)
@@ -478,30 +479,35 @@ class PrologInterface(object) :
     def process_queue(self) :
         queries = []
         for rule in self.__queue :
-            for example in rule.examples :
-                queries.append( self._getRuleSetQueryAtom(rule, example) )
+            if rule.score_predict == None :
+                for example in rule.examples :
+                    queries.append( self._getRuleSetQueryAtom(rule, example) )
             
         cnf, facts = self.engine.ground_cache.toCNF( queries )
         ddnnf = self._compile_cnf(cnf, facts)
         
         Literal = namedtuple('Literal', ['atom'])
         for rule in self.__queue :
-            evaluations = []
-            for example in rule.examples :
-                q = self._getRuleSetQueryAtom(rule, example)
-                q_node_id = self.engine.ground_cache.byName(q)
-                #print (q, q_node_id)
-                if q_node_id == 0 :
-                    p = 1
-                elif q_node_id == None :
-                    p = 0
-                elif q_node_id in facts :
-                    p = facts[q_node_id]
-                else :
-                    res = ddnnf.evaluate({},[ Literal(str(q_node_id)) ])
-                    p = res[1][str(q_node_id)]
-                evaluations.append(p)
-            rule.score_predict = evaluations
+            if rule.score_predict == None :
+                evaluations = []
+                for example in rule.examples :
+                    q = self._getRuleSetQueryAtom(rule, example)
+                    q_node_id = self.engine.ground_cache.byName(q)
+                    #print (q, q_node_id)
+                    if q_node_id == 0 :
+                        p = 1
+                    elif q_node_id == None :
+                        p = 0
+                    elif q_node_id in facts :
+                        p = facts[q_node_id]
+                    elif q_node_id in self.__prob_cache :
+                        p = self.__prob_cache[q_node_id]
+                    else :
+                        res = ddnnf.evaluate({},[ Literal(str(q_node_id)) ])
+                        p = res[1][str(q_node_id)]
+                        self.__prob_cache[q_node_id] = p
+                    evaluations.append(p)
+                rule.score_predict = evaluations
         
         self.__queue = []
                 
@@ -587,21 +593,27 @@ def test(filename) :
     
     r2_1 = RuleHead(r1_2)
     r2_2 = r2_1 + Literal('mother', 'XY')
-            
-    p.enqueue(r1_1)
-    
-    p.enqueue(r1_2)
-    
-    p.enqueue(r2_1)
-    
-    p.enqueue(r2_2)
-    
-    p.process_queue()
 
     print(r0, r0.score_correct)
+            
+    p.enqueue(r1_1)
+    p.process_queue()
+    
     print(r1_1, r1_1.score_predict, r1_1.score)
+
+    p.enqueue(r1_2)
+    p.process_queue()
+
     print(r1_2, r1_2.score_predict, r1_2.score)
+    
+    p.enqueue(r2_1)
+    p.process_queue()
+
     print(r2_1, r2_1.score_predict, r2_1.score)
+    
+    p.enqueue(r2_2)
+    p.process_queue()
+    
     print(r2_2, r2_2.score_predict, r2_2.score)
     
 
