@@ -4,12 +4,95 @@ sys.path.append('../../')
 
 import os
 
-import prolog.core as prolog
+from util import Log
+
 
 from collections import namedtuple, defaultdict
 from itertools import product
+from functools import total_ordering
 
 #from core import PrologEngine, Clause, Conjunction
+
+class Beam(object) :
+    
+    def __init__(self, size, allow_equivalent=False) :
+        self.size = size
+        self.content = []
+        self.allow_equivalent = allow_equivalent
+         
+    def create(self) :
+        return Beam(self.size, self.allow_equivalent) 
+       
+    def __iter__(self) :
+        return iter(self.content)
+        
+    def push(self, obj, active) :
+        if len(self.content) == self.size and obj < self.content[-1][0] : return False
+        
+        is_last = True
+        
+        p = len(self.content) - 1
+        self.content.append( (obj, active) )
+        while p >= 0 and (self.content[p][0] == None or self.content[p][0] < self.content[p+1][0]) :
+            self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
+            p = p - 1
+            is_last = False
+        
+        if not self.allow_equivalent and len(self.content) > 1 :
+            r1, rf1 = self.content[p]
+            r2, rf2 = self.content[p+1]
+            
+            r1scores = r1.score_predict
+            r2scores = r2.score_predict
+            
+            if r1.localScore == r2.localScore and r1scores == r2scores :
+                if rf1 != None and rf2 != None and len(rf1) > len(rf2) : #len(r1.variables) > len(r2.variables) :                
+                    best, worst = r1, r2
+                    self.content[p+1] = self.content[p]
+                else :
+                    best, worst = r2, r1
+                with Log('beam_equivalent', best=best, worst=worst) : pass                
+                self.content.pop(p)
+        
+        popped_last = False
+        while len(self.content) > self.size :
+            self.content.pop(-1)
+            popped_last = True
+            
+        return not (is_last and popped_last)
+    
+    def peak_active(self) :
+        i = 0
+        while i < len(self.content) :
+            if self.content[i][-1] :
+                yield self.content[i]
+                i = 0
+            else :
+                i += 1
+                
+    def has_active(self) :
+        for r, act in self :
+            if act != None : return True
+        return False
+    
+    def pop(self) :
+        self.content = self.content[1:]
+        
+    def __str__(self) :
+        res = ''
+        for c, r in self.content :
+            res += str(c) + ': ' + str(c.score) +  ' | ' + str(r) + '\n'
+        return res
+        
+    def toXML(self) :
+        res = ''
+        for c, r in self.content :
+            if r == None :
+                res +=  '<record rule="%s" score="%s" localScore="%s" refine="NO" />\n' % (c,c.score, c.localScore)
+            else :
+                res +=  '<record rule="%s" score="%s" localScore="%s" refine="%s" />\n' % (c,c.score, c.localScore, '|'.join(map(str,r)))
+        return res
+
 
 class LearningProblem(object) :
     
@@ -17,8 +100,146 @@ class LearningProblem(object) :
         self.language = language
         self.knowledge = knowledge
         
+        self.BEAM_SIZE = 5
+        self.VERBOSE = True
+        self.SIGNIFICANCE = 1
+        
     def calculateScore(self, rule) :
         raise NotImplementedError('calculateScore')
+
+    def learn(self, H) :
+        """Core FOIL learning algorithm.
+    
+        H - initial hypothesis (Rule (e.g. FalseRule))
+        """
+    
+        # Find clauses as long as stopping criterion is not met or until maximal score (1.0) is reached.
+        while H.globalScore < 1.0 :   # this test is not required for correctness (alternative: while True)
+       
+          with Log('learn_rule', _timer=True):
+            
+            # Find best clause that refines this hypothesis
+            new_H = self.best_clause( H )
+        
+            if self.VERBOSE : print ('RULE FOUND:', new_H, new_H.globalScore)
+        
+            # Log progress
+            with Log('rule_found', rule=new_H, score=new_H.score) : 
+                pass
+            with Log('stopping_criterion', old_score=H.globalScore, new_score=new_H.globalScore, full_score=new_H.score) : 
+                pass
+        
+            # TODO check significance level?
+            # Check stopping criterion
+            if (H.globalScore >= new_H.globalScore) :
+                # Clause does not improve hypothesis => remove it and stop
+                break
+            else :
+                # Clause improves hypothesis => continue
+                H = new_H
+        return H
+
+    def best_clause(self, current_rule ) :
+        """Find the best clause for this hypothesis."""
+    
+        # We use beam search; initialize beam
+        beam = Beam(self.BEAM_SIZE)    
+    
+        # Create the new rule ( target <- )
+        init_rule = RuleHead(previous=current_rule)
+    
+        # Calculate initial set of refinements
+        refinements = list(init_rule.refine())
+    
+        # Add clause to beam (with empty score)
+        beam.push( init_rule, refinements )
+    
+        # While there are untested refinements in the beam.
+        while beam.has_active() :
+          with Log('iteration', _timer=True) :
+          
+            # Create the next beam
+            new_beam = beam.create()
+        
+            # Run through old beam and process its content
+            for old_rule, refs in beam :
+                
+            
+              with Log('refining', rule=old_rule, score=old_rule.score, localScore=old_rule.localScore, _timer=True) :
+            
+                # Add current rule to beam and mark it as tested (refinements=None)
+                new_beam.push( old_rule, None )
+                        
+                # Update scores of available refinements and add new refinements if a new variable was introduced.
+                new_rules = self.update_refinements(old_rule, refs)
+            
+                # Extract refinement literals
+                new_refs = [ r.literal for r in new_rules ]
+                
+                #print ('NEW_REFS:', new_refs)
+            
+                # Add rules to new beam (new_refs are ordered by score, descending)
+                for i, new_rule in enumerate(new_rules) :
+                
+                    if self.VERBOSE : print (new_rule, new_rule.score, new_rule.localScore)
+                
+                    if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
+                       return new_rule   # we found a rule with maximal score => no better rule can be found
+                    # elif new_rule.localScore <= old_rule.localScore) :
+                    #     break
+                    # Attempt to add rule to beam
+                    elif not new_beam.push( new_rule , new_refs[i+1:] ) : 
+                        break  # current ref does not have high enough score -> next ones will also fail
+            
+            # Use new beam in next iteration
+            beam = new_beam
+        
+            # Write beam to log
+            with Log('beam', _child=beam.toXML()) : pass
+    
+        # Return head of beam.
+        return beam.content[0][0]
+
+    def update_refinements(self, rule, refine) :
+        #with Log('ref', rule=rule, refine=refine) : pass
+        if refine == None :
+            return []
+    
+        #print ('R',refine)
+    
+        if self.language.DISTINCT_VARS :
+            new_refine = list(rule.refine(update=False))
+            refine = new_refine
+        else :
+            # Calculate new refinements in case a variable was added by the previous literal
+            new_refine = list(rule.refine(update=True))
+            # Add new refinements
+            refine += new_refine
+        
+        #print ('nR',new_refine)
+        # Update scores for all literals in batch
+        refine = sorted((rule + ref for ref in refine), reverse = True)
+        
+        # Reject / accept literals based on a local stopping criterion
+        result = []
+        for r in refine :
+        
+            prev_score = r.previous.score
+            parent_score = r.parent.score
+            new_score = r.score
+                
+            if new_score.TP <= prev_score.TP :
+                # Rule doesn't cover any true positive examples => it's useless
+                with Log('rejected', reason="TP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+            elif r.max_significance < self.SIGNIFICANCE :
+                # Rule cannot reach required significance => it's useless
+                with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
+            else :
+                # Accept the extension and add it to the output
+                with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+                result.append( r )
+    
+        return result
 
     # localScore = property(_calc_local)
     # significance = property(_calc_significance)
@@ -87,9 +308,13 @@ class PF2Score(PF1Score) :
                 return 1
             else :
                 return v
-
-
+                
+                
     def __init__(self, correct, predict, predict_prev) :
+    
+        self.MIN_RULE_PROB = 0.01
+        self.M_ESTIMATE_M = 10
+    
         values = sorted( (self._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
       # with Log('calcscore') :
       #   with Log('values', _child=values) : pass
@@ -101,8 +326,8 @@ class PF2Score(PF1Score) :
             ys.add(y)
             P += p
             N += (1-p)
-        m = SETTINGS.M_ESTIMATE_M
-
+        m = self.M_ESTIMATE_M
+        
         # TODO incremental computation
         def score(x) :
             r = [ ((u-l)*x + l, p) for y,p,l,u in values ]
@@ -119,11 +344,10 @@ class PF2Score(PF1Score) :
         # for x1 in range(0,101) :
         #     x = float(x1) / 100.0
         for x in sorted(ys) :
-
             TP, FP, TN, FN = score(x)
             s = self._m_estimate(m, TP, TN, FP, FN, P, N)
             # with Log('candidate', x=x, score=s, TP=TP, FP=FP, TN=TN, FN=FN) : pass
-            if x >= SETTINGS.MIN_RULE_PROB and ( max_s == None or s > max_s ) :
+            if x >= self.MIN_RULE_PROB and ( max_s == None or s > max_s ) :
                 max_s = s
                 max_x = x
         if max_x == None :
@@ -146,7 +370,10 @@ class PF2Score(PF1Score) :
         #if (TP == 0 and FP == 0 and m == 0) : m = 1
         return (TP + m * (P / (N + P))) / (TP + FP + m) 
 
+    def __str__(self) :
+        return '%.3g %.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN, self.max_x )
 
+@total_ordering
 class Rule(object) :
     
     def __init__(self, parent) :
@@ -157,7 +384,9 @@ class Rule(object) :
         
     def __add__(self, literal) :
         """Adds the given literal to the body of the rule and returns the new rule."""
-        return RuleBody(literal, self)
+        result = RuleBody(literal, self)
+        self.knowledge.enqueue(result)
+        return result
         
     def _get_language(self) :
         return self.previous.language
@@ -178,8 +407,11 @@ class Rule(object) :
         # TODO allow overwriting identifier => combine queries for multiple rules
         return id(self)
     
+    def _get_typed_variables(self) :
+        return self.target.getTypedVariables(self.language)
+        
     def _get_variables(self) :
-        return self.target.variables
+        return set(map(lambda x : x[0], self.typed_variables))
         
     def _get_examples(self) :
         return self.previous.examples    
@@ -191,6 +423,7 @@ class Rule(object) :
     previous = property( lambda s : s._get_previous() )
     identifier = property( lambda s : s._get_identifier() )
     variables = property( lambda s : s._get_variables() )
+    typed_variables = property( lambda s : s._get_typed_variables() )
     language = property( lambda s : s._get_language() )
     knowledge = property( lambda s : s._get_knowledge() )
     examples = property ( lambda s : s._get_examples() )
@@ -207,20 +440,29 @@ class Rule(object) :
             else :
                 lines.append( str(self.target) + '.' )
         return '\t'.join(lines)
+        
+    def __len__(self) :
+        if self.parent :
+            return len(self.parent) + 1
+        else :
+            return 1
     
     def refine(self, update=False) :
         """Generate refinement literals for this rule."""
         # generate refined clauses
         if update :
             # Only generate extensions that use a variable introduced by the last literal
+#            print (self, self._new_vars)
             use_vars = self._new_vars
             if not use_vars : return [] # no variables available
         else :
             use_vars = None
-        return [ literal for literal in self.language.refinements( self.variables, use_vars ) ]
+        return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) ]
         
     def _get_score(self) :
         if self.__score == None :
+            if self.score_predict == None :
+                self.knowledge.process_queue()
             self.__score = self.learning_problem.calculateScore(self)
         return self.__score
     
@@ -233,10 +475,23 @@ class Rule(object) :
     def _get_score_correct(self) :
         return self.previous.score_correct
     
+    def count_negated(self) :
+        return 0
+    
+    def __lt__(self, other) :
+        return (self.localScore, -len(self), -self.count_negated(), str(self)) < (other.localScore, -len(other), -other.count_negated(), str(other))             
+        
+    def __eq__(self, other) :
+        return str(self) == str(other)
+    
     score_correct = property( lambda s: s._get_score_correct() )
     score_predict = property( lambda s : s._get_score_predict(), lambda s,v : s._set_score_predict(v) )
         
     score = property ( lambda s : s._get_score() )
+    
+    globalScore = property( lambda s : s._get_score().accuracy() )
+    localScore = property( lambda s : s._get_score().m_estimate(5) )    # TODO set m value
+    max_significance = property( lambda s : 1.0 ) # TODO get real value
     
     
 class RuleBody(Rule) :
@@ -247,13 +502,13 @@ class RuleBody(Rule) :
         super(RuleBody, self).__init__(parent)
         self.literal = literal
         
-        old_vars = parent.variables
+        old_vars = parent.typed_variables
             
-        current_vars = set(literal.variables)
+        current_vars = set(literal.getTypedVariables(self.language))
         self._all_vars = old_vars | current_vars
         self._new_vars = current_vars - old_vars
         
-    def _get_variables(self) :
+    def _get_typed_variables(self) :
         return self._all_vars
         
     def _str_parts(self) :
@@ -271,7 +526,7 @@ class RuleHead(Rule) :
         
         current_vars = set(self.target.variables)
         self._all_vars = current_vars
-        self._new_vars = current_vars
+        self._new_vars = set([])
     
         self.score_predict = [1] * len(self.score_correct)
                 
@@ -367,11 +622,19 @@ class Literal(object) :
     def _get_variables(self) :
         return set(filter(self._is_var,self.arguments))
         
+    def getTypedVariables(self, language) :
+        types = language.getArgumentTypes(self)
+        result = []
+        for vn, vt in zip(self.arguments, types) :
+            if self._is_var(vn) :
+                result.append( (vn, vt) )
+        return set(result)
+        
     variables = property( _get_variables )  
     arity = property (lambda s : len(s.arguments) )
     key = property( lambda s : ( s.functor, s.arity ) )
     
-    def __str__(self) :
+    def __repr__(self) :
         not_sign = '\+' if self.is_negated else ''
         r = not_sign + self.functor
         if self.arguments :
@@ -384,6 +647,10 @@ class Language(object) :
     def __init__(self) :
         self.__types = {}
         self.__values = defaultdict(set)
+        self.__modes = {}
+        self.__varcount = 0
+        
+        self.DISTINCT_VARS = False
         
     def addValue(self, typename, value) :
         self.__values[typename].add(value)
@@ -391,8 +658,16 @@ class Language(object) :
     def setArgumentTypes(self, literal) :
         self.__types[ literal.key ] = literal.arguments
         
-    def getArgumentTypes(self, literal) :
-        return self.__types[ literal.key ]
+    def setArgumentModes(self, literal) :
+        self.__modes[ literal.key ] = literal.arguments
+        
+    def getArgumentTypes(self, literal=None, key=None) :
+        if literal : key = literal.key
+        return self.__types[ key ]
+            
+    def getArgumentModes(self, literal=None, key=None) :
+        if literal : key = literal.key
+        return self.__modes[ key ] 
                 
     def getTypeValues(self, typename) :
         return self.__values[ typename ]
@@ -400,11 +675,60 @@ class Language(object) :
     def getArgumentValues(self, literal) :
         types = self.getArgumentTypes(literal)
         return list( product( *[ self.getTypeValues(t) for t in types ] ) )
+        
+    def newVar(self) :
+        self.__varcount += 1
+        return self.__varcount
+        
+    def refinements(self, variables, use_vars) :
+        existing_variables = defaultdict(list)
+        for varname, vartype in variables :
+            existing_variables[vartype].append( varname ) 
+        
+        if use_vars != None :
+            use_vars = set(use_vars) # set( [ varname for varname, vartype in use_vars ] )
+        
+        for pred_id in self.__modes :
+            pred_name = pred_id[0]
+            arg_info = list(zip(self.getArgumentTypes(key = pred_id), self.getArgumentModes(key = pred_id)))
+            for args in self._build_refine(existing_variables, True, arg_info, use_vars) :
+                yield Literal(pred_name, args)
+            for args in self._build_refine(existing_variables, False, arg_info, use_vars) :
+                yield Literal(pred_name, args, True)
+    
+    def _build_refine_one(self, existing_variables, positive, arg_type, arg_mode) :
+        if arg_mode in ['+','-'] :
+            for var in existing_variables[arg_type] :
+                yield var
+        if arg_mode == '-' and (positive or self.DISTINCT_VARS) :
+            yield '#'
+        if arg_mode == 'c' :
+            if positive :
+                for val in self.kb.types[arg_type] :
+                    yield val
+            else :
+                yield '_'
+    
+    def _build_refine(self, existing_variables, positive, arg_info, use_vars) :
+        if arg_info :
+            for arg0 in self._build_refine_one(existing_variables, positive, arg_info[0][0], arg_info[0][1]) :
+                if use_vars != None and arg0 in use_vars :
+                    use_vars1 = None
+                else :
+                    use_vars1 = use_vars 
+                for argN in self._build_refine(existing_variables, positive, arg_info[1:], use_vars1) :
+                    if arg0 == '#' :
+                        yield [self.newVar()] + argN
+                    else :
+                        yield [arg0] + argN
+        else :
+            if use_vars == None :
+                yield []
 
 class PrologInterface(object) :
     
     def __init__(self) :
-        self.engine = prolog.PrologEngine()
+        self.engine = self._createPrologEngine()
         self.last_id = 0
         self.__queue = []
         self.__prob_cache = {}
@@ -414,16 +738,16 @@ class PrologInterface(object) :
         
     def _getRuleQueryAtom(self, rule) :
         functor = self._getRuleQuery(rule.identifier)
-        args = [ prolog.Variable(x) for x in rule.variables ]
-        return prolog.Function( functor, args )
+        args = rule.variables
+        return Literal(functor, args)
 
     def _getRuleSetQueryAtom(self, rule, arguments=None) :
         functor = self._getRuleSetQuery(rule.identifier)
         if arguments == None :
-            args = list(map(self._toProlog, rule.target.arguments))
+            args = rule.target.arguments
         else :
-            args = list(map(self._toProlog, arguments))
-        return prolog.Function( functor, args )
+            args = arguments
+        return Literal(functor, args)
         
     def _getRuleSetQuery(self, identifier) :
         return 'query_set_' + str(identifier)
@@ -440,18 +764,18 @@ class PrologInterface(object) :
         clause_body = self._getRuleQueryAtom(rule)
                 
         if prev_head :  # not the first rule
-            clause1 = prolog.Clause(clause_head, prev_head)
+            clause1 = self._toPrologClause(clause_head, prev_head )
             self.engine.addClause( clause1 )
         
         if rule.parent :
             if rule.parent.literal :
-                clauseB = prolog.Clause(clause_body, prolog.Conjunction( self._getRuleQueryAtom(rule.parent), self._toProlog(rule.literal) ) )
+                clauseB = self._toPrologClause(clause_body, self._getRuleQueryAtom(rule.parent), rule.literal )
             else :
-                clauseB = prolog.Clause(clause_body, self._toProlog(rule.literal) )
+                clauseB = self._toPrologClause(clause_body, rule.literal )
             self.engine.addClause( clauseB )
         else :
             clause_body = None
-        clause2 = prolog.Clause(clause_head, clause_body )
+        clause2 = self._toPrologClause(clause_head, clause_body )
         self.engine.addClause( clause2 )
         
         # current_case :- parent_rule(A,B,C,D), new_literal(A,D).
@@ -463,8 +787,7 @@ class PrologInterface(object) :
         
         functor = self._getRuleSetQuery(rule.identifier)
         for ex in examples :
-            args = [ self._toProlog(x) for x in ex ]
-            query = prolog.Function(functor, args)
+            query = self._toProlog( Literal( functor, ex ) )
             self.engine.groundQuery(query)  # => should return node id
             
     def enqueue(self, rule) :
@@ -477,46 +800,107 @@ class PrologInterface(object) :
         self.__queue.append(rule)
         
     def process_queue(self) :
+        #print (','.join(map(str,self.__queue)))
         queries = []
         for rule in self.__queue :
             if rule.score_predict == None :
                 for example in rule.examples :
-                    queries.append( self._getRuleSetQueryAtom(rule, example) )
-            
+                    queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
+        
         cnf, facts = self.engine.ground_cache.toCNF( queries )
         ddnnf = self._compile_cnf(cnf, facts)
+        #print('DDNNF:', ddnnf)
         
         Literal = namedtuple('Literal', ['atom'])
         for rule in self.__queue :
             if rule.score_predict == None :
                 evaluations = []
                 for example in rule.examples :
-                    q = self._getRuleSetQueryAtom(rule, example)
+                    q = self._toProlog(self._getRuleSetQueryAtom(rule, example))
                     q_node_id = self.engine.ground_cache.byName(q)
-                    #print (q, q_node_id)
-                    if q_node_id == 0 :
-                        p = 1
-                    elif q_node_id == None :
+                    
+                    if q_node_id == None :
                         p = 0
-                    elif q_node_id in facts :
-                        p = facts[q_node_id]
-                    elif q_node_id in self.__prob_cache :
-                        p = self.__prob_cache[q_node_id]
                     else :
-                        res = ddnnf.evaluate({},[ Literal(str(q_node_id)) ])
-                        p = res[1][str(q_node_id)]
-                        self.__prob_cache[q_node_id] = p
+                        is_neg = q_node_id < 0
+                        q_node_id = abs(q_node_id)
+                        
+                        if q_node_id == 0 :
+                            p = 1
+                        elif q_node_id in facts :
+                            p = facts[q_node_id]
+                        elif q_node_id in self.__prob_cache :
+                            p = self.__prob_cache[q_node_id]
+                        else :
+                            p = ddnnf[1][q_node_id]
+#                            res = ddnnf.evaluate({},[ Literal(str(q_node_id)) ])
+#                            p = res[1][str(q_node_id)]
+                            self.__prob_cache[q_node_id] = p
+                        
+                        if is_neg : p = 1 - p
                     evaluations.append(p)
                 rule.score_predict = evaluations
         
         self.__queue = []
+                     
+    def _compile_cnf(self, cnf, facts) :
+        import subprocess
+        
+        cnf_file = 'probfoil_eval.cnf'
+        nnf_file = os.path.splitext(cnf_file)[0] + '.nnf'
+        with open(cnf_file,'w') as f :
+            for line in cnf :
+                 print(line,file=f)
+        subprocess.check_output(["dsharp", "-Fnnf", nnf_file , "-smoothNNF", "-disableAllLits", cnf_file])
+        
+        from compilation.compile import DDNNFFile
+        from evaluation.evaluate import FileOptimizedEvaluator, DDNNF
+        
+        ddnnf = DDNNFFile(nnf_file, None)
+        ddnnf.atoms = lambda : list(range(1,len(self.engine.ground_cache)+1))   # OMFG what a hack
+        
+        return FileOptimizedEvaluator()(knowledge=ddnnf, probabilities=facts, queries=None, env=None)
+        
+    ### Prolog implementation specific code below    
+    def query(self, fact) :
+        """Get probability for given fact."""
+        
+        num_sols = 0
+        for context, hasMore, probability in self.engine.executeQuery(self._toProlog(fact)) :
+            num_sols += 1
+        
+        if num_sols == 0 :
+            return 0
+        elif num_sols > 1 :
+            raise Exception('Fact defined multiple times!')
+        elif probability == None :
+            return 1
+        else :
+            return probability.computeValue(None)   ## Prolog specific
+            
+    def _createPrologEngine(self) :
+        import prolog.core as prolog
+        return prolog.PrologEngine()
+         
+    def _toPrologClause(self, head, *body) :
+        import prolog.core as prolog
+        pl_head = self._toProlog(head)
+        i = len(body) - 1
+        pl_body = self._toProlog(body[i])
+        while i > 0 :
+            i -= 1
+            pl_body = prolog.Conjunction( self._toProlog(body[i]), pl_body )
+        return prolog.Clause( pl_head, pl_body )
                 
     def _toProlog(self, term) :
-        if isinstance(term, Literal) :
+        import prolog.core as prolog
+        if term == None :
+            return prolog.Function('true')
+        elif isinstance(term, Literal) :
             args = list(map(self._toProlog, term.arguments))
             func = prolog.Function(term.functor, args)
             if term.is_negated :
-                return prolog.Not(func)
+                return prolog.Negation(func)
             else :
                 return func
         elif isinstance(term, prolog.Constant) or isinstance(term, prolog.Function) :
@@ -531,95 +915,86 @@ class PrologInterface(object) :
                     return prolog.Variable(term)
                 else :
                     return prolog.Function(term)
-        
-    def query(self, literal) :
-        num_sols = 0
-        for context, hasMore, probability in self.engine.executeQuery(self._toProlog(literal)) :
-            num_sols += 1
-        
-        if num_sols == 0 :
-            return 0
-        elif num_sols > 1 :
-            raise Exception('Fact defined multiple times!')
-        elif probability == None :
-            return 1
-        else :
-            return probability.computeValue(None)
-            
-    def _compile_cnf(self, cnf, facts) :
-        import subprocess
-        
-        cnf_file = 'probfoil_eval.cnf'
-        nnf_file = os.path.splitext(cnf_file)[0] + '.nnf'
-        with open(cnf_file,'w') as f :
-            for line in cnf :
-                 print(line,file=f)
-        subprocess.check_output(["dsharp", "-Fnnf", nnf_file , "-smoothNNF", "-disableAllLits", cnf_file])
-        
-        from compilation.compile import DDNNFFile
-        from evaluation.evaluate import DDNNF
-        
-        return DDNNF(DDNNFFile(nnf_file, None), facts)    
+
 
 def test(filename) :
     
     # from rule import Literal, RuleHead, FalseRule
      
-    import prolog.parser as pp
-    parser = pp.PrologParser()
-    target = Literal('parent','XY')
+     
+     
+    with open('log.xml', 'w') as Log.LOG_FILE : 
+     
+        import prolog.parser as pp
+        parser = pp.PrologParser()
+        target = Literal('parent','XY')
     
-    p = PrologInterface()
+        p = PrologInterface()
     
-    p.engine.loadFile(filename)
+        p.engine.loadFile(filename)
     
-    l = Language()
-    l.setArgumentTypes( Literal('grandmother', ('person', 'person') ) )
-    l.setArgumentTypes( Literal('parent', ('person', 'person') ) )
-    l.setArgumentTypes( Literal('father', ('person', 'person') ) )    
-    l.setArgumentTypes( Literal('mother', ('person', 'person') ) )
+        l = Language()
+        l.setArgumentTypes( Literal('grandmother', ('person', 'person') ) )
+        l.setArgumentTypes( Literal('parent', ('person', 'person') ) )
+        l.setArgumentTypes( Literal('father', ('person', 'person') ) )    
+        l.setArgumentTypes( Literal('mother', ('person', 'person') ) )
     
-    for v in  [ 'alice', 'an', 'esther', 'katleen', 'laura', 'lieve', 'lucy', 'rose', 'soetkin', 'yvonne', 
-        'bart', 'etienne', 'leon', 'luc', 'pieter', 'prudent', 'rene', 'stijn', 'willem' ] :
-        l.addValue('person',v)
+        l.setArgumentModes( Literal('father', ('+','+') ) )
+        l.setArgumentModes( Literal('mother', ('+','+') ) )
     
-    lp = ProbFOIL(l, p)
+        for v in  [ 'alice', 'an', 'esther', 'katleen', 'laura', 'lieve', 'lucy', 'rose', 'soetkin', 'yvonne', 
+            'bart', 'etienne', 'leon', 'luc', 'pieter', 'prudent', 'rene', 'stijn', 'willem' ] :
+            l.addValue('person',v)
     
-    r0 = RootRule(target, lp)
-    r0.initialize()
+        lp = ProbFOIL(l, p)
+        r0 = RootRule(target, lp)
+        r0.initialize()
+        
+        result = lp.learn(r0)
     
-    r1_1 = RuleHead(r0)
-    r1_2 = r1_1 + Literal('father', 'XY')
+        print(p.engine.ground_cache.stats())
     
-    r2_1 = RuleHead(r1_2)
-    r2_2 = r2_1 + Literal('mother', 'XY')
-
-    print(r0, r0.score_correct)
-            
-    p.enqueue(r1_1)
-    p.process_queue()
+        print('RULE LEARNED:',result)
+# 
+#     
+#     r1_1 = RuleHead(r0)
+#     
+#     print (r0.refine())
+#     
+#     r1_2 = r1_1 + Literal('father', 'XY', True)
+#     
+#     r2_1 = RuleHead(r1_2)
+#     r2_2 = r2_1 + Literal('mother', 'XY')
+#     
+#     print(r0, r0.score_correct)
+#             
+#     p.enqueue(r1_1)
+#     p.process_queue()
+#     
+#     print(r1_1, r1_1.score_predict, r1_1.score)
+#     
+#     p.enqueue(r1_2)
+#     p.process_queue()
+#     
+#     print(r1_2, r1_2.score_predict, r1_2.score)
+#     
+#     
+# #    p.engine.listing()
+#     
+#     sys.exit()
+#         
+#     p.enqueue(r2_1)
+#     p.process_queue()
+#     
+#     print(r2_1, r2_1.score_predict, r2_1.score)
+#     
+#     p.enqueue(r2_2)
+#     p.process_queue()
+#     
+#     print(r2_2, r2_2.score_predict, r2_2.score)
     
-    print(r1_1, r1_1.score_predict, r1_1.score)
-
-    p.enqueue(r1_2)
-    p.process_queue()
-
-    print(r1_2, r1_2.score_predict, r1_2.score)
-    
-    p.enqueue(r2_1)
-    p.process_queue()
-
-    print(r2_1, r2_1.score_predict, r2_1.score)
-    
-    p.enqueue(r2_2)
-    p.process_queue()
-    
-    print(r2_2, r2_2.score_predict, r2_2.score)
-    
-
     
 #    p.engine.listing()
-#    print(p.engine.ground_cache)
 
     # for ex, sc in zip(r2_2.examples, r2_2.scores) :
     #     if sc > 0 :
