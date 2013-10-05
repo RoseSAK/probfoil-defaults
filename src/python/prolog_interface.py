@@ -3,6 +3,7 @@ import sys
 sys.path.append('../../')
 
 import os
+import time
 
 from util import Log
 
@@ -120,6 +121,12 @@ class LearningProblem(object) :
             
             # Find best clause that refines this hypothesis
             new_H = self.best_clause( H )
+            
+            # Prune rule 
+            #   Explanation: in case of equal score the search procedure prefers rules with more variables
+            #                once the search is over we prefer shorter rules
+            while new_H.parent and new_H.parent.localScore >= new_H.localScore :
+                new_H = new_H.parent
         
             if self.VERBOSE : print ('RULE FOUND:', new_H, new_H.globalScore)
         
@@ -215,6 +222,11 @@ class LearningProblem(object) :
             new_refine = list(rule.refine(update=True))
             # Add new refinements
             refine += new_refine
+            
+        with Log('new_refine', new=new_refine, all=refine) : pass
+#        print ('NEW_REFINE:', new_refine, refine, rule)
+        
+
         
         #print ('nR',new_refine)
         # Update scores for all literals in batch
@@ -376,11 +388,15 @@ class PF2Score(PF1Score) :
 @total_ordering
 class Rule(object) :
     
+    ids = 0
+    
     def __init__(self, parent) :
         self.parent = parent
         self.literal = None
         self.__score = None
         self.score_predict = None
+        self.__identifier = Rule.ids
+        Rule.ids += 1
         
     def __add__(self, literal) :
         """Adds the given literal to the body of the rule and returns the new rule."""
@@ -405,7 +421,7 @@ class Rule(object) :
         
     def _get_identifier(self) :
         # TODO allow overwriting identifier => combine queries for multiple rules
-        return id(self)
+        return self.__identifier # id(self)
     
     def _get_typed_variables(self) :
         return self.target.getTypedVariables(self.language)
@@ -436,7 +452,7 @@ class Rule(object) :
         for p in parts :
             body = ', '.join(p)
             if body :
-                lines.append( str(self.target) + ' <- ' + body + '.' )
+                lines.append( str(self.target) + ' :- ' + body + '.' )
             else :
                 lines.append( str(self.target) + '.' )
         return '\t'.join(lines)
@@ -452,12 +468,11 @@ class Rule(object) :
         # generate refined clauses
         if update :
             # Only generate extensions that use a variable introduced by the last literal
-#            print (self, self._new_vars)
-            use_vars = self._new_vars
+            use_vars = [ vn for vn,vt in self._new_vars ]
             if not use_vars : return [] # no variables available
         else :
             use_vars = None
-        return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) ]
+        return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) if literal != self.literal ]
         
     def _get_score(self) :
         if self.__score == None :
@@ -638,9 +653,18 @@ class Literal(object) :
         not_sign = '\+' if self.is_negated else ''
         r = not_sign + self.functor
         if self.arguments :
-            return r + '(' + ','.join(self.arguments) + ')'
+            return r + '(' + ','.join(map(str,self.arguments)) + ')'
         else :
             return r
+            
+    def __hash__(self) :
+        return hash(str(self))
+            
+    def __eq__(self, other) :
+        if other == None :
+            return False
+        else :
+            return self.functor == other.functor and self.arguments == other.arguments and self.is_negated == other.is_negated
 
 class Language(object) :
     
@@ -678,7 +702,7 @@ class Language(object) :
         
     def newVar(self) :
         self.__varcount += 1
-        return self.__varcount
+        return 'Var_' + str(self.__varcount)
         
     def refinements(self, variables, use_vars) :
         existing_variables = defaultdict(list)
@@ -687,14 +711,17 @@ class Language(object) :
         
         if use_vars != None :
             use_vars = set(use_vars) # set( [ varname for varname, vartype in use_vars ] )
+            #print ('USE_VARS',use_vars)
         
         for pred_id in self.__modes :
             pred_name = pred_id[0]
             arg_info = list(zip(self.getArgumentTypes(key = pred_id), self.getArgumentModes(key = pred_id)))
             for args in self._build_refine(existing_variables, True, arg_info, use_vars) :
-                yield Literal(pred_name, args)
+                new_lit = Literal(pred_name, args)
+                yield new_lit
             for args in self._build_refine(existing_variables, False, arg_info, use_vars) :
-                yield Literal(pred_name, args, True)
+                new_lit = Literal(pred_name, args, True)                
+                yield new_lit
     
     def _build_refine_one(self, existing_variables, positive, arg_type, arg_mode) :
         if arg_mode in ['+','-'] :
@@ -792,14 +819,25 @@ class PrologInterface(object) :
             
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
+        
+        prep_time = time.time()
         self._prepare_rule(rule)
+        prep_time = time.time() - prep_time
+        
+        ground_time = time.time()
         self._ground_rule(rule, rule.examples)
+        ground_time = time.time() - ground_time
+        
+        with Log('enqueue', rule=str(rule), prep_time=prep_time, ground_time=ground_time) : pass
+        
         self._add_to_queue(rule)
         
     def _add_to_queue(self, rule) :
         self.__queue.append(rule)
         
     def process_queue(self) :
+      with Log('problog', _timer=True) :
+        
         #print (','.join(map(str,self.__queue)))
         queries = []
         for rule in self.__queue :
@@ -818,7 +856,6 @@ class PrologInterface(object) :
                 for example in rule.examples :
                     q = self._toProlog(self._getRuleSetQueryAtom(rule, example))
                     q_node_id = self.engine.ground_cache.byName(q)
-                    
                     if q_node_id == None :
                         p = 0
                     else :
@@ -832,7 +869,11 @@ class PrologInterface(object) :
                         elif q_node_id in self.__prob_cache :
                             p = self.__prob_cache[q_node_id]
                         else :
-                            p = ddnnf[1][q_node_id]
+                            try :
+                                p = ddnnf[1][q_node_id]
+                            except KeyError :
+                                print(q,q_node_id)
+                                raise Exception("HA")
 #                            res = ddnnf.evaluate({},[ Literal(str(q_node_id)) ])
 #                            p = res[1][str(q_node_id)]
                             self.__prob_cache[q_node_id] = p
@@ -921,13 +962,12 @@ def test(filename) :
     
     # from rule import Literal, RuleHead, FalseRule
      
-     
-     
+      
     with open('log.xml', 'w') as Log.LOG_FILE : 
-     
+     with Log('log') :
         import prolog.parser as pp
         parser = pp.PrologParser()
-        target = Literal('parent','XY')
+        target = Literal('grandmother','XY')
     
         p = PrologInterface()
     
@@ -938,9 +978,8 @@ def test(filename) :
         l.setArgumentTypes( Literal('parent', ('person', 'person') ) )
         l.setArgumentTypes( Literal('father', ('person', 'person') ) )    
         l.setArgumentTypes( Literal('mother', ('person', 'person') ) )
-    
-        l.setArgumentModes( Literal('father', ('+','+') ) )
-        l.setArgumentModes( Literal('mother', ('+','+') ) )
+        l.setArgumentModes( Literal('father', ('+','-') ) )
+        l.setArgumentModes( Literal('mother', ('+','-') ) )
     
         for v in  [ 'alice', 'an', 'esther', 'katleen', 'laura', 'lieve', 'lucy', 'rose', 'soetkin', 'yvonne', 
             'bart', 'etienne', 'leon', 'luc', 'pieter', 'prudent', 'rene', 'stijn', 'willem' ] :
@@ -950,11 +989,23 @@ def test(filename) :
         r0 = RootRule(target, lp)
         r0.initialize()
         
-        result = lp.learn(r0)
-    
-        print(p.engine.ground_cache.stats())
-    
+        print(r0.refine())
+        
+        print (r0.score_correct)
+        
+        try :
+            result = lp.learn(r0)
+        except :
+            with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass
+            with Log('error') : pass
+            p.engine.listing()
+            raise Exception('ERROR')
+
+        with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass        
         print('RULE LEARNED:',result)
+
+        
+
 # 
 #     
 #     r1_1 = RuleHead(r0)
