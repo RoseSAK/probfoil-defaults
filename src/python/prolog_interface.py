@@ -813,9 +813,10 @@ class PrologInterface(object) :
         """Execute grounding procedure for the given rule with the given examples."""
         
         functor = self._getRuleSetQuery(rule.identifier)
-        for ex in examples :
-            query = self._toProlog( Literal( functor, ex ) )
-            self.engine.groundQuery(query)  # => should return node id
+        for ex_id, ex in enumerate(examples) :
+            if not rule.parent or rule.parent.score_predict[ex_id] != 0 :
+                query = self._toProlog( Literal( functor, ex ) )
+                self.engine.groundQuery(query)  # => should return node id
             
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
@@ -842,44 +843,54 @@ class PrologInterface(object) :
         queries = []
         for rule in self.__queue :
             if rule.score_predict == None :
-                for example in rule.examples :
-                    queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
+                for ex_id, example in enumerate(rule.examples) :
+                    if not rule.parent or rule.parent.score_predict[ex_id] != 0 :
+                        queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
+                    
         
         cnf, facts = self.engine.ground_cache.toCNF( queries )
         ddnnf = self._compile_cnf(cnf, facts)
         #print('DDNNF:', ddnnf)
         
+        print (cnf)
+        print (self.engine.ground_cache)
+        
+        
         Literal = namedtuple('Literal', ['atom'])
         for rule in self.__queue :
             if rule.score_predict == None :
                 evaluations = []
-                for example in rule.examples :
-                    q = self._toProlog(self._getRuleSetQueryAtom(rule, example))
-                    q_node_id = self.engine.ground_cache.byName(q)
-                    if q_node_id == None :
-                        p = 0
-                    else :
-                        is_neg = q_node_id < 0
-                        q_node_id = abs(q_node_id)
-                        
-                        if q_node_id == 0 :
-                            p = 1
-                        elif q_node_id in facts :
-                            p = facts[q_node_id]
-                        elif q_node_id in self.__prob_cache :
-                            p = self.__prob_cache[q_node_id]
+                for ex_id, example in enumerate(rule.examples) :
+                    if not rule.parent or rule.parent.score_predict[ex_id] != 0 :
+                        q = self._toProlog(self._getRuleSetQueryAtom(rule, example))
+                        q_node_id = self.engine.ground_cache.byName(q)
+                        if q_node_id == None :
+                            p = 0
                         else :
-                            try :
-                                p = ddnnf[1][q_node_id]
-                            except KeyError :
-                                print(q,q_node_id)
-                                raise Exception("HA")
-#                            res = ddnnf.evaluate({},[ Literal(str(q_node_id)) ])
-#                            p = res[1][str(q_node_id)]
-                            self.__prob_cache[q_node_id] = p
+                            is_neg = q_node_id < 0
+                            q_node_id = abs(q_node_id)
                         
-                        if is_neg : p = 1 - p
-                    evaluations.append(p)
+                            if q_node_id == 0 :
+                                p = 1
+                            elif q_node_id in facts :
+                                p = facts[q_node_id]
+                            elif q_node_id in self.__prob_cache :
+                                p = self.__prob_cache[q_node_id]
+                            else :
+                                try :
+                                    p = ddnnf[1][q_node_id]
+                                except KeyError :
+                                    print(rule,q,q_node_id)
+                                    raise Exception("HA")
+                                    #p = 0   # TODO bugfix
+    #                            res = ddnnf.evaluate({},[ Literal(str(q_node_id)) ])
+    #                            p = res[1][str(q_node_id)]
+                                self.__prob_cache[q_node_id] = p
+                        
+                            if is_neg : p = 1 - p
+                        evaluations.append(p)
+                    else :
+                        evaluations.append(0)
                 rule.score_predict = evaluations
         
         self.__queue = []
@@ -921,7 +932,7 @@ class PrologInterface(object) :
             
     def _createPrologEngine(self) :
         import prolog.core as prolog
-        return prolog.PrologEngine()
+        return prolog.GroundingEngine()
          
     def _toPrologClause(self, head, *body) :
         import prolog.core as prolog
@@ -976,10 +987,14 @@ def test(filename) :
         l = Language()
         l.setArgumentTypes( Literal('grandmother', ('person', 'person') ) )
         l.setArgumentTypes( Literal('parent', ('person', 'person') ) )
+        l.setArgumentTypes( Literal('female', ('person',) ) )
         l.setArgumentTypes( Literal('father', ('person', 'person') ) )    
         l.setArgumentTypes( Literal('mother', ('person', 'person') ) )
-        l.setArgumentModes( Literal('father', ('+','-') ) )
-        l.setArgumentModes( Literal('mother', ('+','-') ) )
+        # l.setArgumentModes( Literal('father', ('+','-') ) )
+        # l.setArgumentModes( Literal('mother', ('+','-') ) )
+        l.setArgumentModes( Literal('parent', ('+','-') ) )
+        l.setArgumentModes( Literal('female', ('+') ) )
+
     
         for v in  [ 'alice', 'an', 'esther', 'katleen', 'laura', 'lieve', 'lucy', 'rose', 'soetkin', 'yvonne', 
             'bart', 'etienne', 'leon', 'luc', 'pieter', 'prudent', 'rene', 'stijn', 'willem' ] :
@@ -998,7 +1013,7 @@ def test(filename) :
         except :
             with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass
             with Log('error') : pass
-            p.engine.listing()
+#            p.engine.listing()
             raise Exception('ERROR')
 
         with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass        
