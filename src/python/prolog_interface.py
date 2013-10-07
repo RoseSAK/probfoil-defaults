@@ -1023,9 +1023,6 @@ class GroundingEngine(PrologEngine) :
                         results[result_atom].append( self.ground_cache.add('and',tuple(facts)) )
                 else :
                     results[result_atom].append(0)
-#                        print('MORE?', facts)
-#                        results[result_atom].append(0)
-#                        results[result_atom] = results[result_atom] # make sure key exists
                 
         
             new_results = []
@@ -1035,19 +1032,13 @@ class GroundingEngine(PrologEngine) :
                     self.ground_cache.add( 'or', [], name=result_atom)
                     results[result_atom] = []
                     new_results.append( (result_atom, 0 ))
-                    #print (facts)
-#                    print(results[result_atom], result_atom)
                 else :
                     new_results.append( (result_atom, self.ground_cache.add( 'or',tuple(facts), name=result_atom) ) )
-                    #print ('STORED', facts, result_atom)
-                # self.ground_cache[ result_atom ] = results[result_atom]
             self.now_grounding.remove( ground_atom )
         
             for result_atom, idx in new_results :
-#                success = False
                 with context :
                     call_atom.unify(result_atom, context, context)
-                    # print ("RESULT:", result_atom)
                     if results[result_atom] : 
                         context.pushFact(idx)
                     elif call_atom.probability != None :
