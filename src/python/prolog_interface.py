@@ -986,14 +986,12 @@ class GroundingEngine(PrologEngine) :
         if ground_atom in self.now_grounding :
             # cycle detected
             context.pushFact( ground_atom )
-#                print ('LOOKUP:', ground_atom, '=>', 'cycle')
             yield 0
         elif not ground_atom.variables and ground_atom in self.ground_cache.failed :
             return  # failed
         elif not ground_atom.variables and ground_atom in self.ground_cache :
             # already grounded before
             context.pushFact( self.ground_cache.byName(ground_atom) )
-#                   print ('LOOKUP:', ground_atom, '=>', 'tabled')
             yield 0
         elif ground_atom.variables and ground_atom in self.ground_cache.groups :
             group_results = self.ground_cache.groups[ground_atom]
@@ -1004,7 +1002,6 @@ class GroundingEngine(PrologEngine) :
                         context.pushFact( node_id )
                         yield 1
         else :
-#                print ('LOOKUP:', ground_atom, '=>', 'evaluating')
             # not currently grounding, not grounded before
             self.now_grounding.add( ground_atom )
             results = defaultdict(list)
@@ -1300,61 +1297,12 @@ def test(filename) :
 #            p.engine.listing()
             raise Exception('ERROR')
 
-        with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass        
+        with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass
         print('RULE LEARNED:',result)
-
         
+        with open('probfoil.pl','w') as pl_out :
+            print (p.engine.listing(), file=pl_out)
 
-# 
-#     
-#     r1_1 = RuleHead(r0)
-#     
-#     print (r0.refine())
-#     
-#     r1_2 = r1_1 + Literal('father', 'XY', True)
-#     
-#     r2_1 = RuleHead(r1_2)
-#     r2_2 = r2_1 + Literal('mother', 'XY')
-#     
-#     print(r0, r0.score_correct)
-#             
-#     p.enqueue(r1_1)
-#     p.process_queue()
-#     
-#     print(r1_1, r1_1.score_predict, r1_1.score)
-#     
-#     p.enqueue(r1_2)
-#     p.process_queue()
-#     
-#     print(r1_2, r1_2.score_predict, r1_2.score)
-#     
-#     
-# #    p.engine.listing()
-#     
-#     sys.exit()
-#         
-#     p.enqueue(r2_1)
-#     p.process_queue()
-#     
-#     print(r2_1, r2_1.score_predict, r2_1.score)
-#     
-#     p.enqueue(r2_2)
-#     p.process_queue()
-#     
-#     print(r2_2, r2_2.score_predict, r2_2.score)
-    
-    
-#    p.engine.listing()
-
-    # for ex, sc in zip(r2_2.examples, r2_2.scores) :
-    #     if sc > 0 :
-    #         print (ex,sc)
-    
-#    p.engine.listing()
-    
-    # fs = ['stress(%s)' % x for x in range(1,6) ]
-    # for x in fs :
-    #     print (x, p.query( parser.parseToken(x) ))
 
 if __name__ == '__main__' :
     test(*sys.argv[1:])    
