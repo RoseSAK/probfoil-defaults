@@ -813,10 +813,20 @@ class PrologInterface(object) :
         """Execute grounding procedure for the given rule with the given examples."""
         
         functor = self._getRuleSetQuery(rule.identifier)
+        nodes = []
+        requires_problog = False
         for ex_id, ex in enumerate(examples) :
             if not rule.parent or rule.parent.score_predict[ex_id] != 0 :
                 query = self._toProlog( Literal( functor, ex ) )
-                self.engine.groundQuery(query)  # => should return node id
+                node_id = self.engine.groundQuery(query)  # => should return node id
+            else :
+                node_id = None  # rule parent predicted FALSE for this rule
+            nodes.append(node_id)
+            if node_id :    # not None or 0
+                requires_problog = True
+                    
+        rule.nodes = nodes
+        rule.requires_problog = requires_problog
             
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
@@ -839,21 +849,16 @@ class PrologInterface(object) :
     def process_queue(self) :
       with Log('problog', _timer=True) :
         
-        #print (','.join(map(str,self.__queue)))
+        # Build CNF
         queries = []
         for rule in self.__queue :
-            if rule.score_predict == None :
-                for ex_id, example in enumerate(rule.examples) :
-                    if not rule.parent or rule.parent.score_predict[ex_id] != 0 :
-                        queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
-                    
-        
-        cnf, facts = self.engine.ground_cache.toCNF( queries )
-        ddnnf = self._compile_cnf(cnf, facts)
-        #print('DDNNF:', ddnnf)
-        
-        print (cnf)
-        print (self.engine.ground_cache)
+            if rule.requires_problog :
+                if rule.score_predict == None :
+                    for ex_id, example in enumerate(rule.examples) :
+                        if rule.nodes[ex_id] : 
+                            queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
+            cnf, facts = self.engine.ground_cache.toCNF( queries )
+            ddnnf = self._compile_cnf(cnf, facts)
         
         
         Literal = namedtuple('Literal', ['atom'])
@@ -861,29 +866,28 @@ class PrologInterface(object) :
             if rule.score_predict == None :
                 evaluations = []
                 for ex_id, example in enumerate(rule.examples) :
-                    if not rule.parent or rule.parent.score_predict[ex_id] != 0 :
-                        q = self._toProlog(self._getRuleSetQueryAtom(rule, example))
-                        q_node_id = self.engine.ground_cache.byName(q)
-                        if q_node_id == None :
-                            p = 0
-                        else :
-                            is_neg = q_node_id < 0
-                            q_node_id = abs(q_node_id)
-                        
-                            if q_node_id == 0 :
-                                p = 1
-                            elif q_node_id in facts :
-                                p = facts[q_node_id]
-                            elif q_node_id in self.__prob_cache :
-                                p = self.__prob_cache[q_node_id]
-                            else :
-                                p = ddnnf[1][q_node_id]
-                                self.__prob_cache[q_node_id] = p
-                        
-                            if is_neg : p = 1 - p
-                        evaluations.append(p)
+                    q_node_id = rule.nodes[ex_id]
+                    
+#                        q = self._toProlog(self._getRuleSetQueryAtom(rule, example))
+                    #q_node_id = self.engine.ground_cache.byName(q)
+                    if q_node_id == None :
+                        p = 0
                     else :
-                        evaluations.append(0)
+                        is_neg = q_node_id < 0
+                        q_node_id = abs(q_node_id)
+                    
+                        if q_node_id == 0 :
+                            p = 1
+                        elif q_node_id in facts :
+                            p = facts[q_node_id]
+                        elif q_node_id in self.__prob_cache :
+                            p = self.__prob_cache[q_node_id]
+                        else :
+                            p = ddnnf[1][q_node_id]
+                            self.__prob_cache[q_node_id] = p
+                    
+                        if is_neg : p = 1 - p
+                    evaluations.append(p)
                 rule.score_predict = evaluations
         
         self.__queue = []
@@ -1053,7 +1057,24 @@ class GroundingEngine(PrologEngine) :
                     context.pushFact('NEGATE')
                     yield 1
 
-       
+    def groundQuery(self, querystring) :
+        q = querystring
+            
+        from prolog.memory import MemoryContext
+        from prolog.core import DoCut
+        with MemoryContext() as context :
+            success = False
+            try :
+                context.defineVariables(q.variables)
+                for result in q.evaluate(self, context) :
+                    success = True
+            except DoCut :
+                context.log('CUT ENCOUNTERED')
+                #yield context, True
+            if success :
+                return self.ground_cache.byName(querystring)
+            else :
+                return self.ground_cache.byName(querystring)
         
 class Index(object) :
     
