@@ -428,6 +428,9 @@ class Rule(object) :
         
     def _get_variables(self) :
         return set(map(lambda x : x[0], self.typed_variables))
+
+    def _get_body_variables(self) :
+        return set(map(lambda x : x[0], self._body_vars))
         
     def _get_examples(self) :
         return self.previous.examples    
@@ -440,6 +443,7 @@ class Rule(object) :
     identifier = property( lambda s : s._get_identifier() )
     variables = property( lambda s : s._get_variables() )
     typed_variables = property( lambda s : s._get_typed_variables() )
+    body_variables = property( lambda s : s._get_body_variables() )
     language = property( lambda s : s._get_language() )
     knowledge = property( lambda s : s._get_knowledge() )
     examples = property ( lambda s : s._get_examples() )
@@ -522,6 +526,7 @@ class RuleBody(Rule) :
         current_vars = set(literal.getTypedVariables(self.language))
         self._all_vars = old_vars | current_vars
         self._new_vars = current_vars - old_vars
+        self._body_vars = parent._body_vars | current_vars
         
     def _get_typed_variables(self) :
         return self._all_vars
@@ -542,6 +547,7 @@ class RuleHead(Rule) :
         current_vars = set(self.target.variables)
         self._all_vars = current_vars
         self._new_vars = set([])
+        self._body_vars = set([])
     
         self.score_predict = [1] * len(self.score_correct)
                 
@@ -765,7 +771,7 @@ class PrologInterface(object) :
         
     def _getRuleQueryAtom(self, rule) :
         functor = self._getRuleQuery(rule.identifier)
-        args = rule.variables
+        args = rule.body_variables
         return Literal(functor, args)
 
     def _getRuleSetQueryAtom(self, rule, arguments=None) :
@@ -810,8 +816,9 @@ class PrologInterface(object) :
         # new_query(A,B) :- current_case(A,B,C,D).
                 
     def _ground_rule(self, rule, examples) :
-        """Execute grounding procedure for the given rule with the given examples."""
+      """Execute grounding procedure for the given rule with the given examples."""
         
+      with Log("grounding", rule=rule, _timer=True) :
         functor = self._getRuleSetQuery(rule.identifier)
         nodes = []
         requires_problog = False
@@ -859,8 +866,8 @@ class PrologInterface(object) :
                             queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
         cnf, facts = self.engine.ground_cache.toCNF( queries )
         print ('COMPILING CNF for', self.engine.ground_cache)
-        ddnnf = self._compile_cnf(cnf, facts)
-        
+        with Log('compile', _timer=True) :
+            ddnnf = self._compile_cnf(cnf, facts)
         
         Literal = namedtuple('Literal', ['atom'])
         for rule in self.__queue :
@@ -980,19 +987,23 @@ class GroundingEngine(PrologEngine) :
     def _query(self, call_atom, context) :
 
         ground_atom = call_atom.ground(context, destroy_vars=True)
-
+#      with Log("ground", atom=str(ground_atom)) :
         if ground_atom in self.now_grounding :
             # cycle detected
             context.pushFact( ground_atom )
             yield 0
         elif not ground_atom.variables and ground_atom in self.ground_cache.failed :
+            #with Log("fail") : pass
             return  # failed
         elif not ground_atom.variables and ground_atom in self.ground_cache :
             # already grounded before
-            context.pushFact( self.ground_cache.byName(ground_atom) )
+            node_id=self.ground_cache.byName(ground_atom)
+            context.pushFact( node_id )
+            with Log("tabled", node=node_id) : pass
             yield 0
         elif ground_atom.variables and ground_atom in self.ground_cache.groups :
             group_results = self.ground_cache.groups[ground_atom]
+            #with Log("tabled", nodes=group_results) : pass
             #print ('LOOKUP:', ground_atom, '=>', 'tabled', len(group_results), group_results)
             for result_atom, node_id in group_results :
                 with context :
@@ -1000,6 +1011,7 @@ class GroundingEngine(PrologEngine) :
                         context.pushFact( node_id )
                         yield 1
         else :
+            #with Log("evaluate") : pass
             # not currently grounding, not grounded before
             self.now_grounding.add( ground_atom )
             results = defaultdict(list)
@@ -1008,7 +1020,8 @@ class GroundingEngine(PrologEngine) :
             for x in self._query_normal(call_atom, context) :
                 success = True
                 result_atom = call_atom.ground(context, destroy_vars=True)
-                if result_atom.variables : raise PrologError('Expected ground atom: \'%s\'' % result_atom)
+                if result_atom.variables : 
+                    raise Exception('Expected ground atom: \'%s\'' % result_atom)
                 facts = context.getFacts()
                 is_neg = 'NEGATE' in facts
                 facts = list(filter(lambda s : s != 'NEGATE' and s != 0, facts ))
@@ -1290,8 +1303,10 @@ def test(filename) :
             l.addValue('person',v)
     
         lp = ProbFOIL(l, p)
-        r0 = RootRule(target, lp)
-        r0.initialize()
+        
+        with Log('initialize', _timer=True) :
+            r0 = RootRule(target, lp)
+            r0.initialize()
         
         print(r0.refine())
         
