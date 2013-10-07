@@ -1,12 +1,12 @@
 
 base(windok(day)).
-modes(windok(+)).
+modes(windok('+')).
 
 base(pop(day)).
-modes(pop(+)).
+modes(pop('+')).
 
 base(sunshine(day)).
-modes(sunshine(+)).
+modes(sunshine('+')).
 
 base(surfing(day)).
 %modes(surfing(+)).
