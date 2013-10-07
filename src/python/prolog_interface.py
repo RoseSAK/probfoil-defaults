@@ -931,8 +931,8 @@ class PrologInterface(object) :
             return probability.computeValue(None)   ## Prolog specific
             
     def _createPrologEngine(self) :
-        import prolog.core as prolog
-        return prolog.GroundingEngine()
+#        import prolog.core as prolog
+        return GroundingEngine()
          
     def _toPrologClause(self, head, *body) :
         import prolog.core as prolog
@@ -967,6 +967,290 @@ class PrologInterface(object) :
                     return prolog.Variable(term)
                 else :
                     return prolog.Function(term)
+
+from prolog.core import PrologEngine
+class GroundingEngine(PrologEngine) :
+    
+    def __init__(self, **args) :
+        super(GroundingEngine, self).__init__(**args)
+        self.now_grounding = set([])
+        self.ground_cache = Index()
+
+    def _query_normal(self, call_atom, context) :
+        return super(GroundingEngine, self)._query(call_atom, context)
+        
+    def _query(self, call_atom, context) :
+
+        ground_atom = call_atom.ground(context, destroy_vars=True)
+
+        if ground_atom in self.now_grounding :
+            # cycle detected
+            context.pushFact( ground_atom )
+#                print ('LOOKUP:', ground_atom, '=>', 'cycle')
+            yield 0
+        elif not ground_atom.variables and ground_atom in self.ground_cache.failed :
+            return  # failed
+        elif not ground_atom.variables and ground_atom in self.ground_cache :
+            # already grounded before
+            context.pushFact( self.ground_cache.byName(ground_atom) )
+#                   print ('LOOKUP:', ground_atom, '=>', 'tabled')
+            yield 0
+        elif ground_atom.variables and ground_atom in self.ground_cache.groups :
+            group_results = self.ground_cache.groups[ground_atom]
+            #print ('LOOKUP:', ground_atom, '=>', 'tabled', len(group_results), group_results)
+            for result_atom, node_id in group_results :
+                with context :
+                    if call_atom.unify(result_atom, context, context) :
+                        context.pushFact( node_id )
+                        yield 1
+        else :
+#                print ('LOOKUP:', ground_atom, '=>', 'evaluating')
+            # not currently grounding, not grounded before
+            self.now_grounding.add( ground_atom )
+            results = defaultdict(list)
+            success = False
+            #print ('EVALUATING', ground_atom)
+            for x in self._query_normal(call_atom, context) :
+                success = True
+                result_atom = call_atom.ground(context, destroy_vars=True)
+                if result_atom.variables : raise PrologError('Expected ground atom: \'%s\'' % result_atom)
+                facts = context.getFacts()
+                is_neg = 'NEGATE' in facts
+                facts = list(filter(lambda s : s != 'NEGATE' and s != 0, facts ))
+                if facts :
+                    if is_neg :
+                        facts = list(map(lambda x: -x, facts )) # TODO will throw error if negative cycle
+                        not_node = self.ground_cache.add('or',tuple(facts))
+                        results[result_atom].append( not_node )
+                    else :
+                        results[result_atom].append( self.ground_cache.add('and',tuple(facts)) )
+                else :
+                    results[result_atom].append(0)
+#                        print('MORE?', facts)
+#                        results[result_atom].append(0)
+#                        results[result_atom] = results[result_atom] # make sure key exists
+                
+        
+            new_results = []
+            for result_atom in results :
+                facts = results[result_atom]
+                if 0 in facts :
+                    self.ground_cache.add( 'or', [], name=result_atom)
+                    results[result_atom] = []
+                    new_results.append( (result_atom, 0 ))
+                    #print (facts)
+#                    print(results[result_atom], result_atom)
+                else :
+                    new_results.append( (result_atom, self.ground_cache.add( 'or',tuple(facts), name=result_atom) ) )
+                    #print ('STORED', facts, result_atom)
+                # self.ground_cache[ result_atom ] = results[result_atom]
+            self.now_grounding.remove( ground_atom )
+        
+            for result_atom, idx in new_results :
+#                success = False
+                with context :
+                    call_atom.unify(result_atom, context, context)
+                    # print ("RESULT:", result_atom)
+                    if results[result_atom] : 
+                        context.pushFact(idx)
+                    elif call_atom.isProbabilistic :
+                        context.pushFact( self.ground_cache.add('fact', result_atom ))
+                    yield 0 # there was a result
+            if ground_atom.variables :
+                self.ground_cache.groups[ ground_atom ] = new_results
+            if not ground_atom.variables and not success :
+                self.ground_cache.addFailed( ground_atom )
+
+    def _not(self, operand, context) :
+        # TODO BUG in grounding negation?   => (in case of multiple evaluations)
+        with context :
+            for x in operand.evaluate(self, context) :
+                if not operand.isProbabilistic :
+                    assert(not context.getFacts())
+                    return
+                else :
+                    context.pushFact('NEGATE')
+                    yield 1
+
+       
+        
+class Index(object) :
+    
+    def __init__(self) :
+        self.__content = {}
+        self.__index = []
+        self.__names = {}
+        self.__facts = {}
+        
+        self.__refcount = []
+        self.__unresolved = defaultdict(list)
+        self.hasCycle = False
+        self.groups = {}
+        self.failed = set([])
+        
+    def __len__(self) :
+        return len(self.__index)
+        
+    def _update_refcount(self, node_id, data, name=None) :
+        # if name != None :
+        #     self.__refcount[node_id] += 1
+        
+        for x in data :
+            try :
+                x = int(x)
+                self.__refcount[x-1] += 1
+            except TypeError :
+                self.hasCycle = True
+                self.__unresolved[x].append(node_id)
+                
+        if name != None and name in self.__unresolved :
+            nodes = self.__unresolved[name]
+            self.__refcount[node_id-1] += len(nodes)
+            for n in nodes :
+                old_key = self[n]
+                tp, dt = old_key
+                new_tuple = []
+                for d in dt :
+                    if d == name :
+                        new_tuple.append(node_id)
+                    else :
+                        new_tuple.append(d)
+                new_key = tp, tuple(new_tuple)   
+                del self.__content[ old_key ]
+                self.__content[ new_key ] = n
+                self.__index[ n-1 ] = new_key
+            del self.__unresolved[ name ]
+        
+    def addFailed(self, name) :
+        self.failed.add(name)
+        
+    def add(self, nodetype, data, name=None) :
+        if (nodetype == 'and' or nodetype =='or') and not data : 
+            if name :
+                self.__names[name] = 0
+            #print ('DISCARD', nodetype, data, name)
+            return    # Empty node (i.e. no probabilistic children) => skip
+        
+        # Compact and skip nodes with only one child
+        if (nodetype == 'and' or nodetype == 'or') and len(data) == 1  :
+            result = data[0]            
+            self._update_refcount(result, [], name)
+        else :        
+            key = (nodetype, data)
+            result = self.__content.get(key, None)
+            
+            # Node does not exist yet
+            if result == None :
+                result = len(self.__index) + 1
+                self.__content[key] = result
+                self.__index.append(key)
+                self.__refcount.append(0)
+                
+            if nodetype in ('and','or') : 
+                self._update_refcount(result, data, name)
+            elif nodetype == 'not' :
+                self._update_refcount(result, [data], name)
+            else :  # fact
+                self.__facts[ data ] = result
+        # Register node name if one is given.
+        if name :
+            self.__names[name] = result
+        #print ('STORE', nodetype, data, name, result)
+        return result
+    
+    def getIndex(self, data) :
+        return self.__content.get(data, None)
+        
+    def __getitem__(self, index) :
+        assert(index > 0)
+        return self.__index[index - 1]
+        
+    def byName(self, name) :
+        return self.__names.get(name, None)
+        
+    def __contains__(self, data) :
+        return data in self.__names
+        
+    def __iter__(self) :
+        return iter(self.__index)
+        
+    def __str__(self) :
+        s = ''
+        for k,v in enumerate(self.__index) :
+            s += ( str(k+1) + ': ' + str(v)) + '\n'
+        
+        names = dict([ (k, self.__names[k]) for k in self.__names if self.__names[k] != 0 ])
+            
+        s += 'NAMES: [' + str(len(self.__names)) + '] ' + str(names) + '\n'
+        s += 'FACTS: ' + str(self.__facts)
+        return s
+        
+    def _selectNodes(self, queries, node_selection) :
+        for q in queries :
+            node_id = self.byName(q)
+            if node_id :
+                self._selectNode(abs(node_id), node_selection)
+        
+    def _selectNode(self, node_id, node_selection) :
+        assert(node_id != 0)
+        if not node_selection[node_id-1] :
+            node_selection[node_id-1] = True
+            nodetype, content = self[node_id]
+            
+            if nodetype in ('and','or') :
+                for subnode in content :
+                    if subnode :
+                        self._selectNode(abs(subnode), node_selection)
+        
+    def toCNF(self, queries=None) :
+        if self.hasCycle :
+            raise NotImplementedError('The dependency graph contains a cycle!')
+        
+        if queries != None :
+            node_selection = [False] * len(self.__index)    # selection table
+            self._selectNodes(queries, node_selection)
+        else :
+            node_selection = [True] * len(self.__index)    # selection table
+        
+        # TODO offset by one
+        lines = []
+        facts = {}
+        for k, sel in enumerate( node_selection ) :
+          if sel :
+            k += 1
+            v = self[k]
+            nodetype, content = v
+            if nodetype == 'fact' :
+                if content.probability:
+                    facts[k] = content.probability.computeValue(None)
+                else :
+                    facts[k] = 1 
+            elif nodetype == 'and' :
+                line = str(k) + ' ' + ' '.join( map( lambda x : str(-(x)), content ) ) + ' 0'
+                lines.append(line)
+                for x in content :
+                    lines.append( "%s %s 0" % (-k, x) )
+                # lines.append('')
+            elif nodetype == 'or' :
+                line = str(-k) + ' ' + ' '.join( map( lambda x : str(x), content ) ) + ' 0'
+                lines.append(line)
+                for x in content :
+                    lines.append( "%s %s 0" % (k, -x) )
+                # lines.append('')
+            elif nodetype == 'not' :
+                # TODO
+                raise NotImplementedError("Not!")
+                # line = str(k) + '-' + str(content)
+                # lines.append(line)
+            else :
+                raise ValueError("Unknown node type!")
+                
+        atom_count = len(self.__index)
+        clause_count = len(lines)
+        return [ 'p cnf %s %s' % (atom_count, clause_count) ] + lines, facts
+        
+    def stats(self) :
+        return namedtuple('IndexStats', ('atom_count', 'name_count', 'fact_count' ) )(len(self), len(self.__names), len(self.__facts)) 
 
 
 def test(filename) :
