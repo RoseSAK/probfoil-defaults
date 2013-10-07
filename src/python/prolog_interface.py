@@ -1050,7 +1050,7 @@ class GroundingEngine(PrologEngine) :
                     # print ("RESULT:", result_atom)
                     if results[result_atom] : 
                         context.pushFact(idx)
-                    elif call_atom.isProbabilistic :
+                    elif call_atom.probability != None :
                         context.pushFact( self.ground_cache.add('fact', result_atom ))
                     yield 0 # there was a result
             if ground_atom.variables :
