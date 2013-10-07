@@ -857,8 +857,9 @@ class PrologInterface(object) :
                     for ex_id, example in enumerate(rule.examples) :
                         if rule.nodes[ex_id] : 
                             queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
-            cnf, facts = self.engine.ground_cache.toCNF( queries )
-            ddnnf = self._compile_cnf(cnf, facts)
+        cnf, facts = self.engine.ground_cache.toCNF( queries )
+        print ('COMPILING CNF for', self.engine.ground_cache)
+        ddnnf = self._compile_cnf(cnf, facts)
         
         
         Literal = namedtuple('Literal', ['atom'])
@@ -1132,6 +1133,8 @@ class Index(object) :
                 self.__names[name] = 0
             #print ('DISCARD', nodetype, data, name)
             return    # Empty node (i.e. no probabilistic children) => skip
+        
+        if (nodetype == 'and' or nodetype == 'or') : data = tuple(sorted(set(data)))
         
         # Compact and skip nodes with only one child
         if (nodetype == 'and' or nodetype == 'or') and len(data) == 1  :
