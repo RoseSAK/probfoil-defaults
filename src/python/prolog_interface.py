@@ -877,14 +877,7 @@ class PrologInterface(object) :
                             elif q_node_id in self.__prob_cache :
                                 p = self.__prob_cache[q_node_id]
                             else :
-                                try :
-                                    p = ddnnf[1][q_node_id]
-                                except KeyError :
-                                    print(rule,q,q_node_id)
-                                    raise Exception("HA")
-                                    #p = 0   # TODO bugfix
-    #                            res = ddnnf.evaluate({},[ Literal(str(q_node_id)) ])
-    #                            p = res[1][str(q_node_id)]
+                                p = ddnnf[1][q_node_id]
                                 self.__prob_cache[q_node_id] = p
                         
                             if is_neg : p = 1 - p
