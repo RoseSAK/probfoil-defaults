@@ -4,6 +4,7 @@ sys.path.append('../../')
 
 import os
 import time
+import math
 
 from util import Log
 
@@ -11,6 +12,18 @@ from util import Log
 from collections import namedtuple, defaultdict
 from itertools import product
 from functools import total_ordering
+
+chi2_cdf = lambda x : math.erf(math.sqrt(x/2))
+def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
+    v = (low+high)/2
+    r = chi2_cdf(v)
+    if -precision < r - s < precision :
+        return v
+    elif r > s :
+        return calc_significance(s, low, v)
+    else :
+        return calc_significance(s, v, high)
+
 
 #from core import PrologEngine, Clause, Conjunction
 
@@ -103,7 +116,7 @@ class LearningProblem(object) :
         
         self.BEAM_SIZE = 5
         self.VERBOSE = True
-        self.SIGNIFICANCE = 1
+        self.SIGNIFICANCE = calc_significance(0.99)
         
     def calculateScore(self, rule) :
         raise NotImplementedError('calculateScore')
@@ -161,49 +174,55 @@ class LearningProblem(object) :
         # Add clause to beam (with empty score)
         beam.push( init_rule, refinements )
     
-        # While there are untested refinements in the beam.
-        while beam.has_active() :
-          with Log('iteration', _timer=True) :
+        try :
+            # While there are untested refinements in the beam.
+            while beam.has_active() :
+              with Log('iteration', _timer=True) :
           
-            # Create the next beam
-            new_beam = beam.create()
+                # Create the next beam
+                new_beam = beam.create()
         
-            # Run through old beam and process its content
-            for old_rule, refs in beam :
+                # Run through old beam and process its content
+                for old_rule, refs in beam :
                 
             
-              with Log('refining', rule=old_rule, score=old_rule.score, localScore=old_rule.localScore, _timer=True) :
+                  with Log('refining', rule=old_rule, score=old_rule.score, localScore=old_rule.localScore, _timer=True) :
             
-                # Add current rule to beam and mark it as tested (refinements=None)
-                new_beam.push( old_rule, None )
+                    # Add current rule to beam and mark it as tested (refinements=None)
+                    new_beam.push( old_rule, None )
                         
-                # Update scores of available refinements and add new refinements if a new variable was introduced.
-                new_rules = self.update_refinements(old_rule, refs)
+                    # Update scores of available refinements and add new refinements if a new variable was introduced.
+                    new_rules = self.update_refinements(old_rule, refs)
             
-                # Extract refinement literals
-                new_refs = [ r.literal for r in new_rules ]
+                    # Extract refinement literals
+                    new_refs = [ r.literal for r in new_rules ]
                 
-                #print ('NEW_REFS:', new_refs)
+                    #print ('NEW_REFS:', new_refs)
             
-                # Add rules to new beam (new_refs are ordered by score, descending)
-                for i, new_rule in enumerate(new_rules) :
+                    # Add rules to new beam (new_refs are ordered by score, descending)
+                    for i, new_rule in enumerate(new_rules) :
                 
-                    if self.VERBOSE : print (new_rule, new_rule.score, new_rule.localScore)
+                        if self.VERBOSE : print (new_rule, new_rule.score, new_rule.localScore)
                 
-                    if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
-                       return new_rule   # we found a rule with maximal score => no better rule can be found
-                    # elif new_rule.localScore <= old_rule.localScore) :
-                    #     break
-                    # Attempt to add rule to beam
-                    elif not new_beam.push( new_rule , new_refs[i+1:] ) : 
-                        break  # current ref does not have high enough score -> next ones will also fail
+                        if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
+                           return new_rule   # we found a rule with maximal score => no better rule can be found
+                        # elif new_rule.localScore <= old_rule.localScore) :
+                        #     break
+                        # Attempt to add rule to beam
+                        elif not new_beam.push( new_rule , new_refs[i+1:] ) : 
+                            break  # current ref does not have high enough score -> next ones will also fail
             
-            # Use new beam in next iteration
-            beam = new_beam
+                # Use new beam in next iteration
+                beam = new_beam
         
-            # Write beam to log
-            with Log('beam', _child=beam.toXML()) : pass
-    
+                # Write beam to log
+                with Log('beam', _child=beam.toXML()) : pass
+        except KeyboardInterrupt :
+            with Log('INTERRUPT') : pass
+            print ("INTERRUPT")
+            
+            pass    # TODO LOG INTERRUPT
+        
         # Return head of beam.
         return beam.content[0][0]
 
@@ -246,9 +265,12 @@ class LearningProblem(object) :
             elif r.max_significance < self.SIGNIFICANCE :
                 # Rule cannot reach required significance => it's useless
                 with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
+            elif r.score_predict == r.parent.score_predict and not r._new_vars :
+                # Predictions are indentical and new rule does not introduce a new variable
+                with Log('rejected', reason="same", literal=r.literal, score=r.score ) : pass
             else :
                 # Accept the extension and add it to the output
-                with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore ) : pass
+                with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore, max_significance=r.max_significance ) : pass
                 result.append( r )
     
         return result
@@ -296,6 +318,9 @@ class PF1Score(object) :
     def __str__(self) :
         return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
     
+    # def __eq__(self, other) :
+    #     if other == None : return False
+    #     return (self.TP, self.FP, self.TN, self.FN) == (other.TP, other.FP, other.TN, other.FN)
 
 class ProbFOIL(LearningProblem) :
     
@@ -305,7 +330,10 @@ class ProbFOIL(LearningProblem) :
 class ProbFOIL2(LearningProblem) :
     
     def calculateScore(self, rule) :
-        return PF2Score(rule.score_correct, rule.score_predict, rule.previous.score_predict)
+        if not rule.previous :
+            return PF1Score(rule.score_correct, rule.score_predict)
+        else :
+            return PF2Score(rule.score_correct, rule.score_predict, rule.previous.score_predict)
 
 class PF2Score(PF1Score) :
 
@@ -376,6 +404,10 @@ class PF2Score(PF1Score) :
         self.maxTP = score(1.0)[0]
     
         # with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
+
+    # def __eq__(self, other) :
+    #     if other == None : return False
+    #     return (self.TP, self.FP, self.TN, self.FN) == (other.TP, other.FP, other.TN, other.FN)
     
 
     def _m_estimate(self, m, TP, TN, FP, FN, P, N) :
@@ -503,6 +535,41 @@ class Rule(object) :
     def __eq__(self, other) :
         return str(self) == str(other)
     
+    # Calculate maximal achievable significance
+    def _calc_max_significance(self) :
+        s = self.score
+        M = s.P + s.N
+        
+        dTP = s.maxTP
+        dM = M
+        dP = s.P
+        if self.previous :
+            dTP -= self.previous.score.TP
+           # dP -= self.previous.score.TP
+        
+        ms = 2 * dTP * ( -math.log( dP / dM ) )
+        return ms
+    
+    # Calculate actual significance
+    def _calc_significance(self) :
+        s = self.score
+        C = s.TP + s.FP
+        if C == 0 : return 0
+            
+        M = s.P + s.N
+        p_pos_c = s.TP / C
+        p_neg_c = 1 - p_pos_c
+        
+        p_pos = s.P / M
+        p_neg = s.N / M
+        
+        pos_log = math.log(p_pos_c/p_pos) if p_pos_c > 0 else 0
+        neg_log = math.log(p_neg_c/p_neg) if p_neg_c > 0 else 0
+        
+        l = 2*C * (p_pos_c * pos_log  + p_neg_c * neg_log  )
+        
+        return l
+    
     score_correct = property( lambda s: s._get_score_correct() )
     score_predict = property( lambda s : s._get_score_predict(), lambda s,v : s._set_score_predict(v) )
         
@@ -510,7 +577,8 @@ class Rule(object) :
     
     globalScore = property( lambda s : s._get_score().accuracy() )
     localScore = property( lambda s : s._get_score().m_estimate(5) )    # TODO set m value
-    max_significance = property( lambda s : 1.0 ) # TODO get real value
+    max_significance = property( _calc_max_significance ) # TODO get real value
+    significance = property(_calc_significance)
     
     
 class RuleBody(Rule) :
@@ -617,7 +685,7 @@ class RootRule(Rule) :
         
         scores = []
         for example in self.examples :
-            scores.append( self.knowledge.query( self.target.withArgs(example) ) )
+            scores.append( self.knowledge.getFact( self.target.withArgs(example) ) )
         self.__score_correct = scores
         self.score_predict = [0] * len(scores)
     
@@ -681,6 +749,24 @@ class Language(object) :
         self.__varcount = 0
         
         self.DISTINCT_VARS = False
+        
+    def initialize(self, knowledge) :
+        # Load type definitions
+        for context, hasNext, prob in knowledge.engine.normal_engine.executeQuery('base(X).') :
+            X = context['X']
+            self.setArgumentTypes( Literal(X.functor, X.arguments) )
+        
+        # Load values
+        for pred, arity in self.__types :
+            types = self.__types[(pred,arity)]
+            for i, tp in enumerate(types) :
+                args = ['_'] * arity
+                args[i] = 'X'
+                args = ', '.join(args)
+                query = '%s(%s).' % (pred,args)
+                for context, hasNext, prob in knowledge.engine.normal_engine.executeQuery(query) :
+                    self.addValue(tp, context['X'])
+#                    self.__values[tp] |= set(map(str,context['VALUES']))
         
     def addValue(self, typename, value) :
         self.__values[typename].add(value)
@@ -789,10 +875,11 @@ class PrologInterface(object) :
         """Generates clauses for this rule and adds them to the Prolog engine."""
         clause_head = self._getRuleSetQueryAtom(rule)
         
-        if rule.previous.identifier :            
+        if rule.previous.identifier :
             prev_head = self._getRuleSetQueryAtom(rule.previous)
         else :
             prev_head = None
+        
         
         clause_body = self._getRuleQueryAtom(rule)
                 
@@ -816,9 +903,8 @@ class PrologInterface(object) :
         # new_query(A,B) :- current_case(A,B,C,D).
                 
     def _ground_rule(self, rule, examples) :
-      """Execute grounding procedure for the given rule with the given examples."""
+        """Execute grounding procedure for the given rule with the given examples."""
         
-      with Log("grounding", rule=rule, _timer=True) :
         functor = self._getRuleSetQuery(rule.identifier)
         nodes = []
         requires_problog = False
@@ -831,7 +917,7 @@ class PrologInterface(object) :
             nodes.append(node_id)
             if node_id :    # not None or 0
                 requires_problog = True
-                    
+        #print (rule, nodes, self.engine.ground_cache)
         rule.nodes = nodes
         rule.requires_problog = requires_problog
             
@@ -846,28 +932,40 @@ class PrologInterface(object) :
         self._ground_rule(rule, rule.examples)
         ground_time = time.time() - ground_time
         
-        with Log('enqueue', rule=str(rule), prep_time=prep_time, ground_time=ground_time) : pass
+        #with Log('enqueue', rule=str(rule), prep_time=prep_time, ground_time=ground_time) : pass
         
         self._add_to_queue(rule)
+        
+    def getFact(self, fact) :
+        return self.engine.clauses.get_fact( self._toProlog(fact) )
+        
+        
         
     def _add_to_queue(self, rule) :
         self.__queue.append(rule)
         
     def process_queue(self) :
+        
+     #print ('PROCESS', self.engine.ground_cache)
+        
       with Log('problog', _timer=True) :
         
         # Build CNF
         queries = []
+        facts = {}
         for rule in self.__queue :
             if rule.requires_problog :
                 if rule.score_predict == None :
                     for ex_id, example in enumerate(rule.examples) :
-                        if rule.nodes[ex_id] : 
+                        if rule.nodes[ex_id] and not rule.nodes[ex_id] in self.__prob_cache : 
                             queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
-        cnf, facts = self.engine.ground_cache.toCNF( queries )
-        print ('COMPILING CNF for', self.engine.ground_cache)
-        with Log('compile', _timer=True) :
-            ddnnf = self._compile_cnf(cnf, facts)
+        
+        if queries :
+            cnf, facts = self.engine.ground_cache.toCNF( queries )
+            if len(cnf) > 1 :
+                print ('COMPILING CNF ', cnf)
+                with Log('compile', _timer=True) :
+                    ddnnf = self._compile_cnf(cnf, facts)
         
         Literal = namedtuple('Literal', ['atom'])
         for rule in self.__queue :
@@ -908,7 +1006,7 @@ class PrologInterface(object) :
         with open(cnf_file,'w') as f :
             for line in cnf :
                  print(line,file=f)
-        subprocess.check_output(["dsharp", "-Fnnf", nnf_file , "-smoothNNF", "-disableAllLits", cnf_file])
+        subprocess.check_output(["dsharp", "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
         from compilation.compile import DDNNFFile
         from evaluation.evaluate import FileOptimizedEvaluator, DDNNF
@@ -923,7 +1021,7 @@ class PrologInterface(object) :
         """Get probability for given fact."""
         
         num_sols = 0
-        for context, hasMore, probability in self.engine.executeQuery(self._toProlog(fact)) :
+        for context, hasMore, probability in self.engine.normal_engine.executeQuery(self._toProlog(fact)) :
             num_sols += 1
         
         if num_sols == 0 :
@@ -978,64 +1076,83 @@ class GroundingEngine(PrologEngine) :
     
     def __init__(self, **args) :
         super(GroundingEngine, self).__init__(**args)
+        
         self.now_grounding = set([])
         self.ground_cache = Index()
+        
+        self.mode = 'grounding'
 
+        # self.loadFile = self._base_engine.loadFile
+        # self.addClause = self._base_engine.addClause
+        # self.evaluate = self._base_engine.evaluate
+        # self.listing = self._base_engine.listing
+        
+    normal_engine = property( lambda s : super() )
+    
+        
+    #    def addClause(self, clause) :
+    #         return self._base_engine.addClause(clause)
+    #     
+    # def evaluate(self, call_atom, context) :
+    #     return self._base_engine
+        
     def _query_normal(self, call_atom, context) :
-        return super(GroundingEngine, self)._query(call_atom, context)
+        #print ('QN', call_atom.ground(context, destroy_vars=True))
+        return super()._query(call_atom, context)
+       # return self._base_engine._query(call_atom, context)
         
     def _query(self, call_atom, context) :
-
         ground_atom = call_atom.ground(context, destroy_vars=True)
-#      with Log("ground", atom=str(ground_atom)) :
         if ground_atom in self.now_grounding :
-            # cycle detected
+            # We are already grounding this query (cycle).
+            print ('WARNING: cycle detected!')
             context.pushFact( ground_atom )
             yield 0
         elif not ground_atom.variables and ground_atom in self.ground_cache.failed :
-            #with Log("fail") : pass
+            # This (ground) query was grounded before and failed.
             return  # failed
         elif not ground_atom.variables and ground_atom in self.ground_cache :
-            # already grounded before
+            # This (ground) query was grounded before and succeeded.
             node_id=self.ground_cache.byName(ground_atom)
             context.pushFact( node_id )
-            with Log("tabled", node=node_id) : pass
             yield 0
         elif ground_atom.variables and ground_atom in self.ground_cache.groups :
+            # This non-ground query was grounded before.
             group_results = self.ground_cache.groups[ground_atom]
-            #with Log("tabled", nodes=group_results) : pass
-            #print ('LOOKUP:', ground_atom, '=>', 'tabled', len(group_results), group_results)
             for result_atom, node_id in group_results :
                 with context :
                     if call_atom.unify(result_atom, context, context) :
                         context.pushFact( node_id )
                         yield 1
         else :
-            #with Log("evaluate") : pass
-            # not currently grounding, not grounded before
+            # This query was not grounded before, we should evaluate it.
             self.now_grounding.add( ground_atom )
             results = defaultdict(list)
             success = False
-            #print ('EVALUATING', ground_atom)
             for x in self._query_normal(call_atom, context) :
                 success = True
                 result_atom = call_atom.ground(context, destroy_vars=True)
+                result_atom.probability = call_atom.probability
                 if result_atom.variables : 
                     raise Exception('Expected ground atom: \'%s\'' % result_atom)
                 facts = context.getFacts()
-                is_neg = 'NEGATE' in facts
-                facts = list(filter(lambda s : s != 'NEGATE' and s != 0, facts ))
-                if facts :
-                    if is_neg :
-                        facts = list(map(lambda x: -x, facts )) # TODO will throw error if negative cycle
-                        not_node = self.ground_cache.add('or',tuple(facts))
-                        results[result_atom].append( not_node )
-                    else :
-                        results[result_atom].append( self.ground_cache.add('and',tuple(facts)) )
+                facts = list(filter(lambda s : s != 0, facts))
+                
+                if facts and result_atom.probability :
+                    # Probabilistic clause!
+                    # ADD new probabilistic fact
+                    
+                    facts.append( self.ground_cache.add('fact', None ) )
+                    results[result_atom].append( self.ground_cache.add('and',tuple(facts)) )
+#                    raise NotImplementedError('No support for probabilistic clauses yet!')
+                elif facts :
+                    results[result_atom].append( self.ground_cache.add('and',tuple(facts)) )
+                elif result_atom.probability :
+                    node_id = self.ground_cache.add('fact', result_atom )
+                    results[result_atom].append( node_id )
                 else :
                     results[result_atom].append(0)
-                
-        
+            
             new_results = []
             for result_atom in results :
                 facts = results[result_atom]
@@ -1050,26 +1167,37 @@ class GroundingEngine(PrologEngine) :
             for result_atom, idx in new_results :
                 with context :
                     call_atom.unify(result_atom, context, context)
+                    call_atom.probability = result_atom.probability
                     if results[result_atom] : 
                         context.pushFact(idx)
                     elif call_atom.probability != None :
-                        context.pushFact( self.ground_cache.add('fact', result_atom ))
+                        node_id = self.ground_cache.add('fact', result_atom, name=result_atom )
+                        #print ("USE:", result_atom, node_id)
+                        context.pushFact( node_id, result_atom )
                     yield 0 # there was a result
             if ground_atom.variables :
                 self.ground_cache.groups[ ground_atom ] = new_results
             if not ground_atom.variables and not success :
                 self.ground_cache.addFailed( ground_atom )
 
+
     def _not(self, operand, context) :
         # TODO BUG in grounding negation?   => (in case of multiple evaluations)
-        with context :
-            for x in operand.evaluate(self, context) :
-                if not operand.isProbabilistic :
-                    assert(not context.getFacts())
+        with context.derive() as current_context :
+            operand.unify(operand, context, current_context)
+            
+            assert( not operand.ground(context).variables )
+            
+            uf = []
+            for x in operand.evaluate(self, current_context) :
+                if not operand.isProbabilistic and not context.getFacts() or 0 in context.getFacts() :
                     return
-                else :
-                    context.pushFact('NEGATE')
-                    yield 1
+                else :                    
+                    for f in context.getFacts() :
+                        uf.append(-f)
+        for f in uf :
+            context.pushFact(f)
+        yield 0
 
     def groundQuery(self, querystring) :
         q = querystring
@@ -1140,6 +1268,47 @@ class Index(object) :
     def addFailed(self, name) :
         self.failed.add(name)
         
+    def _addNode(self, key) :
+        result = len(self.__index) + 1
+        self.__content[key] = result    # Add the node
+        self.__index.append(key)
+        self.__refcount.append(0)
+        return result
+        
+    def addFact(self, probability, identifier=None) :
+        if identifier == None :
+            identifier = 'FACT_' + str(len(self.__facts))
+        
+        key = ('fact',identifier)
+        result = self.__content.get(key, None)
+        if result == None : result = self._addNode(key)
+        
+        self.__facts[ result ] = probability
+        return result
+        
+    def addNode(self, nodetype, content, name=None) :
+        if not content :
+            # Attempt to add an empty node
+            result = 0  # => link it to 0
+        else :
+            content = tuple(sorted(set(content))) # Eliminate duplicates and fix order
+            if len(content) == 1 :
+                # Node with one child => don't add, just return child.
+                result = content[0]
+                self._update_refcount(result, [], name)
+            else :
+                # Node with multiple children
+                key = (nodetype, content) # Create node key
+                result = self.__content.get(key, None)  # Lookup node
+                # Node does not exist yet
+                if result == None : result = self._addNode(key)
+                self._update_refcount(result, content, name)
+        
+        # Store name
+        if name : self.__names[name] = result
+        
+        return result
+        
     def add(self, nodetype, data, name=None) :
         if (nodetype == 'and' or nodetype =='or') and not data : 
             if name :
@@ -1149,6 +1318,10 @@ class Index(object) :
         
         if (nodetype == 'and' or nodetype == 'or') : data = tuple(sorted(set(data)))
         
+        if nodetype == 'fact' and data == None :
+            data = 'fact_' + str(len(self.__facts)) 
+            raise NotImplementedError('Probabilistic clauses are not yet supported!')
+        
         # Compact and skip nodes with only one child
         if (nodetype == 'and' or nodetype == 'or') and len(data) == 1  :
             result = data[0]            
@@ -1156,7 +1329,6 @@ class Index(object) :
         else :        
             key = (nodetype, data)
             result = self.__content.get(key, None)
-            
             # Node does not exist yet
             if result == None :
                 result = len(self.__index) + 1
@@ -1167,6 +1339,7 @@ class Index(object) :
             if nodetype in ('and','or') : 
                 self._update_refcount(result, data, name)
             elif nodetype == 'not' :
+                assert(False)
                 self._update_refcount(result, [data], name)
             else :  # fact
                 self.__facts[ data ] = result
@@ -1271,38 +1444,52 @@ class Index(object) :
         return namedtuple('IndexStats', ('atom_count', 'name_count', 'fact_count' ) )(len(self), len(self.__names), len(self.__facts)) 
 
 
-def test(filename) :
+def test(filename, target, *modes) :
     
     # from rule import Literal, RuleHead, FalseRule
-     
+    
+    target_pred, target_arity = target.split('/')
+    letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    target_args = [] 
+    for x in range(0, int(target_arity)) :
+        target_args.append(letters[x])
+    target = Literal(target_pred, target_args)
+    
+    modes = list(map(lambda x : Literal(*x.split('/')), modes))
       
     with open('log.xml', 'w') as Log.LOG_FILE : 
      with Log('log') :
         import prolog.parser as pp
         parser = pp.PrologParser()
-        target = Literal('grandmother','XY')
+#        target = Literal('grandmother','XY')
     
         p = PrologInterface()
     
         p.engine.loadFile(filename)
     
         l = Language()
-        l.setArgumentTypes( Literal('grandmother', ('person', 'person') ) )
-        l.setArgumentTypes( Literal('parent', ('person', 'person') ) )
-        l.setArgumentTypes( Literal('female', ('person',) ) )
-        l.setArgumentTypes( Literal('father', ('person', 'person') ) )    
-        l.setArgumentTypes( Literal('mother', ('person', 'person') ) )
+        
+        l.initialize(p)  # ==> read language specification + values from p
+        
+        
+        # l.setArgumentTypes( Literal('grandmother', ('person', 'person') ) )
+        # l.setArgumentTypes( Literal('parent', ('person', 'person') ) )
+        # l.setArgumentTypes( Literal('female', ('person',) ) )
+        # l.setArgumentTypes( Literal('father', ('person', 'person') ) )    
+        # l.setArgumentTypes( Literal('mother', ('person', 'person') ) )
         # l.setArgumentModes( Literal('father', ('+','-') ) )
         # l.setArgumentModes( Literal('mother', ('+','-') ) )
-        l.setArgumentModes( Literal('parent', ('+','-') ) )
-        l.setArgumentModes( Literal('female', ('+') ) )
-
+        
+        for mode in modes :
+            l.setArgumentModes( mode )
+#        l.setArgumentModes( Literal('female', ('+') ) )
+        
+        
+        # for v in  [ 'alice', 'an', 'esther', 'katleen', 'laura', 'lieve', 'lucy', 'rose', 'soetkin', 'yvonne', 
+        #     'bart', 'etienne', 'leon', 'luc', 'pieter', 'prudent', 'rene', 'stijn', 'willem' ] :
+        #     l.addValue('person',v)
     
-        for v in  [ 'alice', 'an', 'esther', 'katleen', 'laura', 'lieve', 'lucy', 'rose', 'soetkin', 'yvonne', 
-            'bart', 'etienne', 'leon', 'luc', 'pieter', 'prudent', 'rene', 'stijn', 'willem' ] :
-            l.addValue('person',v)
-    
-        lp = ProbFOIL(l, p)
+        lp = ProbFOIL2(l, p)
         
         with Log('initialize', _timer=True) :
             r0 = RootRule(target, lp)
@@ -1318,6 +1505,9 @@ def test(filename) :
             with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass
             with Log('error') : pass
 #            p.engine.listing()
+            with open('probfoil.pl','w') as pl_out :
+                print (p.engine.listing(), file=pl_out)
+
             raise Exception('ERROR')
 
         with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass
@@ -1326,6 +1516,7 @@ def test(filename) :
         with open('probfoil.pl','w') as pl_out :
             print (p.engine.listing(), file=pl_out)
 
+        # print(p.engine.ground_cache)
 
 if __name__ == '__main__' :
     test(*sys.argv[1:])    

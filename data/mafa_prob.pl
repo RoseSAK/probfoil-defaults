@@ -25,6 +25,10 @@ base(male_ancestor(person,person)).
 base(female_ancestor(person,person)).
 % modes(female_ancestor(-,-)).
 
+parent(X,Y) :- mother(X,Y).
+parent(X,Y) :- father(X,Y).
+
+
 
 0.7::father(bart, stijn).
 0.9::father(bart, pieter).
@@ -49,30 +53,6 @@ mother(alice, rose).
 mother(rose, luc).
 mother(rose, an).
 mother(laura, esther).
-
-0.7::parent(bart,stijn).
-0.9::parent(bart,pieter).
-0.6::parent(luc,soetkin).
-0.7::parent(willem,lieve).
-0.8::parent(willem,katleen).
-0.9::parent(rene,willem).
-0.7::parent(rene,lucy).
-0.8::parent(leon,rose).
-0.8::parent(etienne,luc).
-0.9::parent(etienne,an).
-0.7::parent(prudent,esther).
-
-parent(katleen,stijn).
-parent(katleen,pieter).
-parent(lieve,soetkin).
-parent(esther,lieve).
-parent(esther,katleen).
-parent(yvonne,willem).
-parent(yvonne,lucy).
-parent(alice,rose).
-parent(rose,luc).
-parent(rose,an).
-parent(laura,esther).
 
 female(alice).
 female(an).
