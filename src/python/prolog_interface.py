@@ -1142,13 +1142,13 @@ class GroundingEngine(PrologEngine) :
                     # Probabilistic clause!
                     # ADD new probabilistic fact
                     
-                    facts.append( self.ground_cache.add('fact', None ) )
-                    results[result_atom].append( self.ground_cache.add('and',tuple(facts)) )
+                    facts.append( self.ground_cache.add( result_atom.probability ) )
+                    results[result_atom].append( self.ground_cache.addNode('and',tuple(facts)) )
 #                    raise NotImplementedError('No support for probabilistic clauses yet!')
                 elif facts :
-                    results[result_atom].append( self.ground_cache.add('and',tuple(facts)) )
+                    results[result_atom].append( self.ground_cache.addNode('and',tuple(facts)) )
                 elif result_atom.probability :
-                    node_id = self.ground_cache.add('fact', result_atom )
+                    node_id = self.ground_cache.addFact(result_atom.probability, str(result_atom) )
                     results[result_atom].append( node_id )
                 else :
                     results[result_atom].append(0)
@@ -1161,7 +1161,7 @@ class GroundingEngine(PrologEngine) :
                     results[result_atom] = []
                     new_results.append( (result_atom, 0 ))
                 else :
-                    new_results.append( (result_atom, self.ground_cache.add( 'or',tuple(facts), name=result_atom) ) )
+                    new_results.append( (result_atom, self.ground_cache.addNode( 'or',tuple(facts), name=result_atom) ) )
             self.now_grounding.remove( ground_atom )
         
             for result_atom, idx in new_results :
@@ -1171,7 +1171,7 @@ class GroundingEngine(PrologEngine) :
                     if results[result_atom] : 
                         context.pushFact(idx)
                     elif call_atom.probability != None :
-                        node_id = self.ground_cache.add('fact', result_atom, name=result_atom )
+                        node_id = self.ground_cache.addFact(result_atom.probability, str(result_atom), result_atom )
                         #print ("USE:", result_atom, node_id)
                         context.pushFact( node_id, result_atom )
                     yield 0 # there was a result
@@ -1275,7 +1275,7 @@ class Index(object) :
         self.__refcount.append(0)
         return result
         
-    def addFact(self, probability, identifier=None) :
+    def addFact(self, probability, identifier=None, name=None) :
         if identifier == None :
             identifier = 'FACT_' + str(len(self.__facts))
         
@@ -1284,6 +1284,8 @@ class Index(object) :
         if result == None : result = self._addNode(key)
         
         self.__facts[ result ] = probability
+        
+        if name : self.__names[name] = result
         return result
         
     def addNode(self, nodetype, content, name=None) :
@@ -1309,45 +1311,45 @@ class Index(object) :
         
         return result
         
-    def add(self, nodetype, data, name=None) :
-        if (nodetype == 'and' or nodetype =='or') and not data : 
-            if name :
-                self.__names[name] = 0
-            #print ('DISCARD', nodetype, data, name)
-            return    # Empty node (i.e. no probabilistic children) => skip
-        
-        if (nodetype == 'and' or nodetype == 'or') : data = tuple(sorted(set(data)))
-        
-        if nodetype == 'fact' and data == None :
-            data = 'fact_' + str(len(self.__facts)) 
-            raise NotImplementedError('Probabilistic clauses are not yet supported!')
-        
-        # Compact and skip nodes with only one child
-        if (nodetype == 'and' or nodetype == 'or') and len(data) == 1  :
-            result = data[0]            
-            self._update_refcount(result, [], name)
-        else :        
-            key = (nodetype, data)
-            result = self.__content.get(key, None)
-            # Node does not exist yet
-            if result == None :
-                result = len(self.__index) + 1
-                self.__content[key] = result
-                self.__index.append(key)
-                self.__refcount.append(0)
-                
-            if nodetype in ('and','or') : 
-                self._update_refcount(result, data, name)
-            elif nodetype == 'not' :
-                assert(False)
-                self._update_refcount(result, [data], name)
-            else :  # fact
-                self.__facts[ data ] = result
-        # Register node name if one is given.
-        if name :
-            self.__names[name] = result
-        #print ('STORE', nodetype, data, name, result)
-        return result
+    # def add(self, nodetype, data, name=None) :
+    #     if (nodetype == 'and' or nodetype =='or') and not data : 
+    #         if name :
+    #             self.__names[name] = 0
+    #         #print ('DISCARD', nodetype, data, name)
+    #         return    # Empty node (i.e. no probabilistic children) => skip
+    #     
+    #     if (nodetype == 'and' or nodetype == 'or') : data = tuple(sorted(set(data)))
+    #     
+    #     if nodetype == 'fact' and data == None :
+    #         data = 'fact_' + str(len(self.__facts)) 
+    #         raise NotImplementedError('Probabilistic clauses are not yet supported!')
+    #     
+    #     # Compact and skip nodes with only one child
+    #     if (nodetype == 'and' or nodetype == 'or') and len(data) == 1  :
+    #         result = data[0]            
+    #         self._update_refcount(result, [], name)
+    #     else :        
+    #         key = (nodetype, data)
+    #         result = self.__content.get(key, None)
+    #         # Node does not exist yet
+    #         if result == None :
+    #             result = len(self.__index) + 1
+    #             self.__content[key] = result
+    #             self.__index.append(key)
+    #             self.__refcount.append(0)
+    #             
+    #         if nodetype in ('and','or') : 
+    #             self._update_refcount(result, data, name)
+    #         elif nodetype == 'not' :
+    #             assert(False)
+    #             self._update_refcount(result, [data], name)
+    #         else :  # fact
+    #             self.__facts[ data ] = result
+    #     # Register node name if one is given.
+    #     if name :
+    #         self.__names[name] = result
+    #     #print ('STORE', nodetype, data, name, result)
+    #     return result
     
     def getIndex(self, data) :
         return self.__content.get(data, None)
