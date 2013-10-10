@@ -30,7 +30,7 @@ learn(coach(person)).
 
 learn(personcanada(person)).
 
-modes(athleteplayssport(+,c)).
+% modes(athleteplayssport(+,c)).
 
 0.7500000152672301::athleteplaysforteam(chauncey_billups,nuggets).
 0.7500000185863227::athleteplayssport(jim_mcmahon,football).

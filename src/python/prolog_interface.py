@@ -6,7 +6,7 @@ import os
 import time
 import math
 
-from util import Log
+from util import Log, Beam
 
 
 from collections import namedtuple, defaultdict
@@ -27,85 +27,6 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
 
 #from core import PrologEngine, Clause, Conjunction
 
-class Beam(object) :
-    
-    def __init__(self, size, allow_equivalent=False) :
-        self.size = size
-        self.content = []
-        self.allow_equivalent = allow_equivalent
-         
-    def create(self) :
-        return Beam(self.size, self.allow_equivalent) 
-       
-    def __iter__(self) :
-        return iter(self.content)
-        
-    def push(self, obj, active) :
-        if len(self.content) == self.size and obj < self.content[-1][0] : return False
-        
-        is_last = True
-        
-        p = len(self.content) - 1
-        self.content.append( (obj, active) )
-        while p >= 0 and (self.content[p][0] == None or self.content[p][0] < self.content[p+1][0]) :
-            self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
-            p = p - 1
-            is_last = False
-        
-        if not self.allow_equivalent and len(self.content) > 1 :
-            r1, rf1 = self.content[p]
-            r2, rf2 = self.content[p+1]
-            
-            r1scores = r1.score_predict
-            r2scores = r2.score_predict
-            
-            if r1.localScore == r2.localScore and r1scores == r2scores :
-                if rf1 != None and rf2 != None and len(rf1) > len(rf2) : #len(r1.variables) > len(r2.variables) :                
-                    best, worst = r1, r2
-                    self.content[p+1] = self.content[p]
-                else :
-                    best, worst = r2, r1
-                with Log('beam_equivalent', best=best, worst=worst) : pass                
-                self.content.pop(p)
-        
-        popped_last = False
-        while len(self.content) > self.size :
-            self.content.pop(-1)
-            popped_last = True
-            
-        return not (is_last and popped_last)
-    
-    def peak_active(self) :
-        i = 0
-        while i < len(self.content) :
-            if self.content[i][-1] :
-                yield self.content[i]
-                i = 0
-            else :
-                i += 1
-                
-    def has_active(self) :
-        for r, act in self :
-            if act != None : return True
-        return False
-    
-    def pop(self) :
-        self.content = self.content[1:]
-        
-    def __str__(self) :
-        res = ''
-        for c, r in self.content :
-            res += str(c) + ': ' + str(c.score) +  ' | ' + str(r) + '\n'
-        return res
-        
-    def toXML(self) :
-        res = ''
-        for c, r in self.content :
-            if r == None :
-                res +=  '<record rule="%s" score="%s" localScore="%s" refine="NO" />\n' % (c,c.score, c.localScore)
-            else :
-                res +=  '<record rule="%s" score="%s" localScore="%s" refine="%s" />\n' % (c,c.score, c.localScore, '|'.join(map(str,r)))
-        return res
 
 
 class LearningProblem(object) :
@@ -158,7 +79,7 @@ class LearningProblem(object) :
                 # Clause improves hypothesis => continue
                 H = new_H
         return H
-
+        
     def best_clause(self, current_rule ) :
         """Find the best clause for this hypothesis."""
     
@@ -333,7 +254,11 @@ class ProbFOIL2(LearningProblem) :
         if not rule.previous :
             return PF1Score(rule.score_correct, rule.score_predict)
         else :
-            return PF2Score(rule.score_correct, rule.score_predict, rule.previous.score_predict)
+            previous_prediction = rule.previous.score_predict
+            #previous_prediction = [ x*rule.previous.probability for x in previous_prediction ]   
+            # TODO check this if multiple previous rules!
+            
+            return PF2Score(rule.score_correct, rule.score_predict, previous_prediction)
 
 class PF2Score(PF1Score) :
 
@@ -394,7 +319,10 @@ class PF2Score(PF1Score) :
             max_x = 1
             TP, FP, TN, FN = score(max_x)
             max_s = self._m_estimate(m, TP, TN, FP, FN, P, N)
-
+            
+        if max_x > 1 - 1e-5 :
+            max_x = 1
+            
         self.max_s = max_s
         self.max_x = max_x
         self.TP, self.FP, self.TN, self.FN = score(max_x)
@@ -485,12 +413,17 @@ class Rule(object) :
     def __str__(self) :
         parts = self._str_parts()
         lines = []
-        for p in parts :
+        
+        for p, prob in parts :
+            if prob != 1 :
+                prob = ' %% (p=%s)' % prob
+            else :
+                prob = ''
             body = ', '.join(p)
             if body :
-                lines.append( str(self.target) + ' :- ' + body + '.' )
+                lines.append( str(self.target) + ' :- ' + body + '.' + prob )
             else :
-                lines.append( str(self.target) + '.' )
+                lines.append( str(self.target) + '.' + prob )
         return '\t'.join(lines)
         
     def __len__(self) :
@@ -579,7 +512,7 @@ class Rule(object) :
     localScore = property( lambda s : s._get_score().m_estimate(5) )    # TODO set m value
     max_significance = property( _calc_max_significance ) # TODO get real value
     significance = property(_calc_significance)
-    
+    probability = property(lambda self: self.score.max_x )
     
 class RuleBody(Rule) :
     """Rule with at least one literal in the body."""
@@ -601,7 +534,8 @@ class RuleBody(Rule) :
         
     def _str_parts(self) :
         par = self.parent._str_parts()
-        par[-1].append(str(self.literal))
+        par[-1][1] = self.probability
+        par[-1][0].append(str(self.literal))
         return par
                 
 class RuleHead(Rule) :
@@ -627,7 +561,7 @@ class RuleHead(Rule) :
         
     def _str_parts(self) :
         par = self.previous._str_parts()
-        par.append([] )
+        par.append( [[], self.probability ] )
         return par
         
 class RootRule(Rule) :
@@ -880,11 +814,10 @@ class PrologInterface(object) :
         else :
             prev_head = None
         
-        
         clause_body = self._getRuleQueryAtom(rule)
                 
         if prev_head :  # not the first rule
-            clause1 = self._toPrologClause(clause_head, prev_head )
+            clause1 = self._toPrologClause(clause_head, prev_head, probability=rule.previous.probability )
             self.engine.addClause( clause1 )
         
         if rule.parent :
@@ -898,10 +831,6 @@ class PrologInterface(object) :
         clause2 = self._toPrologClause(clause_head, clause_body )
         self.engine.addClause( clause2 )
         
-        # current_case :- parent_rule(A,B,C,D), new_literal(A,D).
-        # new_query(A,B) :- previous_cases(A,B).
-        # new_query(A,B) :- current_case(A,B,C,D).
-                
     def _ground_rule(self, rule, examples) :
         """Execute grounding procedure for the given rule with the given examples."""
         
@@ -939,8 +868,6 @@ class PrologInterface(object) :
     def getFact(self, fact) :
         return self.engine.clauses.get_fact( self._toProlog(fact) )
         
-        
-        
     def _add_to_queue(self, rule) :
         self.__queue.append(rule)
         
@@ -967,7 +894,6 @@ class PrologInterface(object) :
                 with Log('compile', _timer=True) :
                     ddnnf = self._compile_cnf(cnf, facts)
         
-        Literal = namedtuple('Literal', ['atom'])
         for rule in self.__queue :
             if rule.score_predict == None :
                 evaluations = []
@@ -1037,15 +963,21 @@ class PrologInterface(object) :
 #        import prolog.core as prolog
         return GroundingEngine()
          
-    def _toPrologClause(self, head, *body) :
+    def _toPrologClause(self, head, *body, probability=1) :
         import prolog.core as prolog
         pl_head = self._toProlog(head)
+        if probability != 1 : 
+            pl_head.probability = prolog.Constant(probability)
+            functor = '<-'
+        else :
+            functor = ':-'
+            
         i = len(body) - 1
         pl_body = self._toProlog(body[i])
         while i > 0 :
             i -= 1
             pl_body = prolog.Conjunction( self._toProlog(body[i]), pl_body )
-        return prolog.Clause( pl_head, pl_body )
+        return prolog.Clause( pl_head, pl_body, functor=functor )
                 
     def _toProlog(self, term) :
         import prolog.core as prolog
@@ -1078,7 +1010,7 @@ class GroundingEngine(PrologEngine) :
         super(GroundingEngine, self).__init__(**args)
         
         self.now_grounding = set([])
-        self.ground_cache = Index()
+        self.ground_cache = Grounding()
         
         self.mode = 'grounding'
 
@@ -1140,15 +1072,12 @@ class GroundingEngine(PrologEngine) :
                 
                 if facts and result_atom.probability :
                     # Probabilistic clause!
-                    # ADD new probabilistic fact
-                    
-                    facts.append( self.ground_cache.add( result_atom.probability ) )
+                    facts.append( self.ground_cache.addFact( result_atom.probability.computeValue(context), 'PROB_' + str(result_atom) ) )
                     results[result_atom].append( self.ground_cache.addNode('and',tuple(facts)) )
-#                    raise NotImplementedError('No support for probabilistic clauses yet!')
                 elif facts :
                     results[result_atom].append( self.ground_cache.addNode('and',tuple(facts)) )
                 elif result_atom.probability :
-                    node_id = self.ground_cache.addFact(result_atom.probability, str(result_atom) )
+                    node_id = self.ground_cache.addFact(result_atom.probability.computeValue(context), str(result_atom) )
                     results[result_atom].append( node_id )
                 else :
                     results[result_atom].append(0)
@@ -1157,7 +1086,7 @@ class GroundingEngine(PrologEngine) :
             for result_atom in results :
                 facts = results[result_atom]
                 if 0 in facts :
-                    self.ground_cache.add( 'or', [], name=result_atom)
+                    self.ground_cache.addNode( 'or', [], name=result_atom)
                     results[result_atom] = []
                     new_results.append( (result_atom, 0 ))
                 else :
@@ -1171,7 +1100,7 @@ class GroundingEngine(PrologEngine) :
                     if results[result_atom] : 
                         context.pushFact(idx)
                     elif call_atom.probability != None :
-                        node_id = self.ground_cache.addFact(result_atom.probability, str(result_atom), result_atom )
+                        node_id = self.ground_cache.addFact(result_atom.probability.computeValue(context), str(result_atom), result_atom )
                         #print ("USE:", result_atom, node_id)
                         context.pushFact( node_id, result_atom )
                     yield 0 # there was a result
@@ -1218,7 +1147,7 @@ class GroundingEngine(PrologEngine) :
             else :
                 return self.ground_cache.byName(querystring)
         
-class Index(object) :
+class Grounding(object) :
     
     def __init__(self) :
         self.__content = {}
@@ -1279,11 +1208,11 @@ class Index(object) :
         if identifier == None :
             identifier = 'FACT_' + str(len(self.__facts))
         
-        key = ('fact',identifier)
+        key = ('fact', identifier)
         result = self.__content.get(key, None)
         if result == None : result = self._addNode(key)
         
-        self.__facts[ result ] = probability
+        self.__facts[ identifier ] = probability
         
         if name : self.__names[name] = result
         return result
@@ -1310,46 +1239,6 @@ class Index(object) :
         if name : self.__names[name] = result
         
         return result
-        
-    # def add(self, nodetype, data, name=None) :
-    #     if (nodetype == 'and' or nodetype =='or') and not data : 
-    #         if name :
-    #             self.__names[name] = 0
-    #         #print ('DISCARD', nodetype, data, name)
-    #         return    # Empty node (i.e. no probabilistic children) => skip
-    #     
-    #     if (nodetype == 'and' or nodetype == 'or') : data = tuple(sorted(set(data)))
-    #     
-    #     if nodetype == 'fact' and data == None :
-    #         data = 'fact_' + str(len(self.__facts)) 
-    #         raise NotImplementedError('Probabilistic clauses are not yet supported!')
-    #     
-    #     # Compact and skip nodes with only one child
-    #     if (nodetype == 'and' or nodetype == 'or') and len(data) == 1  :
-    #         result = data[0]            
-    #         self._update_refcount(result, [], name)
-    #     else :        
-    #         key = (nodetype, data)
-    #         result = self.__content.get(key, None)
-    #         # Node does not exist yet
-    #         if result == None :
-    #             result = len(self.__index) + 1
-    #             self.__content[key] = result
-    #             self.__index.append(key)
-    #             self.__refcount.append(0)
-    #             
-    #         if nodetype in ('and','or') : 
-    #             self._update_refcount(result, data, name)
-    #         elif nodetype == 'not' :
-    #             assert(False)
-    #             self._update_refcount(result, [data], name)
-    #         else :  # fact
-    #             self.__facts[ data ] = result
-    #     # Register node name if one is given.
-    #     if name :
-    #         self.__names[name] = result
-    #     #print ('STORE', nodetype, data, name, result)
-    #     return result
     
     def getIndex(self, data) :
         return self.__content.get(data, None)
@@ -1414,10 +1303,11 @@ class Index(object) :
             v = self[k]
             nodetype, content = v
             if nodetype == 'fact' :
-                if content.probability:
-                    facts[k] = content.probability.computeValue(None)
-                else :
-                    facts[k] = 1 
+                facts[k] = self.__facts[ content ]
+                # if content.probability:
+                #     facts[k] = content.probability.computeValue(None)
+                # else :
+                #     facts[k] = 1 
             elif nodetype == 'and' :
                 line = str(k) + ' ' + ' '.join( map( lambda x : str(-(x)), content ) ) + ' 0'
                 lines.append(line)
@@ -1513,12 +1403,16 @@ def test(filename, target, *modes) :
             raise Exception('ERROR')
 
         with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass
-        print('RULE LEARNED:',result)
+
+        print('######################################################')
+        print('###################     RESULT     ###################')
+        print('######################################################')
+        print(str(result).replace('\t','\n'))
         
         with open('probfoil.pl','w') as pl_out :
             print (p.engine.listing(), file=pl_out)
 
-        # print(p.engine.ground_cache)
+        #print(p.engine.ground_cache)
 
 if __name__ == '__main__' :
     test(*sys.argv[1:])    

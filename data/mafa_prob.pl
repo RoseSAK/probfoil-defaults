@@ -26,7 +26,7 @@ base(female_ancestor(person,person)).
 % modes(female_ancestor(-,-)).
 
 parent(X,Y) :- mother(X,Y).
-parent(X,Y) :- father(X,Y).
+0.9::parent(X,Y) :- father(X,Y).
 
 
 

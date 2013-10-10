@@ -56,13 +56,14 @@ class Timer(object) :
     def __exit__(self, *args) :
         print ( '%s: %.5fs' % (self.desc, self.elapsed_time ))
 
+
 class Beam(object) :
     
     def __init__(self, size, allow_equivalent=False) :
         self.size = size
         self.content = []
         self.allow_equivalent = allow_equivalent
-       
+         
     def create(self) :
         return Beam(self.size, self.allow_equivalent) 
        
@@ -70,23 +71,32 @@ class Beam(object) :
         return iter(self.content)
         
     def push(self, obj, active) :
-        score = obj.score
-        if len(self.content) == self.size and score < self.content[-1][0] : return False
+        if len(self.content) == self.size and obj < self.content[-1][0] : return False
         
         is_last = True
         
         p = len(self.content) - 1
-        self.content.append( (score, obj, active) )
+        self.content.append( (obj, active) )
         while p >= 0 and (self.content[p][0] == None or self.content[p][0] < self.content[p+1][0]) :
             self.content[p], self.content[p+1] = self.content[p+1], self.content[p] # swap elements
             p = p - 1
             is_last = False
         
-        if not self.allow_equivalent and p >= 0 and self.content[p][0] == self.content[p+1][0] :
-            worst, best = sorted( [self.content[p], self.content[p+1]] )
-            Log('beam_equivalent', best=best[1], worst=worst[1]).logline()
-            self.content[p+1] = best
-            self.content = self.content[:p] + self.content[p+1:]    # remove p    
+        if not self.allow_equivalent and len(self.content) > 1 :
+            r1, rf1 = self.content[p]
+            r2, rf2 = self.content[p+1]
+            
+            r1scores = r1.score_predict
+            r2scores = r2.score_predict
+            
+            if r1.localScore == r2.localScore and r1scores == r2scores :
+                if rf1 != None and rf2 != None and len(rf1) > len(rf2) : #len(r1.variables) > len(r2.variables) :                
+                    best, worst = r1, r2
+                    self.content[p+1] = self.content[p]
+                else :
+                    best, worst = r2, r1
+                with Log('beam_equivalent', best=best, worst=worst) : pass                
+                self.content.pop(p)
         
         popped_last = False
         while len(self.content) > self.size :
@@ -98,15 +108,15 @@ class Beam(object) :
     def peak_active(self) :
         i = 0
         while i < len(self.content) :
-            if self.content[i][2] :
+            if self.content[i][-1] :
                 yield self.content[i]
                 i = 0
             else :
                 i += 1
                 
     def has_active(self) :
-        for s, r, act in self :
-            if act : return True
+        for r, act in self :
+            if act != None : return True
         return False
     
     def pop(self) :
@@ -114,15 +124,15 @@ class Beam(object) :
         
     def __str__(self) :
         res = ''
-        for s, c, r in self.content :
-            res += str(c) + ': ' + str(s) +  ' | ' + str(r) + '\n'
+        for c, r in self.content :
+            res += str(c) + ': ' + str(c.score) +  ' | ' + str(r) + '\n'
         return res
         
     def toXML(self) :
         res = ''
-        for s, c, r in self.content :
+        for c, r in self.content :
             if r == None :
-                res +=  '<record rule="%s" score="%s" refinements="" />\n' % (c,s)
+                res +=  '<record rule="%s" score="%s" localScore="%s" refine="NO" />\n' % (c,c.score, c.localScore)
             else :
-                res +=  '<record rule="%s" score="%s" refinements="%s" />\n' % (c,s,'|'.join(map(lambda s : str(s[1]), r)))
+                res +=  '<record rule="%s" score="%s" localScore="%s" refine="%s" />\n' % (c,c.score, c.localScore, '|'.join(map(str,r)))
         return res
