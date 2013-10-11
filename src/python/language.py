@@ -38,7 +38,6 @@ class Rule(object) :
         return self.previous.root
         
     def _get_identifier(self) :
-        # TODO allow overwriting identifier => combine queries for multiple rules
         return self.__identifier # id(self)
     
     def _get_typed_variables(self) :
@@ -316,10 +315,13 @@ class Literal(object) :
     key = property( lambda s : ( s.functor, s.arity ) )
     
     def __repr__(self) :
-        not_sign = '\+' if self.is_negated else ''
-        r = not_sign + self.functor
+        r = self.functor
         if self.arguments :
-            return r + '(' + ','.join(map(str,self.arguments)) + ')'
+            r += '(' + ','.join(map(str,self.arguments)) + ')'
+        else :
+            r += ''
+        if self.is_negated :
+            return 'not(%s)'  % r
         else :
             return r
             
@@ -338,27 +340,33 @@ class Language(object) :
         self.__types = {}
         self.__values = defaultdict(set)
         self.__modes = {}
+        self.__targets = []
         self.__varcount = 0
         
         self.DISTINCT_VARS = False
         
     def initialize(self, knowledge) :
-        # Load type definitions
-        for context, hasNext, prob in knowledge.engine.normal_engine.executeQuery('base(X).') :
-            X = context['X']
-            self.setArgumentTypes( Literal(X.functor, X.arguments) )
+        predicates = list(self.__modes) + self.__targets
+        for predicate, arity in predicates :
+            # Load types
+            args = [ 'V' + str(i) for i in range(0,arity) ]
+            literal = Literal(predicate, args)
+            base_literal = Literal( 'base', [literal] )
+            types = list(knowledge.query( base_literal, args ))
+            if len(types) == 1 :
+                types = types[0]
+                self.setArgumentTypes( Literal( predicate, types ) )
+            elif len(types) > 1 :
+                raise Exception("Multiple 'base' declarations for predicate '%s/%s'!" % (predicate,arity))
+            else :
+                raise Exception("Missing 'base' declaration for predicate '%s/%s'!" % (predicate,arity))
+            
+            values = list(zip(*knowledge.query(literal,args)))
+            for tp, vals in zip(types,values) :
+                self.__values[tp] |= set(vals)
         
-        # Load values
-        for pred, arity in self.__types :
-            types = self.__types[(pred,arity)]
-            for i, tp in enumerate(types) :
-                args = ['_'] * arity
-                args[i] = 'X'
-                args = ', '.join(args)
-                query = '%s(%s).' % (pred,args)
-                for context, hasNext, prob in knowledge.engine.normal_engine.executeQuery(query) :
-                    self.addValue(tp, context['X'])
-#                    self.__values[tp] |= set(map(str,context['VALUES']))
+    def addTarget(self, predicate, arity) :
+        self.__targets.append( (predicate, arity) )
         
     def addValue(self, typename, value) :
         self.__values[typename].add(value)

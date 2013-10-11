@@ -172,12 +172,16 @@ class LearningProblem(object) :
             elif r.max_significance < self.SIGNIFICANCE :
                 # Rule cannot reach required significance => it's useless
                 with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
-            elif r.score_predict == r.parent.score_predict and not r._new_vars :
+            elif not r._new_vars and r.score_predict == r.parent.score_predict :
                 # Predictions are indentical and new rule does not introduce a new variable
-                with Log('rejected', reason="same", literal=r.literal, score=r.score ) : pass
+                with Log('rejected', reason="no improvement", literal=r.literal, score=r.score ) : pass
+            # elif r.score.TP <= r.parent.score.TP and r.score.TN == r.parent.score.TN and not r._new_vars :
+#               DISABLED: combination with symmetry breaking on refinements might eliminate options
+#                # Rule covers less TP and same TN and does not introduce new variable
+                # with Log('rejected', reason="worse", literal=r.literal, score=r.score ) : pass
             else :
                 # Accept the extension and add it to the output
-                with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore, max_significance=r.max_significance ) : pass
+                with Log('accepted', literal=r.literal, score=r.score, localScore=r.localScore) : pass
                 result.append( r )
     
         return result

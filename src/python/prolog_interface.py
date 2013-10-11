@@ -1,5 +1,3 @@
-import sys
-sys.path.append('../../')
 
 import os
 import time
@@ -11,6 +9,49 @@ from learn import ProbFOIL, ProbFOIL2
 
 from collections import namedtuple, defaultdict
 
+
+# Goal: use existing ProbLog grounder
+#   but keep incremental grounding
+# Idea:
+#   - add already grounded information as facts for future
+#       => potential problem => predicates not grounded for all variables
+
+
+class PrologEngine(object) :
+    """Expected interface for PrologEngine."""
+    
+    def __init__(self) :
+        pass
+        
+    def loadFile(self, filename) :
+        """Load a Prolog source file."""
+        raise NotImplementedError('Calling an abstract method!')
+
+    def listing(self) :
+        """Return a string listing the content of the current Prolog database."""
+        raise NotImplementedError('Calling an abstract method!')
+        
+    def addClause(self, clause) :
+        """Add a clause to the database."""
+        raise NotImplementedError('Calling an abstract method!')
+
+    def query(self, literal) :
+        """Execute a query."""
+        raise NotImplementedError('Calling an abstract method!')
+
+    def groundQuery(self, literal) :
+        """Ground a query."""
+        raise NotImplementedError('Calling an abstract method!')
+    
+    def getFactProbability(self, literal) :
+        """Retrieve the fact probability."""
+        raise NotImplementedError('Calling an abstract method!')
+    
+    def getGrounding(self) :
+        """Get grounding information."""
+        raise NotImplementedError('Calling an abstract method!')
+
+    grounding = property(lambda s : s.getGrounding() )
 
 class PrologInterface(object) :
     
@@ -68,39 +109,52 @@ class PrologInterface(object) :
     def _ground_rule(self, rule, examples) :
         """Execute grounding procedure for the given rule with the given examples."""
         
+        ground_time = time.time()
         functor = self._getRuleSetQuery(rule.identifier)
         nodes = []
         requires_problog = False
+        
+        queries_ran = 0
+        to_run = []
         for ex_id, ex in enumerate(examples) :
             if not rule.parent or rule.parent.score_predict[ex_id] != 0 :
                 query = self._toProlog( Literal( functor, ex ) )
-                node_id = self.engine.groundQuery(query)  # => should return node id
+                to_run.append(query)                
+#                node_id = self.engine.groundQuery(query)  # => should return node id
+#                queries_ran += 1
+                node_id = 'RUN'
             else :
                 node_id = None  # rule parent predicted FALSE for this rule
             nodes.append(node_id)
             if node_id :    # not None or 0
                 requires_problog = True
-        #print (rule, nodes, self.engine.ground_cache)
+        
+        print('Grounding', len(to_run), 'queries.')
+        node_ids = self.engine.groundQuery(*to_run)
+        i = 0
+        for j, n in enumerate(nodes) :
+            if n == 'RUN' :
+                nodes[j] = node_ids[i]
+                i += 1
+        
         rule.nodes = nodes
         rule.requires_problog = requires_problog
+        ground_time = time.time() - ground_time
+        
+        Log.TIMERS['grounding'] += ground_time
+        #with Log('enqueue', rule=rule.literal, queries=queries_ran, ground_time=ground_time) : pass
             
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
         
-        prep_time = time.time()
         self._prepare_rule(rule)
-        prep_time = time.time() - prep_time
         
-        ground_time = time.time()
         self._ground_rule(rule, rule.examples)
-        ground_time = time.time() - ground_time
-        
-        #with Log('enqueue', rule=str(rule), prep_time=prep_time, ground_time=ground_time) : pass
         
         self._add_to_queue(rule)
         
     def getFact(self, fact) :
-        return self.engine.clauses.get_fact( self._toProlog(fact) )
+        return self.engine.getFactProbability( self._toProlog(fact) )
         
     def _add_to_queue(self, rule) :
         self.__queue.append(rule)
@@ -122,20 +176,20 @@ class PrologInterface(object) :
                             queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
         
         if queries :
-            cnf, facts = self.engine.ground_cache.toCNF( queries )
+            cnf, facts = self.engine.getGrounding().toCNF( queries )
             if len(cnf) > 1 :
+                compile_time = time.time()
                 print ('COMPILING CNF ', cnf)
                 with Log('compile', _timer=True) :
                     ddnnf = self._compile_cnf(cnf, facts)
-        
+                compile_time = time.time() - compile_time
+                Log.TIMERS['compiling'] += compile_time
         for rule in self.__queue :
             if rule.score_predict == None :
                 evaluations = []
                 for ex_id, example in enumerate(rule.examples) :
                     q_node_id = rule.nodes[ex_id]
                     
-#                        q = self._toProlog(self._getRuleSetQueryAtom(rule, example))
-                    #q_node_id = self.engine.ground_cache.byName(q)
                     if q_node_id == None :
                         p = 0
                     else :
@@ -148,10 +202,12 @@ class PrologInterface(object) :
                             p = facts[q_node_id]
                         elif q_node_id in self.__prob_cache :
                             p = self.__prob_cache[q_node_id]
+                            #print('FROM CACHE', rule.literal, q_node_id, p)
                         else :
+                            
                             p = ddnnf[1][q_node_id]
                             self.__prob_cache[q_node_id] = p
-                    
+                            #print('EVALUATE', rule.literal, q_node_id, p)
                         if is_neg : p = 1 - p
                     evaluations.append(p)
                 rule.score_predict = evaluations
@@ -172,215 +228,11 @@ class PrologInterface(object) :
         from evaluation.evaluate import FileOptimizedEvaluator, DDNNF
         
         ddnnf = DDNNFFile(nnf_file, None)
-        ddnnf.atoms = lambda : list(range(1,len(self.engine.ground_cache)+1))   # OMFG what a hack
+        ddnnf.atoms = lambda : list(range(1,len(self.engine.getGrounding())+1))   # OMFG what a hack
         
         return FileOptimizedEvaluator()(knowledge=ddnnf, probabilities=facts, queries=None, env=None)
-        
-    ### Prolog implementation specific code below    
-    def query(self, fact) :
-        """Get probability for given fact."""
-        
-        num_sols = 0
-        for context, hasMore, probability in self.engine.normal_engine.executeQuery(self._toProlog(fact)) :
-            num_sols += 1
-        
-        if num_sols == 0 :
-            return 0
-        elif num_sols > 1 :
-            raise Exception('Fact defined multiple times!')
-        elif probability == None :
-            return 1
-        else :
-            return probability.computeValue(None)   ## Prolog specific
-            
-    def _createPrologEngine(self) :
-#        import prolog.core as prolog
-        return GroundingEngine()
-         
-    def _toPrologClause(self, head, *body, probability=1) :
-        import prolog.core as prolog
-        pl_head = self._toProlog(head)
-        if probability != 1 : 
-            pl_head.probability = prolog.Constant(probability)
-            functor = '<-'
-        else :
-            functor = ':-'
-            
-        i = len(body) - 1
-        pl_body = self._toProlog(body[i])
-        while i > 0 :
-            i -= 1
-            pl_body = prolog.Conjunction( self._toProlog(body[i]), pl_body )
-        return prolog.Clause( pl_head, pl_body, functor=functor )
-                
-    def _toProlog(self, term) :
-        import prolog.core as prolog
-        if term == None :
-            return prolog.Function('true')
-        elif isinstance(term, Literal) :
-            args = list(map(self._toProlog, term.arguments))
-            func = prolog.Function(term.functor, args)
-            if term.is_negated :
-                return prolog.Negation(func)
-            else :
-                return func
-        elif isinstance(term, prolog.Constant) or isinstance(term, prolog.Function) :
-            return term
-        else :
-            # return parser.parseToken(x)
-            try :
-                x = int(term)
-                return prolog.Constant(x)
-            except ValueError :
-                if term[0] in '_ABCDEFGHIJKLMNOPQRSTUVWXYZ' :
-                    return prolog.Variable(term)
-                else :
-                    return prolog.Function(term)
-
-from prolog.core import PrologEngine
-class GroundingEngine(PrologEngine) :
-    
-    def __init__(self, **args) :
-        super(GroundingEngine, self).__init__(**args)
-        
-        self.now_grounding = set([])
-        self.ground_cache = Grounding()
-        
-        self.mode = 'grounding'
-
-        # self.loadFile = self._base_engine.loadFile
-        # self.addClause = self._base_engine.addClause
-        # self.evaluate = self._base_engine.evaluate
-        # self.listing = self._base_engine.listing
-        
-    normal_engine = property( lambda s : super() )
-    
-        
-    #    def addClause(self, clause) :
-    #         return self._base_engine.addClause(clause)
-    #     
-    # def evaluate(self, call_atom, context) :
-    #     return self._base_engine
-        
-    def _query_normal(self, call_atom, context) :
-        #print ('QN', call_atom.ground(context, destroy_vars=True))
-        return super()._query(call_atom, context)
-       # return self._base_engine._query(call_atom, context)
-        
-    def _query(self, call_atom, context) :
-        ground_atom = call_atom.ground(context, destroy_vars=True)
-        if ground_atom in self.now_grounding :
-            # We are already grounding this query (cycle).
-            print ('WARNING: cycle detected!')
-            context.pushFact( ground_atom )
-            yield 0
-        elif not ground_atom.variables and ground_atom in self.ground_cache.failed :
-            # This (ground) query was grounded before and failed.
-            return  # failed
-        elif not ground_atom.variables and ground_atom in self.ground_cache :
-            # This (ground) query was grounded before and succeeded.
-            node_id=self.ground_cache.byName(ground_atom)
-            context.pushFact( node_id )
-            yield 0
-        elif ground_atom.variables and ground_atom in self.ground_cache.groups :
-            # This non-ground query was grounded before.
-            group_results = self.ground_cache.groups[ground_atom]
-            for result_atom, node_id in group_results :
-                with context :
-                    if call_atom.unify(result_atom, context, context) :
-                        context.pushFact( node_id )
-                        yield 1
-        else :
-            # This query was not grounded before, we should evaluate it.
-            self.now_grounding.add( ground_atom )
-            results = defaultdict(list)
-            success = False
-            for x in self._query_normal(call_atom, context) :
-                success = True
-                result_atom = call_atom.ground(context, destroy_vars=True)
-                result_atom.probability = call_atom.probability
-                if result_atom.variables : 
-                    raise Exception('Expected ground atom: \'%s\'' % result_atom)
-                facts = context.getFacts()
-                facts = list(filter(lambda s : s != 0, facts))
-                
-                if facts and result_atom.probability :
-                    # Probabilistic clause!
-                    facts.append( self.ground_cache.addFact( result_atom.probability.computeValue(context), 'PROB_' + str(result_atom) ) )
-                    results[result_atom].append( self.ground_cache.addNode('and',tuple(facts)) )
-                elif facts :
-                    results[result_atom].append( self.ground_cache.addNode('and',tuple(facts)) )
-                elif result_atom.probability :
-                    node_id = self.ground_cache.addFact(result_atom.probability.computeValue(context), str(result_atom) )
-                    results[result_atom].append( node_id )
-                else :
-                    results[result_atom].append(0)
-            
-            new_results = []
-            for result_atom in results :
-                facts = results[result_atom]
-                if 0 in facts :
-                    self.ground_cache.addNode( 'or', [], name=result_atom)
-                    results[result_atom] = []
-                    new_results.append( (result_atom, 0 ))
-                else :
-                    new_results.append( (result_atom, self.ground_cache.addNode( 'or',tuple(facts), name=result_atom) ) )
-            self.now_grounding.remove( ground_atom )
-        
-            for result_atom, idx in new_results :
-                with context :
-                    call_atom.unify(result_atom, context, context)
-                    call_atom.probability = result_atom.probability
-                    if results[result_atom] : 
-                        context.pushFact(idx)
-                    elif call_atom.probability != None :
-                        node_id = self.ground_cache.addFact(result_atom.probability.computeValue(context), str(result_atom), result_atom )
-                        #print ("USE:", result_atom, node_id)
-                        context.pushFact( node_id, result_atom )
-                    yield 0 # there was a result
-            if ground_atom.variables :
-                self.ground_cache.groups[ ground_atom ] = new_results
-            if not ground_atom.variables and not success :
-                self.ground_cache.addFailed( ground_atom )
 
 
-    def _not(self, operand, context) :
-        # TODO BUG in grounding negation?   => (in case of multiple evaluations)
-        with context.derive() as current_context :
-            operand.unify(operand, context, current_context)
-            
-            assert( not operand.ground(context).variables )
-            
-            uf = []
-            for x in operand.evaluate(self, current_context) :
-                if not operand.isProbabilistic and not context.getFacts() or 0 in context.getFacts() :
-                    return
-                else :                    
-                    for f in context.getFacts() :
-                        uf.append(-f)
-        for f in uf :
-            context.pushFact(f)
-        yield 0
-
-    def groundQuery(self, querystring) :
-        q = querystring
-            
-        from prolog.memory import MemoryContext
-        from prolog.core import DoCut
-        with MemoryContext() as context :
-            success = False
-            try :
-                context.defineVariables(q.variables)
-                for result in q.evaluate(self, context) :
-                    success = True
-            except DoCut :
-                context.log('CUT ENCOUNTERED')
-                #yield context, True
-            if success :
-                return self.ground_cache.byName(querystring)
-            else :
-                return self.ground_cache.byName(querystring)
-        
 class Grounding(object) :
     
     def __init__(self) :
@@ -394,6 +246,11 @@ class Grounding(object) :
         self.hasCycle = False
         self.groups = {}
         self.failed = set([])
+        
+    names = property(lambda s : s.__names)
+        
+    def getProbability(self, name) :
+        return self.__facts[name]
         
     def __len__(self) :
         return len(self.__index)
@@ -442,14 +299,26 @@ class Grounding(object) :
         if identifier == None :
             identifier = 'FACT_' + str(len(self.__facts))
         
-        key = ('fact', identifier)
-        result = self.__content.get(key, None)
-        if result == None : result = self._addNode(key)
+        if probability == 1 :
+            result = 0
+        else :
+            key = ('fact', identifier)
+            result = self.__content.get(key, None)
+            if result == None : result = self._addNode(key)
         
-        self.__facts[ identifier ] = probability
-        
+            self.__facts[ identifier ] = probability
         if name : self.__names[name] = result
         return result
+    
+    def updateNode(self, nodeid, nodetype, content, name=None) :
+        key = self[nodeid]
+        newkey = (nodetype,content)
+        del self.__content[key]
+        self.__content[newkey] = nodeid
+        self.__index[nodeid-1] = newkey
+        self._update_refcount(nodeid, content, name)
+        if name : self.__names[name] = nodeid
+        return nodeid
         
     def addNode(self, nodetype, content, name=None) :
         if not content :
@@ -569,4 +438,62 @@ class Grounding(object) :
     def stats(self) :
         return namedtuple('IndexStats', ('atom_count', 'name_count', 'fact_count' ) )(len(self), len(self.__names), len(self.__facts)) 
 
+    def reserveNode(self, name) :
+        return self._addNode(name)
 
+    def integrate(self, nodes) :
+        old_count = len(self)
+        
+        translation = {}
+        for line_id, line in enumerate(nodes) :
+            if line_id > 0 :
+                self._integrate_node(line_id, line[0], line[1], line[2], nodes, translation)
+                
+        return len(self) - old_count
+            
+    def _integrate_node(self, line_id, line_type, line_content, name, lines, translation) :
+        if name and name in self.__names :
+            node_id = self.byName(name)
+            translation[line_id] = node_id
+            return node_id
+        elif line_id and line_id in translation : 
+            node_id = translation[line_id]
+            if node_id == None :
+                self.hasCycle = True
+                node_id = self.reserveNode(name)
+                translation[line_id] = node_id
+                return node_id
+            else :
+                return translation[line_id] # node already integrated
+            
+        if line_id != None : translation[line_id] = None
+
+        if line_type == 'fact' :
+            # 
+            node_id = self.addFact(line_content, name, name)
+        else :
+            # line_type in ('or', 'and')
+            subnodes = []
+            for subnode in line_content :
+                if type(subnode) == tuple :
+                    subnodes.append(self._integrate_node(None, subnode[0], subnode[1], None, lines, translation))
+                else :
+                    subnode_id = int(subnode)
+                    neg = -1 if subnode_id < 0 else 1
+                    subnode_id = abs(subnode_id)
+                    subnode = lines[subnode_id]
+                    subnodes.append(neg * self._integrate_node(subnode_id, subnode[0], subnode[1], subnode[2], lines, translation))
+
+            if line_id != None and translation[ line_id ] != None :
+                node_id = translation[ line_id ]
+                self.updateNode(node_id, line_type, tuple(subnodes), name )
+            else :
+                node_id = self.addNode(line_type, tuple(subnodes), name)
+            
+        if line_id != None : 
+            translation[ line_id ] = node_id
+        return node_id
+    
+        
+    
+            

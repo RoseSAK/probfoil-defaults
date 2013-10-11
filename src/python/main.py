@@ -1,20 +1,21 @@
 #! /usr/bin/env python3
 
-import sys
+import sys, time
 from util import Log
 
 from language import Literal, Language, RootRule
-from prolog_interface import PrologInterface
+from prolog_interface_yap import YapPrologInterface
 from learn import ProbFOIL2, ProbFOIL
 
-def test(filename, target, *modes) :
+def main(filename, target, *modes) :
     
     # from rule import Literal, RuleHead, FalseRule
     
     target_pred, target_arity = target.split('/')
+    target_arity = int(target_arity)
     letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     target_args = [] 
-    for x in range(0, int(target_arity)) :
+    for x in range(0, target_arity) :
         target_args.append(letters[x])
     target = Literal(target_pred, target_args)
     
@@ -25,17 +26,19 @@ def test(filename, target, *modes) :
         import prolog.parser as pp
         parser = pp.PrologParser()
     
-        p = PrologInterface()
+        p = YapPrologInterface()
     
         p.engine.loadFile(filename)
     
         l = Language()
-        
-        l.initialize(p)  # ==> read language specification + values from p
                 
         for mode in modes :
             l.setArgumentModes( mode )
-    
+            
+        l.addTarget( target_pred, target_arity )
+        
+        l.initialize(p)  # ==> read language specification + values from p
+        
         lp = ProbFOIL2(l, p)
         
         with Log('initialize', _timer=True) :
@@ -46,28 +49,32 @@ def test(filename, target, *modes) :
         
         print (r0.score_correct)
         
+        learn_time = time.time()
         try :
             result = lp.learn(r0)
         except :
-            with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass
+            with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
             with Log('error') : pass
 #            p.engine.listing()
-            with open('/tmp/probfoil.pl','w') as pl_out :
-                print (p.engine.listing(), file=pl_out)
+            # with open('/tmp/probfoil.pl','w') as pl_out :
+            #     print (p.engine.listing(), file=pl_out)
 
             raise Exception('ERROR')
 
-        with Log('grounding_stats', **vars(p.engine.ground_cache.stats())) : pass
+        with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
 
-        print('######################################################')
-        print('###################     RESULT     ###################')
-        print('######################################################')
+        print('##################################################################')
+        print('#########################     RESULT     #########################')
+        print('##################################################################')
         print(str(result).replace('\t','\n'))
         
-        with open('/tmp/probfoil.pl','w') as pl_out :
-            print (p.engine.listing(), file=pl_out)
+        # with open('/tmp/probfoil.pl','w') as pl_out :
+        #     print (p.engine.listing(), file=pl_out)
 
-        #print(p.engine.ground_cache)
+        learn_time = time.time() - learn_time
+        for t in Log.TIMERS :
+            print( '%s => %.3fs (%.3f%%)' % (t, Log.TIMERS[t], 100*(Log.TIMERS[t] / learn_time) ))    
+        print('total',' => ', learn_time, 's', sep='')
 
 if __name__ == '__main__' :
-    test(*sys.argv[1:])    
+    main(*sys.argv[1:])    

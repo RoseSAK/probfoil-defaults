@@ -3,10 +3,12 @@
 from __future__ import print_function
 
 import sys, time
+from collections import defaultdict
 
 class Log(object) :
     
     LOG_FILE=sys.stderr
+    TIMERS=defaultdict(float)
     
     def __init__(self, tag, file=None, _child=None, _timer=False, **atts) :
         if file == None :
@@ -16,10 +18,9 @@ class Log(object) :
         self.file = file
         self._child = _child
         if _timer :
-            self._timer = time.time()            
+            self._timer = time.time()
         else :
             self._timer = None
-
     
     def get_attr_str(self, atts=None) :
         string = ''
