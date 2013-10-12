@@ -23,8 +23,8 @@ def main(filename, target, *modes) :
       
     with open('log.xml', 'w') as Log.LOG_FILE : 
      with Log('log') :
-        import prolog.parser as pp
-        parser = pp.PrologParser()
+        # import prolog.parser as pp
+        # parser = pp.PrologParser()
     
         p = YapPrologInterface()
     
