@@ -91,7 +91,7 @@ class PrologEngine(object) :
         return [ self.getGrounding().byName(lit) for lit in literals ]
     
     def _call_grounder(self, in_file) :
-        PROBLOG_GROUNDER=os.environ['PROBLOGPATH'] + 'assist/ground_compact.pl'
+        PROBLOG_GROUNDER=os.environ['PROBLOGPATH'] + '/assist/ground_compact.pl'
                 
         # 2) Call yap to do the actual grounding
         ground_program = '/tmp/probfoil.ground'
