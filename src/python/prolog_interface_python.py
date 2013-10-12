@@ -182,24 +182,22 @@ class GroundingEngine(PrologEngine) :
             context.pushFact(f)
         yield 0
 
-    def groundQuery(self, querystring) :
-        q = querystring
-            
+    def groundQuery(self, *queries) :
+        
         from prolog.memory import MemoryContext
         from prolog.core import DoCut
-        with MemoryContext() as context :
-            success = False
-            try :
-                context.defineVariables(q.variables)
-                for result in q.evaluate(self, context) :
-                    success = True
-            except DoCut :
-                context.log('CUT ENCOUNTERED')
-                #yield context, True
-            if success :
-                return self.ground_cache.byName(querystring)
-            else :
-                return self.ground_cache.byName(querystring)
+        
+        for q in queries :
+            with MemoryContext() as context :
+                success = False
+                try :
+                    context.defineVariables(q.variables)
+                    for result in q.evaluate(self, context) :
+                        success = True
+                except DoCut :
+                    context.log('CUT ENCOUNTERED')
+                    #yield context, True
+        return [ self.getGrounding().byName(q) for q in queries ]
                 
     def getGrounding(self) :
         return self.ground_cache
