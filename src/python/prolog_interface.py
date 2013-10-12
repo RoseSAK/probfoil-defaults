@@ -106,117 +106,131 @@ class PrologInterface(object) :
         clause2 = self._toPrologClause(clause_head, clause_body )
         self.engine.addClause( clause2 )
         
-    def _ground_rule(self, rule, examples) :
-        """Execute grounding procedure for the given rule with the given examples."""
-        
-        ground_time = time.time()
-        functor = self._getRuleSetQuery(rule.identifier)
-        nodes = []
-        requires_problog = False
-        
-        queries_ran = 0
-        to_run = []
-        for ex_id, ex in enumerate(examples) :
-            if not rule.parent or rule.parent.score_predict[ex_id] != 0 :
-                query = self._toProlog( Literal( functor, ex ) )
-                to_run.append(query)                
-#                node_id = self.engine.groundQuery(query)  # => should return node id
-#                queries_ran += 1
-                node_id = 'RUN'
-            else :
-                node_id = None  # rule parent predicted FALSE for this rule
-            nodes.append(node_id)
-            if node_id :    # not None or 0
-                requires_problog = True
-        
-        print('Grounding', len(to_run), 'queries.')
-        node_ids = self.engine.groundQuery(*to_run)
-        i = 0
-        for j, n in enumerate(nodes) :
-            if n == 'RUN' :
-                nodes[j] = node_ids[i]
-                i += 1
-        
-        rule.nodes = nodes
-        rule.requires_problog = requires_problog
-        ground_time = time.time() - ground_time
-        
-        Log.TIMERS['grounding'] += ground_time
-        #with Log('enqueue', rule=rule.literal, queries=queries_ran, ground_time=ground_time) : pass
-            
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
-        
         self._prepare_rule(rule)
-        
-        self._ground_rule(rule, rule.examples)
-        
         self._add_to_queue(rule)
         
     def getFact(self, fact) :
         return self.engine.getFactProbability( self._toProlog(fact) )
         
     def _add_to_queue(self, rule) :
-        self.__queue.append(rule)
+        for ex_id, example in enumerate(rule.examples) :
+            if rule.parent and rule.parent.score_predict[ex_id] == 0 :
+                # parent rule predicts 0 => current rule will also predict 0
+                pass 
+            elif rule.previous and rule.previous.score_predict[ex_id] == 1 :
+                # previous rule predicts 1 => current rule irrelevant
+                pass
+            else :
+                # rule requires evaluation for this example
+                query_head = self._toProlog(self._getRuleSetQueryAtom(rule, example))
+                self.__queue.append( ( rule, ex_id, query_head ) )
+        
+    def _ground_queue(self, ground_queue) :
+        ground_time = time.time()
+        
+        # Separate tuples in queue
+        rules, ex_ids, queries = zip(*ground_queue)
+        
+        # Ground all queries simultaneously (returns node_ids for each individual query)
+        node_ids = self.engine.groundQuery(*queries)
+        
+        # Initialize evaluation queue
+        evaluation_queue = defaultdict(list)
+        
+        # For debugging / logging
+        debug_case_counters = [0] * 4
+        
+        # Run through results and build evaluation queue
+        for rule, ex_id, node_id in zip(rules, ex_ids, node_ids) :
+            if rule.score_predict == None : rule.score_predict = [0] * len(rule.examples)
+            
+            if node_id == None:
+                # Grounding failed (query failed)
+                pass    # Don't do anything (score_predict is 0 by default)
+                debug_case_counters[0] += 1
+            elif node_id == 0 :
+                # Grounding is empty (query deterministically true)
+                # Set score for this examples and rule
+                rule.score_predict[ex_id] = 1
+                debug_case_counters[1] += 1
+            else :
+                negated = node_id < 0
+                node_id = abs(node_id)
+                if node_id in self.__prob_cache :
+                    # This node was evaluated earlier => reuse
+                    p = self.__prob_cache[node_id]
+                    if negated : p = 1-p
+                    rule.score_predict[ex_id] = p
+                    debug_case_counters[2] += 1
+                else :
+                    # Add node to evaluation queue
+                    evaluation_queue[node_id].append( (rule, ex_id, negated) )
+                    debug_case_counters[3] += 1
+        
+        ground_time = time.time() - ground_time
+        with Log('grounding', time=ground_time, queue_size=len(ground_queue), fail=debug_case_counters[0], true=debug_case_counters[1], cache=debug_case_counters[2], queue=debug_case_counters[3] ) : pass
+        Log.TIMERS['grounding'] += ground_time
+        
+        # Return evaluation queue
+        return evaluation_queue
+        
+    def _evaluate_queue(self, evaluation_queue) :
+        
+        # Get list of nodes to evaluate
+        nodes = list(evaluation_queue.keys())
+        
+        if not nodes : return # Nothing to do
+        
+        # Convert grounding to CNF
+        cnf, facts = self.engine.getGrounding().toCNF( nodes )
+        
+        # If cnf is not empty (possible if all nodes are facts)
+        if len(cnf) > 1 :
+            # Compile the CNF
+            compile_time = time.time()
+            with Log('compile', _timer=True) :
+                compiled_cnf = self._compile_cnf(cnf, facts)
+            compile_time = time.time() - compile_time
+            Log.TIMERS['compiling'] += compile_time
+        
+        for node_id in evaluation_queue :
+            assert(node_id != 0 and node_id != None)
+            assert(not node_id in self.__prob_cache)
+            
+            # Retrieve probability p for this node
+            if node_id in facts :
+                # Node is a fact
+                p = facts[node_id]
+            else :
+                # Node was evaluated
+                p = compiled_cnf[node_id]
+                self.__prob_cache[node_id] = p
+                
+            # Store probability in rule
+            for rule, ex_id, negated in evaluation_queue[node_id] :
+                if negated :
+                    rule.score_predict[ex_id] = 1-p
+                else :
+                    rule.score_predict[ex_id] = p
+        
         
     def process_queue(self) :
         
-     #print ('PROCESS', self.engine.ground_cache)
-        
-      with Log('problog', _timer=True) :
-        
-        # Build CNF
-        queries = []
-        facts = {}
-        for rule in self.__queue :
-            if rule.requires_problog :
-                if rule.score_predict == None :
-                    for ex_id, example in enumerate(rule.examples) :
-                        if rule.nodes[ex_id] and not rule.nodes[ex_id] in self.__prob_cache : 
-                            queries.append( self._toProlog(self._getRuleSetQueryAtom(rule, example)) )
-        
-        if queries :
-            cnf, facts = self.engine.getGrounding().toCNF( queries )
-            if len(cnf) > 1 :
-                compile_time = time.time()
-                print ('COMPILING CNF ', cnf)
-                with Log('compile', _timer=True) :
-                    ddnnf = self._compile_cnf(cnf, facts)
-                compile_time = time.time() - compile_time
-                Log.TIMERS['compiling'] += compile_time
-        for rule in self.__queue :
-            if rule.score_predict == None :
-                evaluations = []
-                for ex_id, example in enumerate(rule.examples) :
-                    q_node_id = rule.nodes[ex_id]
-                    
-                    if q_node_id == None :
-                        p = 0
-                    else :
-                        is_neg = q_node_id < 0
-                        q_node_id = abs(q_node_id)
-                    
-                        if q_node_id == 0 :
-                            p = 1
-                        elif q_node_id in facts :
-                            p = facts[q_node_id]
-                        elif q_node_id in self.__prob_cache :
-                            p = self.__prob_cache[q_node_id]
-                            #print('FROM CACHE', rule.literal, q_node_id, p)
-                        else :
-                            
-                            p = ddnnf[1][q_node_id]
-                            self.__prob_cache[q_node_id] = p
-                            #print('EVALUATE', rule.literal, q_node_id, p)
-                        if is_neg : p = 1 - p
-                    evaluations.append(p)
-                rule.score_predict = evaluations
-        
+        # Ground stored queries => returns nodes to be evaluated
+        evaluations = self._ground_queue(self.__queue)
+
+        # Clear queue
         self.__queue = []
-                     
+            
+        # Evaluate nodes
+        self._evaluate_queue(evaluations)
+        
     def _compile_cnf(self, cnf, facts) :
         import subprocess
         
+        # Compile CNF to DDNNF
         cnf_file = '/tmp/probfoil_eval.cnf'
         nnf_file = os.path.splitext(cnf_file)[0] + '.nnf'
         with open(cnf_file,'w') as f :
@@ -224,13 +238,14 @@ class PrologInterface(object) :
                  print(line,file=f)
         subprocess.check_output(["dsharp", "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
+        # Evaluate DDNNF
         from compilation.compile import DDNNFFile
         from evaluation.evaluate import FileOptimizedEvaluator, DDNNF
         
         ddnnf = DDNNFFile(nnf_file, None)
         ddnnf.atoms = lambda : list(range(1,len(self.engine.getGrounding())+1))   # OMFG what a hack
         
-        return FileOptimizedEvaluator()(knowledge=ddnnf, probabilities=facts, queries=None, env=None)
+        return FileOptimizedEvaluator()(knowledge=ddnnf, probabilities=facts, queries=None, env=None)[1]
 
 
 class Grounding(object) :
