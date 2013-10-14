@@ -2,10 +2,10 @@
 import os
 import time
 import math
+import sys
 
 from util import Log
-from language import Literal, Language, RootRule
-from learn import ProbFOIL, ProbFOIL2
+from language import Literal
 
 from collections import namedtuple, defaultdict
 
@@ -82,19 +82,22 @@ class PrologInterface(object) :
         
     def _prepare_rule(self, rule) :
         """Generates clauses for this rule and adds them to the Prolog engine."""
+        
+        if not rule.previous : return # Don't do anything when rule is root 
+        
         clause_head = self._getRuleSetQueryAtom(rule)
         
         if rule.previous.identifier :
             prev_head = self._getRuleSetQueryAtom(rule.previous)
         else :
             prev_head = None
-        
+            
         clause_body = self._getRuleQueryAtom(rule)
-                
+            
         if prev_head :  # not the first rule
             clause1 = self._toPrologClause(clause_head, prev_head, probability=rule.previous.probability )
             self.engine.addClause( clause1 )
-        
+            
         if rule.parent :
             if rule.parent.literal :
                 clauseB = self._toPrologClause(clause_body, self._getRuleQueryAtom(rule.parent), rule.literal )
@@ -115,17 +118,26 @@ class PrologInterface(object) :
         return self.engine.getFactProbability( self._toProlog(fact) )
         
     def _add_to_queue(self, rule) :
+        
+        debug_case_counters = [0] * 3
+        
         for ex_id, example in enumerate(rule.examples) :
             if rule.parent and rule.parent.score_predict[ex_id] == 0 :
                 # parent rule predicts 0 => current rule will also predict 0
                 pass 
-            elif rule.previous and rule.previous.score_predict[ex_id] == 1 :
+                debug_case_counters[0] += 1
+#            elif rule.previous and rule.previous.score_predict[ex_id] == 1 :
                 # previous rule predicts 1 => current rule irrelevant
-                pass
+#                pass
+            elif not rule.previous : # evaluating root rule
+                query_head = self._toProlog(rule.target.withArgs(example))
+                self.__queue.append( ( rule, ex_id, query_head ) )
+                debug_case_counters[1] += 1
             else :
                 # rule requires evaluation for this example
                 query_head = self._toProlog(self._getRuleSetQueryAtom(rule, example))
                 self.__queue.append( ( rule, ex_id, query_head ) )
+                debug_case_counters[2] += 1
         
     def _ground_queue(self, ground_queue) :
         ground_time = time.time()
@@ -236,8 +248,12 @@ class PrologInterface(object) :
         with open(cnf_file,'w') as f :
             for line in cnf :
                  print(line,file=f)
-        subprocess.check_output(["dsharp", "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
+                 
+        executable = os.environ['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
+        subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
+        if sys.path[-1] != os.environ['PROBLOGPATH'] + '/src/' :
+            sys.path.append(os.environ['PROBLOGPATH'] + '/src/')
         # Evaluate DDNNF
         from compilation.compile import DDNNFFile
         from evaluation.evaluate import FileOptimizedEvaluator, DDNNF
@@ -336,10 +352,18 @@ class Grounding(object) :
         return nodeid
         
     def addNode(self, nodetype, content, name=None) :
+        
         if not content :
             # Attempt to add an empty node
             result = 0  # => link it to 0
         else :
+            if 0 in content : # Certainly true in node
+                if nodetype == 'or' :   
+                    return 0    # Or is certainly true
+                else :  # nodetype == 'and'
+                    # filter out 0
+                    content = tuple(filter(lambda x : x != 0, content))
+            
             content = tuple(sorted(set(content))) # Eliminate duplicates and fix order
             if len(content) == 1 :
                 # Node with one child => don't add, just return child.
@@ -387,7 +411,7 @@ class Grounding(object) :
         
     def _selectNodes(self, queries, node_selection) :
         for q in queries :
-            node_id = self.byName(q)
+            node_id = q
             if node_id :
                 self._selectNode(abs(node_id), node_selection)
         

@@ -166,10 +166,18 @@ class Rule(object) :
     score = property ( lambda s : s._get_score() )
     
     globalScore = property( lambda s : s._get_score().accuracy() )
-    localScore = property( lambda s : s._get_score().m_estimate(5) )    # TODO set m value
+    localScore = property( lambda s : s._get_score().m_estimate() )    
+    localScoreMax = property( lambda s : s._get_score().m_estimate_max() )  
+    
     max_significance = property( _calc_max_significance ) # TODO get real value
     significance = property(_calc_significance)
     probability = property(lambda self: self.score.max_x )
+    
+    def getTheory(self) :
+        if self.previous :
+            return self.previous.getTheory() + [ str(self) ]
+        else :
+            return []
     
 class RuleBody(Rule) :
     """Rule with at least one literal in the body."""
@@ -217,7 +225,8 @@ class RuleHead(Rule) :
         return self.__previous
         
     def _str_parts(self) :
-        par = self.previous._str_parts()
+        par = []
+#        par = self.previous._str_parts()
         par.append( [[], self.probability ] )
         return par
         
@@ -273,12 +282,15 @@ class RootRule(Rule) :
         #   => requires access to 'facts'
         #   => scores are 1 - p where p is probability of the fact
         
+        self.knowledge.enqueue( self )    # TODO check if this works
+        self.knowledge.process_queue()
+        self.__score_correct = self.score_predict
+        self.score_predict = [0] * len(self.__score_correct)
         
-        scores = []
-        for example in self.examples :
-            scores.append( self.knowledge.getFact( self.target.withArgs(example) ) )
-        self.__score_correct = scores
-        self.score_predict = [0] * len(scores)
+        # for example in self.examples :
+        #     scores.append( self.knowledge.getFact( self.target.withArgs(example) ) )
+        # self.__score_correct = scores
+        # self.score_predict = [0] * len(scores)
     
     def _str_parts(self) :
         return []
@@ -342,8 +354,6 @@ class Language(object) :
         self.__modes = {}
         self.__targets = []
         self.__varcount = 0
-        
-        self.DISTINCT_VARS = False
         
     def initialize(self, knowledge) :
         predicates = list(self.__modes) + self.__targets
@@ -419,7 +429,7 @@ class Language(object) :
         if arg_mode in ['+','-'] :
             for var in existing_variables[arg_type] :
                 yield var
-        if arg_mode == '-' and (positive or self.DISTINCT_VARS) :
+        if arg_mode == '-' and positive :
             yield '#'
         if arg_mode == 'c' :
             if positive :

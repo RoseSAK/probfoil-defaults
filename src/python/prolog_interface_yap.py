@@ -5,6 +5,8 @@ from language import Literal
 import sys
 import os
 
+# TODO randomize temporary filenames
+
 class PrologEngine(object) :
     """Expected interface for PrologEngine."""
     
@@ -23,7 +25,7 @@ class PrologEngine(object) :
         return 'LISTING NOT SUPPORTED'
         
     def addClause(self, clause) :
-        """Add a clause to the database."""
+        """Add a clause tonot e."""
         self.__clauses.append(str(clause) + '.')
         
     def query(self, literal, variables) :
@@ -36,7 +38,7 @@ class PrologEngine(object) :
                     self._write_file(fsrc, f, True)
             
             writes = ", write('|'), ".join( ('write(%s)' % v ) for v in variables )
-        
+            
             f.write( 'write_all :- %s, %s, nl, fail.\n' % (literal, writes) )
             f.write( 'write_all. \n')
             f.write( ':- write_all.')
@@ -48,7 +50,7 @@ class PrologEngine(object) :
     def _write_file(self, file_in, file_out, deterministic=False) :
         if deterministic :
             import re
-            regex = re.compile('\d([.]\d)?\s*::')
+            regex = re.compile('\d([.]\d+)?\s*::')
         
         for line in file_in :
             if deterministic : 
@@ -97,6 +99,9 @@ class PrologEngine(object) :
         ground_program = '/tmp/probfoil.ground'
         evidence = '/dev/null'
         queries = '/dev/null'
+        
+        if sys.path[-1] != os.environ['PROBLOGPATH'] + '/src/' :
+            sys.path.append(os.environ['PROBLOGPATH'] + '/src/')
         
         import core
         core.call_yap(PROBLOG_GROUNDER, args=[in_file, ground_program, evidence, queries])

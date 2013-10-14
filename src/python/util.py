@@ -133,7 +133,7 @@ class Beam(object) :
         res = ''
         for c, r in self.content :
             if r == None :
-                res +=  '<record rule="%s" score="%s" localScore="%s" refine="NO" />\n' % (c,c.score, c.localScore)
+                res +=  '<record rule="%s" score="%s" localScore="%s" maxScore="%s" refine="NO" />\n' % (c,c.score, c.localScore, c.localScoreMax)
             else :
-                res +=  '<record rule="%s" score="%s" localScore="%s" refine="%s" />\n' % (c,c.score, c.localScore, '|'.join(map(str,r)))
+                res +=  '<record rule="%s" score="%s" localScore="%s" maxScore="%s" refine="%s" />\n' % (c,c.score, c.localScore, c.localScoreMax, '|'.join(map(str,r)))
         return res
