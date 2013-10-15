@@ -124,6 +124,7 @@ def main(arguments) :
         for t in Timer.TIMERS :
             print( '%s => %.3fs (%.3f%%)' % (t, Timer.TIMERS[t], 100*(Timer.TIMERS[t] / learn_time) ))    
         print('total',' => ', learn_time, 's', sep='')
+        with Log('timers', total=learn_time, **Timer.TIMERS) : pass
 
 if __name__ == '__main__' :
     main(sys.argv[1:])    
