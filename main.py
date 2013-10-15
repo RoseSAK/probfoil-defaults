@@ -45,9 +45,15 @@ def main(arguments) :
     
     args = parse_args(arguments)
     
-    if not 'PROBLOGPATH' in os.environ :
-        print('PROBLOGPATH environment variable not set. Set it with \'export PROBLOGPATH=<path to problog>\'.', file=sys.stderr)
-        sys.exit(1)
+    if 'PROBLOGPATH' in os.environ :
+        PROBLOGPATH = os.environ['PROBLOGPATH']
+    else :
+        try :
+            import settings
+            PROBLOGPATH = settings.PROBLOGPATH
+        except Exception :
+            print('PROBLOGPATH environment variable not set. Set it with \'export PROBLOGPATH=<path to problog>\' or define it in the file \'settings.py\'.', file=sys.stderr)
+            sys.exit(1)
     
     parameters = vars(args)
         
@@ -62,7 +68,7 @@ def main(arguments) :
     modes = list(map(lambda x : Literal(*x.split('/')), args.modes))
       
     with open('log.xml', 'w') as Log.LOG_FILE :
-     with WorkEnv() as env :    # Set up a temporary working directory
+     with WorkEnv(PROBLOGPATH=PROBLOGPATH) as env :    # Set up a temporary working directory
       with Log('log', **parameters) :
         # import prolog.parser as pp
         # parser = pp.PrologParser()

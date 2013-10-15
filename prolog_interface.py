@@ -69,11 +69,13 @@ class PrologEngine(object) :
 
 class PrologInterface(object) :
     
-    def __init__(self) :
+    def __init__(self, env) :
+        self.env = env
         self.engine = self._createPrologEngine()
         self.last_id = 0
         self.__queue = []
         self.__prob_cache = {}
+
                 
     def _getRuleQuery(self, identifier) :
         return 'query_' + str(identifier)
@@ -263,11 +265,11 @@ class PrologInterface(object) :
             for line in cnf :
                  print(line,file=f)
                  
-        executable = os.environ['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
+        executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
         subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
-        if sys.path[-1] != os.environ['PROBLOGPATH'] + '/src/' :
-            sys.path.append(os.environ['PROBLOGPATH'] + '/src/')
+        if sys.path[-1] != self.env['PROBLOGPATH'] + '/src/' :
+            sys.path.append(self.env['PROBLOGPATH'] + '/src/')
         # Evaluate DDNNF
         from compilation.compile import DDNNFFile
         from evaluation.evaluate import FileOptimizedEvaluator, DDNNF

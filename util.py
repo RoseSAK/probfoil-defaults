@@ -26,11 +26,21 @@ class WorkEnv(object) :
     ALWAYS_KEEP=2       # directory is never removed
     # NOTE: a pre-existing directory is never removed
     
-    def __init__(self, outdir=None, persistent=KEEP_ON_ERROR) :
+    def __init__(self, outdir=None, persistent=KEEP_ON_ERROR, **extra) :
         self.__outdir = outdir
         self.__persistent = persistent
+        self.__extra = extra
         
     logger = property(lambda s : s.__logger)
+    
+    def __getitem__(self, key) :
+        return self.__extra[key]
+        
+    def __setitem__(self, key, value) :
+        self.__extra[key] = value
+        
+    def __contains__(self, key) :
+        return key in self.__extra 
     
     def __enter__(self) :
         if self.__outdir == None :

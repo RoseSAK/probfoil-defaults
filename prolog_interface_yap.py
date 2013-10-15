@@ -110,15 +110,15 @@ class PrologEngine(object) :
         return [ self.getGrounding().byName(lit) for lit in literals ]
     
     def _call_grounder(self, in_file) :
-        PROBLOG_GROUNDER=os.environ['PROBLOGPATH'] + '/assist/ground_compact.pl'
+        PROBLOG_GROUNDER=self.__env['PROBLOGPATH'] + '/assist/ground_compact.pl'
                 
         # 2) Call yap to do the actual grounding
         ground_program = self.__env.tmp_path('probfoil.ground')
         evidence = '/dev/null'
         queries = '/dev/null'
         
-        if sys.path[-1] != os.environ['PROBLOGPATH'] + '/src/' :
-            sys.path.append(os.environ['PROBLOGPATH'] + '/src/')
+        if sys.path[-1] != self.__env['PROBLOGPATH'] + '/src/' :
+            sys.path.append(self.__env['PROBLOGPATH'] + '/src/')
         
         import core
         core.call_yap(PROBLOG_GROUNDER, args=[in_file, ground_program, evidence, queries])
@@ -167,16 +167,14 @@ def read_grounding(filename) :
 
 class YapPrologInterface(PrologInterface) :
     
-    def __init__(self, working_environment) :
-        self.__env = working_environment
-        super().__init__()
-
+    def __init__(self, env) :
+        super().__init__(env)
         
     def query(self, query, variables) :
         return self.engine.query(query, variables)
         
     def _createPrologEngine(self) :
-        return PrologEngine(self.__env)
+        return PrologEngine(self.env)
          
     def _toPrologClause(self, head, *body, probability=1) :
         head = str(head)
