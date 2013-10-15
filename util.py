@@ -67,7 +67,6 @@ class WorkEnv(object) :
 class Log(object) :
     
     LOG_FILE=sys.stderr
-    TIMERS=defaultdict(float)
     
     def __init__(self, tag, file=None, _child=None, _timer=False, **atts) :
         if file == None :
@@ -104,8 +103,11 @@ class Log(object) :
             
 class Timer(object) :
     
-    def __init__(self, desc) :
+    TIMERS = defaultdict(float)
+    
+    def __init__(self, desc=None, category=None) :
         self.desc = desc
+        self.category = category
     
     elapsed_time = property(lambda s : time.time()-s.start)
     
@@ -114,8 +116,10 @@ class Timer(object) :
         return self
         
     def __exit__(self, *args) :
-        print ( '%s: %.5fs' % (self.desc, self.elapsed_time ))
-
+        if self.category :
+            self.TIMERS[self.category] += self.elapsed_time
+        if self.desc :
+            print ( '%s: %.5fs' % (self.desc, self.elapsed_time ))
 
 class Beam(object) :
     

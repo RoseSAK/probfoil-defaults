@@ -18,6 +18,8 @@ from functools import total_ordering
 from collections import namedtuple, defaultdict
 from itertools import product
 import math
+import time
+from util import Log, Timer
 
 @total_ordering
 class Rule(object) :
@@ -120,7 +122,8 @@ class Rule(object) :
         if self.__score == None :
             if self.score_predict == None :
                 self.knowledge.process_queue()
-            self.__score = self.learning_problem.calculateScore(self)
+            with Timer(category='scoring') :
+                self.__score = self.learning_problem.calculateScore(self)
         return self.__score
     
     def _get_score_predict(self) :

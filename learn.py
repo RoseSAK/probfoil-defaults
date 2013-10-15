@@ -14,8 +14,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import math
-from util import Log, Beam
+from util import Log, Beam, Timer
 from language import RuleHead
+import time
 
 # Helper function for transforming significance p-value into ChiSquare decision value.
 chi2_cdf = lambda x : math.erf(math.sqrt(x/2))
@@ -93,7 +94,8 @@ class LearningProblem(object) :
         init_rule = RuleHead(previous=current_rule)
     
         # Calculate initial set of refinements
-        refinements = list(init_rule.refine())
+        with Timer(category='refine') :
+            refinements = list(init_rule.refine())
     
         # Add clause to beam (with empty score)
         beam.push( init_rule, refinements )
@@ -165,12 +167,14 @@ class LearningProblem(object) :
         if refine == None :
             # No refinements available
             return []
-    
-        # Calculate new refinements in case a variable was added by the previous literal
-        new_refine = list(rule.refine(update=True))
-        # Add new refinements
-        refine += new_refine
-        
+            
+        # Calculate new refinements in case a variable was added by the previous literal    
+        with Timer(category='refine') :
+            new_refine = list(rule.refine(update=True))
+            
+            # Add new refinements
+            refine += new_refine
+                
         if self.VERBOSE > 2 : print('Evaluating %s refinements...' % len(refine) )
             
         with Log('new_refine', new=new_refine, all=refine) : pass

@@ -18,7 +18,7 @@ import time
 import math
 import sys
 
-from util import Log
+from util import Log, Timer
 from language import Literal
 
 from collections import namedtuple, defaultdict
@@ -127,8 +127,11 @@ class PrologInterface(object) :
         
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
-        self._prepare_rule(rule)
-        self._add_to_queue(rule)
+        with Timer(category='enqueue') :
+            with Timer(category='enqueue_prepare') :
+                self._prepare_rule(rule)
+            with Timer(category='enqueue_add') :
+                self._add_to_queue(rule)
         
     def getFact(self, fact) :
         return self.engine.getFactProbability( self._toProlog(fact) )
@@ -156,7 +159,8 @@ class PrologInterface(object) :
                 debug_case_counters[2] += 1
         
     def _ground_queue(self, ground_queue) :
-        ground_time = time.time()
+        
+      with Timer(category='evaluate_grounding') as tmr : 
         
         # Separate tuples in queue
         rules, ex_ids, queries = zip(*ground_queue)
@@ -197,9 +201,7 @@ class PrologInterface(object) :
                     evaluation_queue[node_id].append( (rule, ex_id, negated) )
                     debug_case_counters[3] += 1
         
-        ground_time = time.time() - ground_time
-        with Log('grounding', time=ground_time, queue_size=len(ground_queue), fail=debug_case_counters[0], true=debug_case_counters[1], cache=debug_case_counters[2], queue=debug_case_counters[3] ) : pass
-        Log.TIMERS['grounding'] += ground_time
+        with Log('grounding', time=tmr.elapsed_time, queue_size=len(ground_queue), fail=debug_case_counters[0], true=debug_case_counters[1], cache=debug_case_counters[2], queue=debug_case_counters[3] ) : pass
         
         # Return evaluation queue
         return evaluation_queue
@@ -217,11 +219,9 @@ class PrologInterface(object) :
         # If cnf is not empty (possible if all nodes are facts)
         if len(cnf) > 1 :
             # Compile the CNF
-            compile_time = time.time()
-            with Log('compile', _timer=True) :
-                compiled_cnf = self._compile_cnf(cnf, facts)
-            compile_time = time.time() - compile_time
-            Log.TIMERS['compiling'] += compile_time
+            with Timer(category='evaluate_compiling') :
+                with Log('compile', _timer=True) :
+                    compiled_cnf = self._compile_cnf(cnf, facts)
         
         for node_id in evaluation_queue :
             assert(node_id != 0 and node_id != None)
@@ -245,6 +245,8 @@ class PrologInterface(object) :
         
         
     def process_queue(self) :
+        
+      with Timer(category='evaluate') :
         
         # Ground stored queries => returns nodes to be evaluated
         evaluations = self._ground_queue(self.__queue)

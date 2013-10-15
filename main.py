@@ -18,7 +18,7 @@
 
 
 import sys, time
-from util import Log, WorkEnv
+from util import Log, WorkEnv, Timer
 import os
 
 from language import Literal, Language, RootRule
@@ -75,27 +75,24 @@ def main(arguments) :
         p.engine.loadFile(args.input)
         
         init_time1 = time.time()
-        if args.verbose : print('Reading language specifications...')    
         
-        l = Language()
-        for mode in modes :
-            l.setArgumentModes( mode )
-        l.addTarget( target_pred, target_arity )
-        l.initialize(p)  # ==> read language specification + values from p
-        Log.TIMERS['language'] = time.time() - init_time1
-        
+        with Timer(category='init_language') :
+            l = Language()
+            for mode in modes :
+                l.setArgumentModes( mode )
+            l.addTarget( target_pred, target_arity )
+            l.initialize(p)  # ==> read language specification + values from p        
 
-        init_time2 = time.time()        
-        if args.probfoil == '2' :
-            lp = ProbFOIL2(l, p, **parameters)
-        else :
-            lp = ProbFOIL1(l, p, **parameters)
+        with Timer(category='init_learner') :
+            if args.probfoil == '2' :
+                lp = ProbFOIL2(l, p, **parameters)
+            else :
+                lp = ProbFOIL1(l, p, **parameters)
         
-        if args.verbose : print('Initializing root rule...')
-        with Log('initialize', _timer=True) :
-            r0 = RootRule(target, lp)
-            r0.initialize()
-        Log.TIMERS['initial'] = time.time() - init_time2
+            if args.verbose : print('Initializing root rule...')
+            with Log('initialize', _timer=True) :
+                r0 = RootRule(target, lp)
+                r0.initialize()
             
         if args.verbose > 1 :
             print (r0.score_correct)
@@ -107,7 +104,7 @@ def main(arguments) :
         except Exception as e :
             with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
             with Log('error') : pass
-            raise e from None
+            raise e
 
         with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
 
@@ -124,8 +121,8 @@ def main(arguments) :
         
         print('#########################     TIMING     #########################')
         learn_time = time.time() - learn_time
-        for t in Log.TIMERS :
-            print( '%s => %.3fs (%.3f%%)' % (t, Log.TIMERS[t], 100*(Log.TIMERS[t] / learn_time) ))    
+        for t in Timer.TIMERS :
+            print( '%s => %.3fs (%.3f%%)' % (t, Timer.TIMERS[t], 100*(Timer.TIMERS[t] / learn_time) ))    
         print('total',' => ', learn_time, 's', sep='')
 
 if __name__ == '__main__' :
