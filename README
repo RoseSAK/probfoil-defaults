@@ -1,0 +1,98 @@
+This directory contains the implementation of the Prob2FOIL algorithm for learning probabilistic clauses from probabilistic data.
+
+1. INSTALLATION
+===============
+
+Currently, this algorithm will only work on Linux x86_64.
+
+This code has the following dependencies:
+
+    - ProbLog2 - which can be downloaded from http://dtai.cs.kuleuven.be/problog/
+    - YAP Prolog (also a dependency of ProbLog2)
+    - Python 3 (also a dependency of ProbLog2)
+    
+After installing ProbLog2 you need to set the PROBLOGPATH environment variable to the top-level path of your ProbLog installation.
+
+For example:
+    /somedir/problog2/
+                assist/
+                src/
+                ...
+    
+export PROBLOGPATH=/somedir/problog2/
+        
+
+2. DATA FORMAT
+==============
+
+The algorithm uses ProbLog's data format, that is Prolog files augmented with probabilities.
+
+For example,
+
+0.8::father(john, mary).
+0.7::father(john, billy).
+
+mother(mary, tom).
+mother(an, jenny).
+
+parent(X,Y) :- mother(X,Y).
+parent(X,Y) :- father(X,Y).
+
+0.8::grandfather(john, tom).
+
+
+Additionally, the input file should contain type information for all predicates to be used in the learning algorithm.
+For example,
+
+base(father(person,person)).
+base(mother(person,person)).
+base(parent(person,person)).
+base(grandfather(person,person)).
+
+
+3. USAGE
+========
+
+To run the algorithm, run 'main.py'.
+For example, to learn the 'grandfather' relation you can use.
+
+    ./main.py family.pl grandfather/2 father/+- mother/+-
+
+where 
+    - family.pl is the data file
+    - grandfather/2 is the target ( predicate/arity )
+    - father/+- and mother/+- are the modes 
+        + means that that argument should be an existing variable in the rule so far
+        - means that that argument can be a new variable
+
+With the previous setting, the parent/2 predicate is not used.
+We can enable it by using        
+    ./main.py family.pl grandfather/2 father/+- mother/+- parent/+-
+
+There are several parameters available. See './main.py --help' for more information.
+
+The algorithm writes out an extensive log file in XML.
+
+4. CREDITS
+==========
+
+The algorithm is based on the work of Luc De Raedt, Anton Dries, Ingo Thon, Guy Van den Broeck, Mathias Verbeke. 
+It was implemented by Anton Dries.
+
+5. LICENSE
+==========
+
+Copyright (C) 2013 Anton Dries (anton.dries@cs.kuleuven.be)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 2.1 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
