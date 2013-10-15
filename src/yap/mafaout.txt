@@ -1,5 +1,0 @@
-mother(A,B):-true,parent(A,B).
-father(A,B):-true,parent(A,B).
-male_ancestor(A,B):- (true,parent(A,B)),\+female_ancestor(A,C).
-female_ancestor(A,B):- (true,parent(C,B)),female_ancestor(A,C).
-female_ancestor(A,B):- (true,parent(A,B)),\+male_ancestor(A,C).
