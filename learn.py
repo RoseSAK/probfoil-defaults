@@ -242,7 +242,9 @@ class PF1Score(object) :
             self.FN += fn
             self.P += p
             self.N += n
-        self.maxTP = self.TP                                    
+        self.maxTP = self.TP
+        self.localScore = self.m_estimate()
+        self.localScoreMax = self.m_estimate_max()
         
     def m_estimate(self) :
         m = self.M_ESTIMATE_M
@@ -353,6 +355,9 @@ class PF2Score(object) :
         self.N = N
     
         self.maxTP = score(1.0)[0]
+        self.localScore = self.m_estimate()
+        self.localScoreMax = self.m_estimate_max()
+        
     
         # with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
 
