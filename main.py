@@ -70,9 +70,6 @@ def main(arguments) :
     with open('log.xml', 'w') as Log.LOG_FILE :
      with WorkEnv(PROBLOGPATH=PROBLOGPATH) as env :    # Set up a temporary working directory
       with Log('log', **parameters) :
-        # import prolog.parser as pp
-        # parser = pp.PrologParser()
-        
         p = YapPrologInterface(env)
         
         p.engine.loadFile(args.input)
@@ -107,14 +104,10 @@ def main(arguments) :
         learn_time = time.time()
         try :
             result = lp.learn(r0)
-        except :
+        except Exception as e :
             with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
             with Log('error') : pass
-#            p.engine.listing()
-            # with open('/tmp/probfoil.pl','w') as pl_out :
-            #     print (p.engine.listing(), file=pl_out)
-
-            raise Exception('ERROR')
+            raise e from None
 
         with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
 
@@ -125,12 +118,11 @@ def main(arguments) :
             print('\n'.join(result.getTheory()))
         else :
             print('%s :- fail.' % result.target )
-        print('PREDICTIONS (TP, TN, FP, FN):', result.score)
-        print('ACCURACY:', result.globalScore)
+        print('#########################     SCORES     #########################')
+        print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
+        print('ACCURACY                     :', result.globalScore)
         
-        # with open('/tmp/probfoil.pl','w') as pl_out :
-        #     print (p.engine.listing(), file=pl_out)
-
+        print('#########################     TIMING     #########################')
         learn_time = time.time() - learn_time
         for t in Log.TIMERS :
             print( '%s => %.3fs (%.3f%%)' % (t, Log.TIMERS[t], 100*(Log.TIMERS[t] / learn_time) ))    
