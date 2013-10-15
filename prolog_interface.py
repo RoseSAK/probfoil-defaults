@@ -141,14 +141,7 @@ class PrologInterface(object) :
         debug_case_counters = [0] * 3
         
         for ex_id, example in rule.enum_examples() : # enumerate(rule.examples) :
-            if rule.parent and rule.parent.score_predict[ex_id] == 0 :
-                # parent rule predicts 0 => current rule will also predict 0
-                pass 
-                debug_case_counters[0] += 1
-#            elif rule.previous and rule.previous.score_predict[ex_id] == 1 :
-                # previous rule predicts 1 => current rule irrelevant
-#                pass
-            elif not rule.previous : # evaluating root rule
+            if not rule.previous : # evaluating root rule
                 query_head = self._toProlog(rule.target.withArgs(example))
                 self.__queue.append( ( rule, ex_id, query_head ) )
                 debug_case_counters[1] += 1
