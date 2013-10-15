@@ -32,6 +32,10 @@ class Rule(object) :
         self.__score = None
         self.score_predict = None
         self.__identifier = Rule.ids
+        if parent :
+            self.__length = len(parent) + 1
+        else :
+            self.__length = 1
         Rule.ids += 1
         
     def __add__(self, literal) :
@@ -111,10 +115,7 @@ class Rule(object) :
         return '\t'.join(lines)
         
     def __len__(self) :
-        if self.parent :
-            return len(self.parent) + 1
-        else :
-            return 1
+        return self.__length
     
     def refine(self, update=False) :
         """Generate refinement literals for this rule."""
