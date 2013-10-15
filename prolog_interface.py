@@ -140,7 +140,7 @@ class PrologInterface(object) :
         
         debug_case_counters = [0] * 3
         
-        for ex_id, example in enumerate(rule.examples) :
+        for ex_id, example in rule.enum_examples() : # enumerate(rule.examples) :
             if rule.parent and rule.parent.score_predict[ex_id] == 0 :
                 # parent rule predicts 0 => current rule will also predict 0
                 pass 

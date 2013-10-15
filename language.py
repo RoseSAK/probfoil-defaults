@@ -67,6 +67,15 @@ class Rule(object) :
     def _get_body_variables(self) :
         return set(map(lambda x : x[0], self._body_vars))
         
+    def enum_examples(self) :
+        if self.parent :
+            for ex_id, example in self.parent.enum_examples() :
+                if self.parent.score_predict[ex_id] != 0 :
+                    yield ex_id, example
+        else :
+            for x in enumerate(self.examples) :
+                yield x
+        
     def _get_examples(self) :
         return self.previous.examples    
                 
