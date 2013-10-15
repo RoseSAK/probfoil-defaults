@@ -26,10 +26,11 @@ import os
 class PrologEngine(object) :
     """Expected interface for PrologEngine."""
     
-    def __init__(self) :
+    def __init__(self, env) :
         self.__sources = []
         self.__clauses = []
         self.__grounding = Grounding()
+        self.__env = env
         
     def loadFile(self, filename) :
         """Load a Prolog source file."""
@@ -47,7 +48,7 @@ class PrologEngine(object) :
     def query(self, literal, variables) :
         """Execute a query."""
         
-        program_file = '/tmp/probfoil.pl'
+        program_file = self.__env.tmp_path('probfoil.pl')
         with open(program_file, 'w') as f :
             for sourcefile in self.__sources :
                 with open(sourcefile) as fsrc :
@@ -88,7 +89,7 @@ class PrologEngine(object) :
         lines = []
 #        lines += [ ('0.5::%s.' % name) for name in self.grounding.names ]
         
-        pl_filename = '/tmp/probfoil.pl'
+        pl_filename = self.__env.tmp_path('probfoil.pl')
         with open(pl_filename, 'w') as pl_file : 
             for sourcefile in self.__sources :
                 with open(sourcefile) as in_file :
@@ -112,7 +113,7 @@ class PrologEngine(object) :
         PROBLOG_GROUNDER=os.environ['PROBLOGPATH'] + '/assist/ground_compact.pl'
                 
         # 2) Call yap to do the actual grounding
-        ground_program = '/tmp/probfoil.ground'
+        ground_program = self.__env.tmp_path('probfoil.ground')
         evidence = '/dev/null'
         queries = '/dev/null'
         
@@ -166,14 +167,16 @@ def read_grounding(filename) :
 
 class YapPrologInterface(PrologInterface) :
     
-    def __init__(self) :
+    def __init__(self, working_environment) :
+        self.__env = working_environment
         super().__init__()
+
         
     def query(self, query, variables) :
         return self.engine.query(query, variables)
         
     def _createPrologEngine(self) :
-        return PrologEngine()
+        return PrologEngine(self.__env)
          
     def _toPrologClause(self, head, *body, probability=1) :
         head = str(head)

@@ -15,8 +15,44 @@
 
 from __future__ import print_function
 
-import sys, time
+import sys, time, os
 from collections import defaultdict
+import tempfile, shutil
+
+class WorkEnv(object) :
+    
+    NEVER_KEEP=0        # directory is always removed on exit
+    KEEP_ON_ERROR=1     # directory is removed, unless exit was caused by an error
+    ALWAYS_KEEP=2       # directory is never removed
+    # NOTE: a pre-existing directory is never removed
+    
+    def __init__(self, outdir=None, persistent=KEEP_ON_ERROR) :
+        self.__outdir = outdir
+        self.__persistent = persistent
+        
+    logger = property(lambda s : s.__logger)
+    
+    def __enter__(self) :
+        if self.__outdir == None :
+            self.__outdir = tempfile.mkdtemp()
+        elif not os.path.exists(self.__outdir) :
+            os.makedirs(self.__outdir)
+        else :  # using non-temporary, existing directory => NEVER delete this
+            self.__persistent = self.ALWAYS_KEEP
+        return self
+        
+    def __exit__(self, exc_type, value, traceback) :
+        if self.__persistent == self.NEVER_KEEP or (self.__persistent == self.KEEP_ON_ERROR and exc_type == None) :
+            shutil.rmtree(self.__outdir)
+        elif self.__persistent == self.KEEP_ON_ERROR and exc_type != None :
+            # An error occurred
+            print('Error occurred: working directory preserved', self.__outdir, file=sys.stderr)
+        
+    def out_path(self, relative_filename) :
+        return os.path.join(self.__outdir, relative_filename)
+        
+    def tmp_path(self, relative_filename) :
+        return os.path.join(self.__outdir, relative_filename)
 
 class Log(object) :
     

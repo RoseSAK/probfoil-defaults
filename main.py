@@ -18,7 +18,8 @@
 
 
 import sys, time
-from util import Log
+from util import Log, WorkEnv
+import os
 
 from language import Literal, Language, RootRule
 from prolog_interface_yap import YapPrologInterface
@@ -44,6 +45,10 @@ def main(arguments) :
     
     args = parse_args(arguments)
     
+    if not 'PROBLOGPATH' in os.environ :
+        print('PROBLOGPATH environment variable not set. Set it with \'export PROBLOGPATH=<path to problog>\'.', file=sys.stderr)
+        sys.exit(1)
+    
     parameters = vars(args)
         
     target_pred, target_arity = args.target.split('/')
@@ -56,12 +61,13 @@ def main(arguments) :
     
     modes = list(map(lambda x : Literal(*x.split('/')), args.modes))
       
-    with open('log.xml', 'w') as Log.LOG_FILE : 
-     with Log('log', **parameters) :
+    with open('log.xml', 'w') as Log.LOG_FILE :
+     with WorkEnv() as env :    # Set up a temporary working directory
+      with Log('log', **parameters) :
         # import prolog.parser as pp
         # parser = pp.PrologParser()
         
-        p = YapPrologInterface()
+        p = YapPrologInterface(env)
         
         p.engine.loadFile(args.input)
         
