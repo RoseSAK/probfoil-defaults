@@ -154,7 +154,7 @@ class Beam(object) :
             r2scores = r2.score_predict
             
             if r1.localScore == r2.localScore and r1scores == r2scores :
-                if rf1 != None and rf2 != None and len(rf1) > len(rf2) : #len(r1.variables) > len(r2.variables) :                
+                if rf2 == None or (rf1 != None and len(rf1) > len(rf2)) : #len(r1.variables) > len(r2.variables) :                
                     best, worst = r1, r2
                     self.content[p+1] = self.content[p]
                 else :
