@@ -254,7 +254,7 @@ class PrologInterface(object) :
         import subprocess
         
         # Compile CNF to DDNNF
-        cnf_file = '/tmp/probfoil_eval.cnf'
+        cnf_file = self.env.tmp_path('probfoil_eval.cnf')
         nnf_file = os.path.splitext(cnf_file)[0] + '.nnf'
         with open(cnf_file,'w') as f :
             for line in cnf :
@@ -494,12 +494,14 @@ class Grounding(object) :
     def integrate(self, nodes) :
         old_count = len(self)
         
+        result = {}
         translation = {}
         for line_id, line in enumerate(nodes) :
             if line_id > 0 :
-                self._integrate_node(line_id, line[0], line[1], line[2], nodes, translation)
-                
-        return len(self) - old_count
+                line_type, line_content, name = line
+                node_id = self._integrate_node(line_id, line_type, line_content, name, nodes, translation)
+                result[name] = node_id
+        return result
             
     def _integrate_node(self, line_id, line_type, line_content, name, lines, translation) :
         if name and name in self.__names :
@@ -533,7 +535,7 @@ class Grounding(object) :
                     subnode_id = abs(subnode_id)
                     subnode = lines[subnode_id]
                     subnodes.append(neg * self._integrate_node(subnode_id, subnode[0], subnode[1], subnode[2], lines, translation))
-
+                    
             if line_id != None and translation[ line_id ] != None :
                 node_id = translation[ line_id ]
                 self.updateNode(node_id, line_type, tuple(subnodes), name )

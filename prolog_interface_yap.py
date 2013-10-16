@@ -105,9 +105,9 @@ class PrologEngine(object) :
         grounder_result = self._call_grounder( pl_filename)
         
         # 3) Read in grounding and insert new things into Grounding data structure
-        self.getGrounding().integrate(grounder_result)
+        names_nodes = self.getGrounding().integrate(grounder_result)
         
-        return [ self.getGrounding().byName(lit) for lit in literals ]
+        return [ names_nodes.get(lit,None) for lit in literals ]
     
     def _call_grounder(self, in_file) :
         PROBLOG_GROUNDER=self.__env['PROBLOGPATH'] + '/assist/ground_compact.pl'
@@ -125,18 +125,18 @@ class PrologEngine(object) :
         
         return read_grounding(ground_program)
     
-    def getFactProbability(self, literal) :
-        """Retrieve the fact probability."""
-        
-        self.groundQuery(literal)
-        
-        index = self.getGrounding().byName(str(literal))
-        if index == None :
-            return 0
-        elif index == 0 :
-            return 1
-        else :
-            return self.getGrounding().getProbability(str(literal))
+    # def getFactProbability(self, literal) :
+    #     """Retrieve the fact probability."""
+    #     
+    #     self.groundQuery(literal)
+    #     
+    #     index = self.getGrounding().byName(str(literal))
+    #     if index == None :
+    #         return 0
+    #     elif index == 0 :
+    #         return 1
+    #     else :
+    #         return self.getGrounding().getProbability(str(literal))
     
     def getGrounding(self) :
         """Get grounding information."""
