@@ -199,7 +199,7 @@ class LearningProblem(object) :
             elif not r._new_vars and r.score_predict == r.parent.score_predict :
                 # Predictions are indentical and new rule does not introduce a new variable
                 with Log('rejected', reason="no improvement", literal=r.literal, score=r.score ) : pass
-            elif best_score != None and r.localScoreMax < best_score and r.localScore < best_score :
+            elif best_score != None and r.localScoreMax <= best_score and r.localScore < best_score :
                 # This rule and any of its extensions can be better than the currently best rule
                 with Log('rejected', reason="maxscore", literal=r.literal, score=r.score, localscore=r.localScore, maxscore=r.localScoreMax ) : pass
 #            elif r.score.TP <= r.parent.score.TP and r.score.TN == r.parent.score.TN and not r._new_vars :
