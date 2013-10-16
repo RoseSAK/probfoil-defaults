@@ -287,7 +287,179 @@ class ProbFOIL2(LearningProblem) :
                 previous_prediction = [ a + (b-a)*p   for a,b in zip(rule.previous.previous.score_predict, previous_prediction) ]
             return PF2Score(rule.score_correct, rule.score_predict, previous_prediction, self.M_ESTIMATE_M)
 
-class PF2Score(object) :
+class PF2Score_Incremental(object):
+
+    def _calc_y(self, p,l,u) :
+        if l == u :
+            # inactive
+            return None
+        else :
+            v = (p-l) / (u-l)
+            if v < 0 :
+                return 0    # overestimate
+            elif v > 1 :
+                return 1    # underestimate
+            else :
+                return v    # correctable
+    
+    def __init__(self, correct, predict, predict_prev, m) :
+        self.M_ESTIMATE_M = m
+        self.MIN_RULE_PROB = 0.01
+        
+        # Calculate the y values for which
+        #values = [ (self._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict ) ]
+        
+        # There are four types of scores:
+        #   Take dS = u - l
+        #   - inactive: current rule is not adaptable (u == l)   => x is irrelevant
+        #       dTP = 0
+        #       dFP = 0
+        #   - overestimating: current rule is an overestimate ( p < l )
+        #       dTP = 0
+        #       dFP = x*dS
+        #   - underestimating: current rule is an underestimate ( p > u )
+        #       dTP = x*dS
+        #       dFP = 0
+        #   - correctable: x can be adjusted to perfect prediction ( l < p < u )
+        #       y = (p-l) / (u-l)
+        #       if x < y :  (underestimate)
+        #           dTP = x*dS
+        #           dFP = 0
+        #       elif y > x :  (overestimate)
+        #           dTP = (p-l)
+        #           dFP = (x*dS) - (p-l)
+        #       else :  (correct)
+        #           => p-l == x*dS
+        #           => dTP = x*dS = p-l
+        #           => dFP = 0
+        #       Incremental computation:
+        #           dS_{low}
+        #           SUM^{p-l}_{high} = SUM^{p-l}_all - SUM^{p-l}_{low}
+        #           dTP = dS_{low}*x + SUM^{p-l}_{high}
+
+        P = sum(correct)
+        M = len(correct)
+        N = M - P
+        self.mPNP = self.M_ESTIMATE_M  * ( P / M )
+        
+        TP_previous = 0.0
+        FP_previous = 0.0
+        
+        TP_base = 0.0
+        FP_base = 0.0
+        values = []
+        
+        dS_total = 0.0
+        for p,l,u in zip(correct, predict_prev, predict ) :
+            TP_previous += min(l,p)
+            FP_previous += max(0,l-p)
+            
+            dS = u - l
+            if dS == 0 :    # inactive
+                pass
+            elif p < l :    # overestimate
+                FP_base += dS
+            elif p > u :    # underestimate
+                TP_base += dS
+            else : # correctable
+                dS_total += dS
+                y = (p-l) / (u-l)
+                values.append( (y,p,l,u) )
+                
+        tau_l, tau_u, tau_p = 0.0, 0.0, 0.0     # Sum l_i
+        sigma_l, sigma_u, sigma_p = 0.0, 0.0, 0.0 # Sum l_i: x>y 
+        
+        if values : 
+            values = sorted(values)
+        
+            TP_x, FP_x, TN_x, FN_x = 0.0, 0.0, 0.0, 0.0
+        
+            max_score = None
+            max_x = None
+            max_score_details = None
+        
+            dS_running = 0.0
+            pl_running = 0.0
+            prev_y = None
+            for y, p, l, u in values + [(None,0.0,0.0,0.0)] :
+                if y == None  or (prev_y != None and y > prev_y) :
+                    x = prev_y
+                    
+                    TP_x = pl_running + x * (dS_total - dS_running) + x * TP_base + TP_previous
+                    FP_x = x * dS_running - pl_running
+                    
+                    score_x = self._m_estimate_m(TP_x, FP_x)
+                
+                    if x >= self.MIN_RULE_PROB and ( max_score == None or score_x > max_score ) :
+                        TN_x = N - FP_x
+                        FN_x = P - TP_x
+                    
+                        # TN_x = M - tau_p + sigma_p - (sigma_u - sigma_l) * x - sigma_l
+                        # FN_x = tau_p - sigma_p - (tau_u - tau_l - sigma_u + sigma_l) * x - tau_l + sigma_l
+                        max_score_details = (TP_x, TN_x, FP_x, FN_x)
+                        max_score = score_x
+                        max_x = x
+                    
+                prev_y = y
+                
+                pl_running += (p-l)
+                dS_running += (u-l)
+
+            
+                
+            if max_x == None or max_x > 1 - 1e-5 :
+                x = 1
+                TP_x = pl_running + x * (dS_total - dS_running) + x * TP_base + TP_previous
+                FP_x = x * dS_running - pl_running
+            
+                TN_x = N - FP_x
+                FN_x = P - TP_x
+                
+                    # TN_x = M - tau_p + sigma_p - (sigma_u - sigma_l) * x - sigma_l
+                    # FN_x = tau_p - sigma_p - (tau_u - tau_l - sigma_u + sigma_l) * x - tau_l + sigma_l
+                max_score_details = (TP_x, TN_x, FP_x, FN_x)
+                max_score = score_x
+                max_x = x
+                
+        else :
+            max_x = 1.0
+            TP_x = TP_base + TP_previous
+            FP_x = FP_base + FP_previous
+            TN_x = N - FP_x
+            FN_x = P - TP_x
+            score_x = self._m_estimate_m(TP_x, FP_x)
+            max_score_details = (TP_x, TN_x, FP_x, FN_x)
+            max_score = score_x
+            
+        self.max_s = max_score
+        self.max_x = max_x
+        self.TP, self.TN, self.FP, self.FN = max_score_details
+        self.P = P
+        self.N = M-P
+
+        self.maxTP = TP_x
+        self.localScore = self.m_estimate()
+        self.localScoreMax = self.m_estimate_max()
+        
+    def accuracy(self) :
+        M = self.P + self.N
+        return (self.TP + self.TN ) / M
+            
+    def m_estimate(self) :
+        return self._m_estimate_m(self.TP, self.FP)
+
+    def m_estimate_max(self) :
+        return self._m_estimate_m(self.TP, 0)
+
+            
+    def _m_estimate_m(self, TP, FP) :
+        return (TP + self.mPNP) / (TP + FP + self.M_ESTIMATE_M) 
+
+    def __str__(self) :
+        return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
+        
+
+class PF2Score_NonIncremental(object) :
 
     def _calc_y(self, p,l,u) :
         if l == u :
@@ -300,7 +472,6 @@ class PF2Score(object) :
                 return 1
             else :
                 return v
-                
                 
     def __init__(self, correct, predict, predict_prev, m) :
         self.M_ESTIMATE_M = m
@@ -384,3 +555,5 @@ class PF2Score(object) :
 
     def __str__(self) :
         return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
+
+PF2Score = PF2Score_Incremental
