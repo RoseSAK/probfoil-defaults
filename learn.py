@@ -458,10 +458,9 @@ class PF2Score_Incremental(object):
             
     def m_estimate(self) :
         return self._m_estimate_m(self.TP, self.FP)
-
+        
     def m_estimate_max(self) :
-        return self._m_estimate_m(self.TP, 0)
-
+        return self._m_estimate_m(self.maxTP, 0)
             
     def _m_estimate_m(self, TP, FP) :
         return (TP + self.mPNP) / (TP + FP + self.M_ESTIMATE_M) 
