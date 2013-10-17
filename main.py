@@ -68,6 +68,8 @@ def main(arguments) :
     
     modes = list(map(lambda x : Literal(*x.split('/')), args.modes))
       
+    learn_time = time.time()  
+    
     with open(args.log, 'w') as Log.LOG_FILE :
      with WorkEnv(PROBLOGPATH=PROBLOGPATH) as env :    # Set up a temporary working directory
       with Log('log', **parameters) :
@@ -99,7 +101,6 @@ def main(arguments) :
             print (r0.score_correct)
         
         if args.verbose: print('Start learning...')
-        learn_time = time.time()
         try :
             result = lp.learn(r0)
         except Exception as e :
