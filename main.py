@@ -38,6 +38,7 @@ def parse_args(args) :
     p.add_argument('-p','--significance_p_value', type=float, default=0.99, help="P-value for rule significance.")
     p.add_argument('-v','--verbose', action='count', help="Verbosity level.", default=0)
     p.add_argument('-s','--probfoil', choices=['1','2'], default='2', help="Scoring function for ProbFOIL version (1/2)")
+    p.add_argument('-l','--log', help="Name of log-file (default: /tmp/probfoil.xml)", default='/tmp/probfoil.xml')
     
     return p.parse_args(args)
 
@@ -67,7 +68,7 @@ def main(arguments) :
     
     modes = list(map(lambda x : Literal(*x.split('/')), args.modes))
       
-    with open('log.xml', 'w') as Log.LOG_FILE :
+    with open(args.log, 'w') as Log.LOG_FILE :
      with WorkEnv(PROBLOGPATH=PROBLOGPATH) as env :    # Set up a temporary working directory
       with Log('log', **parameters) :
         p = YapPrologInterface(env)
