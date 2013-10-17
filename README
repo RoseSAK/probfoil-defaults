@@ -1,5 +1,6 @@
 This directory contains the implementation of the Prob2FOIL algorithm for learning probabilistic clauses from probabilistic data.
 
+
 1. INSTALLATION
 ===============
 
@@ -73,13 +74,28 @@ There are several parameters available. See './main.py --help' for more informat
 
 The algorithm writes out an extensive log file in XML.
 
-4. CREDITS
+4. NOTES
+========
+
+- Using CTRL-C
+
+During clause search you can press CTRL-C to stop the current search for best clause.
+This will output the best clause found so far and continue with the next phase.
+
+If you want to stop the algorithm entirely, you can press CTRL-C repeatedly.
+
+- Terminal corruption
+
+Pressing CTRL-C while Yap is running may corrupt your terminal (i.e. input echo-ing will be off).
+Type 'reset' on the terminal to reset it. 
+
+5. CREDITS
 ==========
 
 The algorithm is based on the work of Luc De Raedt, Anton Dries, Ingo Thon, Guy Van den Broeck, Mathias Verbeke. 
 It was implemented by Anton Dries.
 
-5. LICENSE
+6. LICENSE
 ==========
 
 Copyright (C) 2013 Anton Dries (anton.dries@cs.kuleuven.be)
