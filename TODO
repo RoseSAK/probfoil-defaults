@@ -13,6 +13,8 @@ Possible improvements
         => use Prolog to find examples in the data (only relevant for target with arity > 1)
     - grounding
         => incremental grounding, requires small change to ProbLog grounder so that it can use 'already_grounded' information
+    - substructure
+        => detect whether (part of) the data is propositional and exploit this
 
 * efficiency - with effect on solution
     - refinement operator shouldn't generate unconnected literals e.g.: tg(X,Y) :- a(A,B).
