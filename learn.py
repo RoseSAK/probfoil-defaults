@@ -337,9 +337,16 @@ class PF2Score_Incremental(object):
         #           => dTP = x*dS = p-l
         #           => dFP = 0
         #       Incremental computation:
-        #           dS_{low}
-        #           SUM^{p-l}_{high} = SUM^{p-l}_all - SUM^{p-l}_{low}
-        #           dTP = dS_{low}*x + SUM^{p-l}_{high}
+        #           Take pl = p-l
+        #           Take dS = u-l
+        #           At position n, value[n] = x
+        #               TP_x = x \sum_{i=n+1}^{M} dS_i = \sum_{i=1}^{n} pl_i 
+        #               FP_x = x \sum_{i=1}^{n} dS_i - \sum_{i=1}^{n} pl_i
+        #           We can compute this by maintaining the running sums:
+        #               dS_running = \sum_{i=1}^{n} dS_i
+        #               pl_running = \sum_{i=1}^{n} pl_i
+        #           and the sum
+        #               dS_total = \sum_{i=i}^{M} dS_i
 
         P = sum(correct)
         M = len(correct)
