@@ -114,6 +114,9 @@ class LearningProblem(object) :
                 for old_rule, refs in beam :
                 
                   with Log('refining', rule=old_rule, score=old_rule.score, localScore=old_rule.localScore, _timer=True) :
+                    if best_score != None and old_rule.localScoreMax < best_score :
+                        # Prune this rule, it can never reach the top of the beam.
+                        continue 
             
                     # Add current rule to beam and mark it as tested (refinements=None)
                     new_beam.push( old_rule, None )
