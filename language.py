@@ -42,6 +42,7 @@ class Rule(object) :
         """Adds the given literal to the body of the rule and returns the new rule."""
         result = RuleBody(literal, self)
         self.knowledge.enqueue(result)
+        # self.knowledge.process_queue()
         return result
         
     def _get_language(self) :
@@ -127,6 +128,9 @@ class Rule(object) :
         else :
             use_vars = None
         return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) if literal != self.literal ]
+        
+    def hasScore(self) :
+         return self.__score != None
         
     def _get_score(self) :
         if self.__score == None :
@@ -228,7 +232,10 @@ class RuleBody(Rule) :
         
     def _str_parts(self) :
         par = self.parent._str_parts()
-        par[-1][1] = self.probability
+        if self.hasScore() :
+            par[-1][1] = self.probability
+        else :
+            par[-1][1] = 1
         par[-1][0].append(str(self.literal))
         return par
                 
@@ -256,7 +263,10 @@ class RuleHead(Rule) :
     def _str_parts(self) :
         par = []
 #        par = self.previous._str_parts()
-        par.append( [[], self.probability ] )
+        if self.hasScore() :
+            par.append( [[], self.probability ] )
+        else :
+            par.append( [[], 1 ] )
         return par
         
 class RootRule(Rule) :
@@ -315,12 +325,7 @@ class RootRule(Rule) :
         self.knowledge.process_queue()
         self.__score_correct = self.score_predict
         self.score_predict = [0] * len(self.__score_correct)
-        
-        # for example in self.examples :
-        #     scores.append( self.knowledge.getFact( self.target.withArgs(example) ) )
-        # self.__score_correct = scores
-        # self.score_predict = [0] * len(scores)
-    
+            
     def _str_parts(self) :
         return []
         
@@ -442,7 +447,6 @@ class Language(object) :
         
         if use_vars != None :
             use_vars = set(use_vars) # set( [ varname for varname, vartype in use_vars ] )
-            #print ('USE_VARS',use_vars)
         
         for pred_id in self.__modes :
             pred_name = pred_id[0]
