@@ -159,7 +159,7 @@ class PrologInterface(object) :
         rules, ex_ids, queries = zip(*ground_queue)
         
         # Ground all queries simultaneously (returns node_ids for each individual query)
-        node_ids = self.engine.groundQuery(*queries)
+        node_ids = list(self.engine.groundQuery(*queries))
         
         # Initialize evaluation queue
         evaluation_queue = defaultdict(list)
@@ -258,7 +258,7 @@ class PrologInterface(object) :
         nnf_file = os.path.splitext(cnf_file)[0] + '.nnf'
         with open(cnf_file,'w') as f :
             for line in cnf :
-                 print(line,file=f)
+                print(line,file=f)
                  
         executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
         subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
@@ -374,6 +374,13 @@ class Grounding(object) :
                 else :  # nodetype == 'and'
                     # filter out 0
                     content = tuple(filter(lambda x : x != 0, content))
+                    if not content : return 0
+            if None in content: # Certainly false in node
+                if nodetype == 'and' :
+                    return None
+                else : # or
+                    content = tuple(filter(lambda x : x != 0, content))
+                    if not content : return None
             
             content = tuple(sorted(set(content))) # Eliminate duplicates and fix order
             if len(content) == 1 :
@@ -455,6 +462,7 @@ class Grounding(object) :
             k += 1
             v = self[k]
             nodetype, content = v
+            
             if nodetype == 'fact' :
                 facts[k] = self.__facts[ content ]
                 # if content.probability:
@@ -534,7 +542,16 @@ class Grounding(object) :
                     neg = -1 if subnode_id < 0 else 1
                     subnode_id = abs(subnode_id)
                     subnode = lines[subnode_id]
-                    subnodes.append(neg * self._integrate_node(subnode_id, subnode[0], subnode[1], subnode[2], lines, translation))
+                    tr_subnode = self._integrate_node(subnode_id, subnode[0], subnode[1], subnode[2], lines, translation)
+                    if neg == -1 :
+                        if tr_subnode == 0 :
+                            subnodes.append( None )
+                        elif tr_subnode == None :
+                            subnodes.append(0)
+                        else :
+                            subnodes.append(-tr_subnode)
+                    else :
+                        subnodes.append(tr_subnode)
                     
             if line_id != None and translation[ line_id ] != None :
                 node_id = translation[ line_id ]
