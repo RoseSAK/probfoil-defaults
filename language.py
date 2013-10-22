@@ -42,7 +42,9 @@ class Rule(object) :
         """Adds the given literal to the body of the rule and returns the new rule."""
         result = RuleBody(literal, self)
         self.knowledge.enqueue(result)
-        # self.knowledge.process_queue()
+        
+        if not self.learning_problem.PACK_QUERIES :
+            self.knowledge.process_queue()
         return result
         
     def _get_language(self) :
