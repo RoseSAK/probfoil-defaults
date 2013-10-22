@@ -39,6 +39,8 @@ def parse_args(args) :
     p.add_argument('-v','--verbose', action='count', help="Verbosity level.", default=0)
     p.add_argument('-s','--probfoil', choices=['1','2'], default='2', help="Scoring function for ProbFOIL version (1/2)")
     p.add_argument('-l','--log', help="Name of log-file (default: /tmp/probfoil.xml)", default='/tmp/probfoil.xml')
+    p.add_argument('--minrules', type=int, default=0, help="Minimal number of rules to learn.")
+    p.add_argument('--maxrules', type=int, default=-1, help="Maximal number of rules to learn.")
     
     return p.parse_args(args)
 

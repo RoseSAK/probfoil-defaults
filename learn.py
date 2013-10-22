@@ -34,13 +34,16 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
 class LearningProblem(object) :
     """Base class for FOIL learning algorithm."""
     
-    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, verbose=False, **other_args ) :
+    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, verbose=False, minrules=0, maxrules=-1, **other_args ) :
         self.language = language
         self.knowledge = knowledge
         
         self.BEAM_SIZE = beam_size
         self.VERBOSE = verbose
         self.SIGNIFICANCE = calc_significance(significance_p_value)
+        
+        self.MINRULES = minrules
+        self.MAXRULES = maxrules
         
     def calculateScore(self, rule) :
         raise NotImplementedError('calculateScore')
@@ -51,6 +54,8 @@ class LearningProblem(object) :
         H - initial hypothesis (Rule (e.g. RootRule))
         """
     
+        rule_count = 0
+        
         # Find clauses as long as stopping criterion is not met or until maximal score (1.0) is reached.
         while H.globalScore < 1.0 :   # this test is not required for correctness (alternative: while True)
        
@@ -76,12 +81,15 @@ class LearningProblem(object) :
             # TODO check significance level?
             
             # Check stopping criterion
-            if (H.globalScore >= new_H.globalScore) :
-                # Clause does not improve hypothesis => remove it and stop
+            if self.MAXRULES > 0 and rule_count > self.MAXRULES :
                 break
-            else :
+            elif self.MINRULES > rule_count or new_H.globalScore >= H.globalScore :
                 # Clause improves hypothesis => continue
                 H = new_H
+                rule_count += 1
+            else :
+                # Clause does not improve hypothesis => remove it and stop
+                break
         return H
         
     def best_clause(self, current_rule ) :
