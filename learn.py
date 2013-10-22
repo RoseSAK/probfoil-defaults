@@ -81,14 +81,15 @@ class LearningProblem(object) :
             # TODO check significance level?
             
             # Check stopping criterion
-            if self.MAXRULES > 0 and rule_count > self.MAXRULES :
-                break
-            elif self.MINRULES > rule_count or new_H.globalScore >= H.globalScore :
+            if self.MINRULES > rule_count or new_H.globalScore >= H.globalScore :
                 # Clause improves hypothesis => continue
                 H = new_H
                 rule_count += 1
             else :
                 # Clause does not improve hypothesis => remove it and stop
+                break
+            if self.MAXRULES > 0 and rule_count >= self.MAXRULES :
+                # Maximal number of rules reached => stop
                 break
         return H
         

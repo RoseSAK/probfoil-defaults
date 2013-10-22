@@ -379,7 +379,7 @@ class Grounding(object) :
                 if nodetype == 'and' :
                     return None
                 else : # or
-                    content = tuple(filter(lambda x : x != 0, content))
+                    content = tuple(filter(lambda x : x != None, content))
                     if not content : return None
             
             content = tuple(sorted(set(content))) # Eliminate duplicates and fix order
