@@ -262,10 +262,12 @@ class PF1Score(object) :
         
     def m_estimate(self) :
         m = self.M_ESTIMATE_M
+        if (self.TP == 0 and self.FP == 0 and m == 0) : return 0
         return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 
         
     def m_estimate_max(self) :
         m = self.M_ESTIMATE_M
+        if (self.TP == 0 and m == 0) : return 0
         return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + m) 
     
     def accuracy(self) :
@@ -363,6 +365,8 @@ class PF2Score_Incremental(object):
         N = M - P
         self.mPNP = self.M_ESTIMATE_M  * ( P / M )
         
+        #print ('mPNP', self.mPNP)
+        
         TP_previous = 0.0
         FP_previous = 0.0
         
@@ -374,6 +378,8 @@ class PF2Score_Incremental(object):
         for p,l,u in zip(correct, predict_prev, predict ) :
             TP_previous += min(l,p)
             FP_previous += max(0,l-p)
+            
+            #print (p,l,u)
             
             dS = u - l
             if dS == 0 :    # inactive
@@ -407,10 +413,10 @@ class PF2Score_Incremental(object):
                     x = prev_y
                     
                     TP_x = pl_running + x * (dS_total - dS_running) + x * TP_base + TP_previous
-                    FP_x = x * dS_running - pl_running
+                    FP_x = x * dS_running - pl_running + x * FP_base + FP_previous
                     
                     score_x = self._m_estimate_m(TP_x, FP_x)
-                
+                    #print (x, score_x, TP_x, FP_x, self._m_estimate_m(TP_x,0))
                     if x >= self.MIN_RULE_PROB and ( max_score == None or score_x > max_score ) :
                         TN_x = N - FP_x
                         FN_x = P - TP_x

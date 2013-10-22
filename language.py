@@ -38,6 +38,8 @@ class Rule(object) :
             self.__length = 1
         Rule.ids += 1
         
+        self.eval_nodes = None
+        
     def __add__(self, literal) :
         """Adds the given literal to the body of the rule and returns the new rule."""
         result = RuleBody(literal, self)
@@ -88,7 +90,16 @@ class Rule(object) :
                 
     def _get_learning_problem(self) :
         return self.previous.learning_problem
+
+    def _get_literals(self) :
+        if self.parent and self.literal :
+            return self.parent.literals + [self.literal]
+        elif self.literal : # Should not happen
+            return [self.literal]
+        else :
+            return []
                 
+    literals = property( lambda s : s._get_literals() )                
     target = property( lambda s : s._get_target() )
     previous = property( lambda s : s._get_previous() )
     identifier = property( lambda s : s._get_identifier() )
@@ -107,7 +118,7 @@ class Rule(object) :
         
         for p, prob in parts :
             if prob != 1 :
-                prob = ' %% (p=%s)' % prob
+                prob = ' %% (p=%.5f)' % prob
             else :
                 prob = ''
             body = ', '.join(p)
@@ -307,7 +318,7 @@ class RootRule(Rule) :
     def _get_score_correct(self) :
         return self.__score_correct
         
-    def initialize(self) :
+    def initialize(self, examples = None) :
         # 1) Determine types of arguments of self.target
         #   => requires access to 'language'
         # argument_types = self.language.getArgumentTypes( self.target ) 
@@ -317,7 +328,11 @@ class RootRule(Rule) :
 
         # 3) Populate list of examples
         #   => carthesian product of values
-        self.__examples = self.language.getArgumentValues( self.target )
+        
+        if examples == None :
+            self.__examples = self.language.getArgumentValues( self.target )
+        else :
+            self.__examples = examples
         
         # 4) Populate scores => fact probabilities
         #   => requires access to 'facts'
@@ -425,14 +440,14 @@ class Language(object) :
         
     def getArgumentTypes(self, literal=None, key=None) :
         if literal : key = literal.key
-        return self.__types[ key ]
+        return self.__types.get(key,[])
             
     def getArgumentModes(self, literal=None, key=None) :
         if literal : key = literal.key
-        return self.__modes[ key ] 
+        return self.__modes.get(key,[])
                 
     def getTypeValues(self, typename) :
-        return self.__values[ typename ]
+        return self.__values.get(typename,[])
         
     def getArgumentValues(self, literal) :
         types = self.getArgumentTypes(literal)

@@ -45,6 +45,9 @@ class PrologEngine(object) :
         """Add a clause tonot e."""
         self.__clauses.append(str(clause) + '.')
         
+    def clearClauses(self) :
+        self.__clauses = []
+        
     def query(self, literal, variables) :
         """Execute a query."""
         

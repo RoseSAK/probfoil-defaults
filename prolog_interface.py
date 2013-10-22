@@ -75,6 +75,8 @@ class PrologInterface(object) :
         self.last_id = 0
         self.__queue = []
         self.__prob_cache = {}
+        
+        self.preground = None
 
                 
     def _getRuleQuery(self, identifier) :
@@ -104,7 +106,24 @@ class PrologInterface(object) :
         clause_head = self._getRuleSetQueryAtom(rule)
         
         if rule.previous.identifier :
-            prev_head = self._getRuleSetQueryAtom(rule.previous)
+            prev_head = Literal('pf_prev', rule.target.arguments)
+            
+            if self.preground == None :
+                self.preground = []
+                
+                # There is a previous rule
+                for ex_id, example in rule.previous.enum_examples() :
+                    prev_node = rule.previous.eval_nodes[ex_id]
+                    if prev_node == 0 :
+                        self.preground.append( 'pf_prev( %s )' % ','.join(example) )
+                    elif prev_node != None :
+                        if prev_node < 0 :
+                            prev_node = '9' + str(prev_node)
+                        else :
+                            prev_node = '0' + str(prev_node)
+                        self.preground.append('0.%s::pf_prev( %s )' % ( prev_node, ','.join(example) ) )
+                for c in self.preground :
+                    self.engine.addClause(c)
         else :
             prev_head = None
             
@@ -113,17 +132,24 @@ class PrologInterface(object) :
         if prev_head :  # not the first rule
             clause1 = self._toPrologClause(clause_head, prev_head, probability=rule.previous.probability )
             self.engine.addClause( clause1 )
+            #print (clause1)            
             
         if rule.parent :
-            if rule.parent.literal :
-                clauseB = self._toPrologClause(clause_body, self._getRuleQueryAtom(rule.parent), rule.literal )
-            else :
-                clauseB = self._toPrologClause(clause_body, rule.literal )
-            self.engine.addClause( clauseB )
+            clause_body = rule.literals
+            # 
+            # if rule.parent.literal :
+            #     clauseB = self._toPrologClause(clause_body, *rule.literals )
+            # else :
+            #     clauseB = self._toPrologClause(clause_body, rule.literal )
+            # self.engine.addClause( clauseB )
+            # print (clauseB)
         else :
-            clause_body = None
-        clause2 = self._toPrologClause(clause_head, clause_body )
+            clause_body = [None]
+        clause2 = self._toPrologClause(clause_head, *clause_body )
         self.engine.addClause( clause2 )
+        #print (clause2)
+        
+
         
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
@@ -161,6 +187,9 @@ class PrologInterface(object) :
         # Ground all queries simultaneously (returns node_ids for each individual query)
         node_ids = list(self.engine.groundQuery(*queries))
         
+        self.preground = None
+        self.engine.clearClauses()
+        
         # Initialize evaluation queue
         evaluation_queue = defaultdict(list)
         
@@ -170,6 +199,7 @@ class PrologInterface(object) :
         # Run through results and build evaluation queue
         for rule, ex_id, node_id in zip(rules, ex_ids, node_ids) :
             if rule.score_predict == None : rule.score_predict = [0] * len(rule.examples)
+            if rule.eval_nodes == None : rule.eval_nodes = [None] * len(rule.examples)
             
             if node_id == None:
                 # Grounding failed (query failed)
@@ -179,9 +209,11 @@ class PrologInterface(object) :
                 # Grounding is empty (query deterministically true)
                 # Set score for this examples and rule
                 rule.score_predict[ex_id] = 1
+                rule.eval_nodes[ex_id] = 0
                 debug_case_counters[1] += 1
             else :
                 negated = node_id < 0
+                rule.eval_nodes[ex_id] = node_id
                 node_id = abs(node_id)
                 if node_id in self.__prob_cache :
                     # This node was evaluated earlier => reuse
@@ -235,7 +267,6 @@ class PrologInterface(object) :
                     rule.score_predict[ex_id] = 1-p
                 else :
                     rule.score_predict[ex_id] = p
-        
         
     def process_queue(self) :
         
@@ -296,6 +327,7 @@ class Grounding(object) :
         
     def addFact(self, name, probability) :
         """Add a named fact to the grounding."""
+        assert(not name.startswith('pf_'))
         node_id = self.__fact_names.get(name,None)
         if node_id == None : # Fact doesn't exist yet
             node_id = self._addNode( 'fact', (name, probability) )
@@ -373,7 +405,14 @@ class Grounding(object) :
             if node_id != '?' : return node_id
         
         if line_type == 'fact' :
-            node_id = self.addFact(line_alias, line_content)
+            if line_alias.startswith('pf_') :
+                node_id = str(line_content)[2:]
+                if node_id[0] == '9' :
+                    node_id = -int(node_id[1:])
+                else :
+                    node_id = int(node_id[1:])
+            else :
+                node_id = self.addFact(line_alias, line_content)
         else :
             # Compound node => process content recursively
             subnodes = []
