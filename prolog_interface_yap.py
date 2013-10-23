@@ -117,14 +117,21 @@ class PrologEngine(object) :
                 
         # 2) Call yap to do the actual grounding
         ground_program = self.__env.tmp_path('probfoil.ground')
+        # Remove output file
+        if os.path.exists(ground_program) : os.remove(ground_program)
+        
         evidence = '/dev/null'
         queries = '/dev/null'
         
         if sys.path[-1] != self.__env['PROBLOGPATH'] + '/src/' :
             sys.path.append(self.__env['PROBLOGPATH'] + '/src/')
         
-        import core
-        core.call_yap(PROBLOG_GROUNDER, args=[in_file, ground_program, evidence, queries])
+        import subprocess
+        self.__env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
+        output = subprocess.check_output(['yap', "-L", PROBLOG_GROUNDER , '--', in_file, ground_program, evidence, queries ])
+        
+        # import core
+        # core.call_yap(PROBLOG_GROUNDER, args=[in_file, ground_program, evidence, queries])
         
         return read_grounding(ground_program)
     
