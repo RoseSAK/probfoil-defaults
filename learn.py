@@ -298,10 +298,12 @@ class ProbFOIL2(LearningProblem) :
         else :
             # TODO store this information somewhere
             previous_prediction = rule.previous.score_predict
-            if rule.previous.probability != 1 :
-                p = rule.previous.probability
-                previous_prediction = [ a + (b-a)*p   for a,b in zip(rule.previous.previous.score_predict, previous_prediction) ]
-            return PF2Score(rule.score_correct, rule.score_predict, previous_prediction, self.M_ESTIMATE_M)
+            # if rule.previous.probability != 1 :
+            #     p = rule.previous.probability
+            #     previous_prediction = [ a + (b-a)*p   for a,b in zip(rule.previous.previous.score_predict, previous_prediction) ]
+            
+            result = PF2Score(rule.score_correct, rule.score_predict, previous_prediction, self.M_ESTIMATE_M)
+            return result
 
 class PF2Score_Incremental(object):
 
@@ -468,6 +470,12 @@ class PF2Score_Incremental(object):
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
         
+        # Update score_predict
+        for i, l in enumerate(predict_prev) :
+            predict[i] = l + max_x*(predict[i]-l)
+            
+        
+        
     def accuracy(self) :
         M = self.P + self.N
         return (self.TP + self.TN ) / M
@@ -555,6 +563,13 @@ class PF2Score_NonIncremental(object) :
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
         
+        # print ('PREDICT', predict_prev)
+        # print ('PREDICT', predict)
+        # Update score_predict
+        for i, l in enumerate(predict_prev) :
+            predict[i] = l + max_x*(predict[i]-l)
+        
+        # print ('PREDICT SCALED', max_x, predict)
     
         # with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
 
@@ -582,4 +597,4 @@ class PF2Score_NonIncremental(object) :
     def __str__(self) :
         return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
 
-PF2Score = PF2Score_Incremental
+PF2Score = PF2Score_NonIncremental

@@ -17,6 +17,7 @@ import os
 import time
 import math
 import sys
+import re
 
 from util import Log, Timer
 from language import Literal
@@ -118,9 +119,9 @@ class PrologInterface(object) :
                         self.preground.append( 'pf_prev( %s )' % ','.join(example) )
                     elif prev_node != None :
                         if prev_node < 0 :
-                            prev_node = '9' + str(prev_node)
+                            prev_node = '9' + str(prev_node) + '1'
                         else :
-                            prev_node = '0' + str(prev_node)
+                            prev_node = '0' + str(prev_node) + '1'
                         self.preground.append('0.%s::pf_prev( %s )' % ( prev_node, ','.join(example) ) )
                 for c in self.preground :
                     self.engine.addClause(c)
@@ -129,15 +130,16 @@ class PrologInterface(object) :
             
         clause_body = self._getRuleQueryAtom(rule)
             
+        # FIXME TODO SETTING PREVIOUS RULE PROBABILITY ONLY WORKS IN CASE OF 1 PREVIOUS RULE!!!!
         if prev_head :  # not the first rule
-            clause1 = self._toPrologClause(clause_head, prev_head, probability=rule.previous.probability )
+            clause1 = self._toPrologClause(clause_head, prev_head )
             self.engine.addClause( clause1 )
             
         if rule.parent :
             clause_body = rule.literals
         else :
             clause_body = [None]
-        clause2 = self._toPrologClause(clause_head, *clause_body )
+        clause2 = self._toPrologClause(clause_head, *clause_body, probability=0.8 )
         self.engine.addClause( clause2 )
         
 
@@ -175,8 +177,12 @@ class PrologInterface(object) :
         # Separate tuples in queue
         rules, ex_ids, queries = zip(*ground_queue)
         
+        rules_dict = {}
+        for rule, query in zip(rules,queries) :
+            rules_dict[query] = rule
+        
         # Ground all queries simultaneously (returns node_ids for each individual query)
-        node_ids = list(self.engine.groundQuery(*queries))
+        node_ids = list(self.engine.groundQuery(queries, rules_dict))
         
         self.preground = None
         self.engine.clearClauses()
@@ -315,6 +321,9 @@ class Grounding(object) :
             return self.TRUE
         else :
             return -t
+            
+    def addChoice(self, rule) :
+        return self._addNode('choice', rule)
         
     def addFact(self, name, probability) :
         """Add a named fact to the grounding."""
@@ -375,7 +384,7 @@ class Grounding(object) :
         assert(index > 0)
         return self.__nodes[index-1]
         
-    def integrate(self, lines) :
+    def integrate(self, lines, rules) :
         # Dictionary query_name => node_id
         result = {}
         
@@ -383,12 +392,12 @@ class Grounding(object) :
         line_num = 0
         for line_type, line_content, line_alias in lines[1:] :
             line_num += 1
-            node_id = self._integrate_line(line_num, line_type, line_content, line_alias, lines, ln_to_ni)
+            node_id = self._integrate_line(line_num, line_type, line_content, line_alias, lines, ln_to_ni, rules)
             if node_id != None :
                 result[line_alias] = node_id
         return result
         
-    def _integrate_line(self, line_num, line_type, line_content, line_alias, lines, ln_to_ni) :
+    def _integrate_line(self, line_num, line_type, line_content, line_alias, lines, ln_to_ni, rules) :
         # TODO make it work for cycles
         
         if line_num != None :
@@ -396,12 +405,15 @@ class Grounding(object) :
             if node_id != '?' : return node_id
         
         if line_type == 'fact' :
-            if line_alias.startswith('pf_') :
+            if re.match('ad\d+_query_set_', line_alias) :
+                query = line_alias[len(re.match('ad\d+_', line_alias).group()):]
+                node_id = self.addChoice(rules[query])
+            elif line_alias.startswith('pf_') :
                 node_id = str(line_content)[2:]
                 if node_id[0] == '9' :
-                    node_id = -int(node_id[1:])
+                    node_id = -int(node_id[1:-1])
                 else :
-                    node_id = int(node_id[1:])
+                    node_id = int(node_id[1:-1])
             else :
                 node_id = self.addFact(line_alias, line_content)
         else :
@@ -409,13 +421,13 @@ class Grounding(object) :
             subnodes = []
             for subnode in line_content :
                 if type(subnode) == tuple :
-                    subnodes.append(self._integrate_line(None, subnode[0], subnode[1], None, lines, ln_to_ni))
+                    subnodes.append(self._integrate_line(None, subnode[0], subnode[1], None, lines, ln_to_ni, rules))
                 else :
                     subnode_id = int(subnode)
                     neg = subnode_id < 0
                     subnode_id = abs(subnode_id)
                     subnode = lines[subnode_id]
-                    tr_subnode = self._integrate_line(subnode_id, subnode[0], subnode[1], subnode[2], lines, ln_to_ni)
+                    tr_subnode = self._integrate_line(subnode_id, subnode[0], subnode[1], subnode[2], lines, ln_to_ni, rules)
                     if neg :
                         tr_subnode = self._negate(tr_subnode)
                     subnodes.append(tr_subnode)
@@ -481,6 +493,11 @@ class Grounding(object) :
                 for x in content :
                     lines.append( "%s %s 0" % (k, -x) )
                 # lines.append('')
+            elif nodetype == 'choice' :
+                if content.hasScore() :
+                    facts[k] = content.probability
+                else :
+                    facts[k] = 1.0
             else :
                 raise ValueError("Unknown node type!")
                 
@@ -489,4 +506,8 @@ class Grounding(object) :
         return [ 'p cnf %s %s' % (atom_count, clause_count) ] + lines, facts
         
     def stats(self) :
-        return namedtuple('IndexStats', ('atom_count', 'name_count', 'fact_count' ) )(len(self), 0, len(self.__fact_names)) 
+        return namedtuple('IndexStats', ('atom_count', 'name_count', 'fact_count' ) )(len(self), 0, len(self.__fact_names))
+        
+    def __str__(self) :
+        return '\n'.join('%s: %s' % (i+1,n) for i, n in enumerate(self.__nodes))   
+         

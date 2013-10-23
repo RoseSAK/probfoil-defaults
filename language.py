@@ -47,6 +47,7 @@ class Rule(object) :
         
         if not self.learning_problem.PACK_QUERIES :
             self.knowledge.process_queue()
+            x = result._get_score()
         return result
         
     def _get_language(self) :

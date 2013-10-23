@@ -78,7 +78,7 @@ class PrologEngine(object) :
                 line = line.replace('<-', ':-')
             file_out.write(line)
         
-    def groundQuery(self, *literals) :
+    def groundQuery(self, literals, rules) :
         """Ground a query."""
         
         # 1) Write out input file for grounder
@@ -108,7 +108,7 @@ class PrologEngine(object) :
         grounder_result = self._call_grounder( pl_filename)
         
         # 3) Read in grounding and insert new things into Grounding data structure
-        names_nodes = self.getGrounding().integrate(grounder_result)
+        names_nodes = self.getGrounding().integrate(grounder_result, rules)
         
         return [ names_nodes.get(lit,None) for lit in literals ]
     
