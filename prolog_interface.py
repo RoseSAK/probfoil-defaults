@@ -132,22 +132,13 @@ class PrologInterface(object) :
         if prev_head :  # not the first rule
             clause1 = self._toPrologClause(clause_head, prev_head, probability=rule.previous.probability )
             self.engine.addClause( clause1 )
-            #print (clause1)            
             
         if rule.parent :
             clause_body = rule.literals
-            # 
-            # if rule.parent.literal :
-            #     clauseB = self._toPrologClause(clause_body, *rule.literals )
-            # else :
-            #     clauseB = self._toPrologClause(clause_body, rule.literal )
-            # self.engine.addClause( clauseB )
-            # print (clauseB)
         else :
             clause_body = [None]
         clause2 = self._toPrologClause(clause_head, *clause_body )
         self.engine.addClause( clause2 )
-        #print (clause2)
         
 
         

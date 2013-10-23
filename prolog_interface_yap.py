@@ -129,25 +129,9 @@ class PrologEngine(object) :
         import subprocess
         self.__env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
         output = subprocess.check_output(['yap', "-L", PROBLOG_GROUNDER , '--', in_file, ground_program, evidence, queries ])
-        
-        # import core
-        # core.call_yap(PROBLOG_GROUNDER, args=[in_file, ground_program, evidence, queries])
-        
+                
         return read_grounding(ground_program)
-    
-    # def getFactProbability(self, literal) :
-    #     """Retrieve the fact probability."""
-    #     
-    #     self.groundQuery(literal)
-    #     
-    #     index = self.getGrounding().byName(str(literal))
-    #     if index == None :
-    #         return 0
-    #     elif index == 0 :
-    #         return 1
-    #     else :
-    #         return self.getGrounding().getProbability(str(literal))
-    
+        
     def getGrounding(self) :
         """Get grounding information."""
         return self.__grounding
