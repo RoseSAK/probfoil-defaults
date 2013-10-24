@@ -24,7 +24,6 @@ import os
 # TODO randomize temporary filenames
 
 class PrologEngine(object) :
-    """Expected interface for PrologEngine."""
     
     def __init__(self, env) :
         self.__sources = []
@@ -42,7 +41,7 @@ class PrologEngine(object) :
         return 'LISTING NOT SUPPORTED'
         
     def addClause(self, clause) :
-        """Add a clause tonot e."""
+        """Add a clause to engine."""
         self.__clauses.append(str(clause) + '.')
         
     def clearClauses(self) :
@@ -130,34 +129,34 @@ class PrologEngine(object) :
         self.__env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
         output = subprocess.check_output(['yap', "-L", PROBLOG_GROUNDER , '--', in_file, ground_program, evidence, queries ])
                 
-        return read_grounding(ground_program)
+        return self._read_grounding(ground_program)
         
     def getGrounding(self) :
         """Get grounding information."""
         return self.__grounding
 
-def read_grounding(filename) :
-    lines = []
-    with open(filename,'r') as f :
-        for line in f :
-            line = line.strip().split('|', 1)
-            name = None
+    def _read_grounding(self, filename) :
+        lines = []
+        with open(filename,'r') as f :
+            for line in f :
+                line = line.strip().split('|', 1)
+                name = None
             
-            if len(line) > 1 : name = line[1].strip()
-            line = line[0].split()
-            line_id = int(line[0])
-            line_type = line[1].lower()
+                if len(line) > 1 : name = line[1].strip()
+                line = line[0].split()
+                line_id = int(line[0])
+                line_type = line[1].lower()
             
-            while line_id >= len(lines) :
-                lines.append( (None,[],None) )
-            if line_type == 'fact' :
-                line_content = float(line[2])
-            else :
-                line_content = lines[line_id][1] + [(line_type, line[2:])]
-                line_type = 'or'
+                while line_id >= len(lines) :
+                    lines.append( (None,[],None) )
+                if line_type == 'fact' :
+                    line_content = float(line[2])
+                else :
+                    line_content = lines[line_id][1] + [(line_type, line[2:])]
+                    line_type = 'or'
                 
-            lines[line_id] = ( line_type, line_content, name )
-    return lines
+                lines[line_id] = ( line_type, line_content, name )
+        return lines
 
 class YapPrologInterface(PrologInterface) :
     
