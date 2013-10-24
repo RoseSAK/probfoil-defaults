@@ -18,6 +18,7 @@ import time
 import math
 import sys
 import re
+import subprocess
 
 from util import Log, Timer
 from language import Literal
@@ -75,6 +76,8 @@ class PrologInterface(object) :
         self.engine = self._createPrologEngine()
         self.last_id = 0
         self.__queue = []
+        
+        # TODO FIXME __prob_cache => what if rule probabilities are updated?
         self.__prob_cache = {}
         
         self.preground = None
@@ -130,7 +133,6 @@ class PrologInterface(object) :
             
         clause_body = self._getRuleQueryAtom(rule)
             
-        # FIXME TODO SETTING PREVIOUS RULE PROBABILITY ONLY WORKS IN CASE OF 1 PREVIOUS RULE!!!!
         if prev_head :  # not the first rule
             clause1 = self._toPrologClause(clause_head, prev_head )
             self.engine.addClause( clause1 )
@@ -238,33 +240,27 @@ class PrologInterface(object) :
         # Convert grounding to CNF
         cnf, facts = self.engine.getGrounding().toCNF( nodes )
         
-        # If cnf is not empty (possible if all nodes are facts)
-        if len(cnf) > 1 :
-            # Compile the CNF
-            with Timer(category='evaluate_compiling') :
-                with Log('compile', _timer=True) :
-                    compiled_cnf = self._compile_cnf(cnf, facts)
+        # Compile the CNF
+        evaluator = self._compile_cnf(cnf, facts)
         
         for node_id in evaluation_queue :
             assert(node_id != 0 and node_id != None)
             assert(not node_id in self.__prob_cache)
             
-            # Retrieve probability p for this node
-            if node_id in facts :
-                # Node is a fact
-                p = facts[node_id]
-            else :
-                # Node was evaluated
-                p = compiled_cnf[node_id]
-                self.__prob_cache[node_id] = p
-                
-            # Store probability in rule
-            for rule, ex_id, negated in evaluation_queue[node_id] :
-                if negated :
-                    rule.score_predict[ex_id] = 1-p
-                else :
-                    rule.score_predict[ex_id] = p
-        
+            with Timer(category='evaluate_evaluating') :
+
+                if not evaluator.example_dependent() :
+                    p = evaluator.evaluate(node_id)
+
+                # Store probability in rule
+                for rule, ex_id, negated in evaluation_queue[node_id] :
+                    if evaluator.example_dependent() :
+                        p = evaluator.evaluate(node_id, ex_id)
+                    if negated :
+                        rule.score_predict[ex_id] = 1-p
+                    else :
+                        rule.score_predict[ex_id] = p
+            
     def process_queue(self) :
         
       with Timer(category='evaluate') :
@@ -279,28 +275,79 @@ class PrologInterface(object) :
         self._evaluate_queue(evaluations)
         
     def _compile_cnf(self, cnf, facts) :
-        import subprocess
+        if len(cnf) <= 1 :
+            return self._construct_evaluator(None, facts)
+        else :
+          #with Log('compile', _timer=True) :
         
-        # Compile CNF to DDNNF
-        cnf_file = self.env.tmp_path('probfoil_eval.cnf')
-        nnf_file = os.path.splitext(cnf_file)[0] + '.nnf'
-        with open(cnf_file,'w') as f :
-            for line in cnf :
-                print(line,file=f)
+          with Timer(category='evaluate_compiling') :
+
+            # Compile CNF to DDNNF
+            cnf_file = self.env.tmp_path('probfoil_eval.cnf')
+            nnf_file = os.path.splitext(cnf_file)[0] + '.nnf'
+            with open(cnf_file,'w') as f :
+                for line in cnf :
+                    print(line,file=f)
                  
-        executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
-        subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
+            executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
+            subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
-        if sys.path[-1] != self.env['PROBLOGPATH'] + '/src/' :
-            sys.path.append(self.env['PROBLOGPATH'] + '/src/')
-        # Evaluate DDNNF
-        from compilation.compile import DDNNFFile
-        from evaluation.evaluate import FileOptimizedEvaluator, DDNNF
+            if sys.path[-1] != self.env['PROBLOGPATH'] + '/src/' :
+                sys.path.append(self.env['PROBLOGPATH'] + '/src/')
+            # Evaluate DDNNF
+            from compilation.compile import DDNNFFile
+            from evaluation.evaluate import FileOptimizedEvaluator
         
-        ddnnf = DDNNFFile(nnf_file, None)
-        ddnnf.atoms = lambda : list(range(1,len(self.engine.getGrounding())+1))   # OMFG what a hack
+          with Timer(category='evaluate_evaluating') :
+            ddnnf = DDNNFFile(nnf_file, None)
+            ddnnf.atoms = lambda : list(range(1,len(self.engine.getGrounding())+1))   # OMFG what a hack
+            return self._construct_evaluator(ddnnf, facts)
+            
+    def _construct_evaluator(self, ddnnf, facts) :
+        return DefaultEvaluator(ddnnf, facts)
         
-        return FileOptimizedEvaluator()(knowledge=ddnnf, probabilities=facts, queries=None, env=None)[1]
+class DefaultEvaluator(object) :
+    
+    def __init__(self, knowledge, facts) :
+        self.__knowledge = knowledge
+        self.__facts = facts
+        
+        print ('  evaluating...')
+        if knowledge :
+            from evaluation.evaluate import FileOptimizedEvaluator
+            self.__base = FileOptimizedEvaluator()
+            self.__result = self.__base(knowledge=self.__knowledge, probabilities=self.__facts, queries=None, env=None)[1]
+        else :
+            self.__result = {}
+        self.__result.update(facts)
+        print (self.__result)
+        
+    def example_dependent(self) :
+        return False
+        
+    def evaluate(self, node_id, ex_id=None) :
+        return self.__result[node_id]
+        
+class PropositionalEvaluator(object) :
+    
+    def __init__(self, knowledge, facts) :
+        self.__knowledge = knowledge
+        self.__facts = facts
+                
+    def evaluate(self, node_id, ex_id=None) :
+        facts = self.__facts[ex_id]
+        
+        if node_id in facts :
+            return facts[node_id]
+        else :
+            from evaluation.evaluate import FileOptimizedEvaluator
+            base = FileOptimizedEvaluator()
+            result = base(knowledge=self.__knowledge, probabilities=self.__facts, queries=[node_id], env=None)[1]
+            return result[node_id]
+    
+    def example_dependent(self) :
+        return True
+    
 
 class Grounding(object) :
     
