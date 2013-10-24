@@ -174,31 +174,95 @@ class Rule(object) :
     
     # Calculate maximal achievable significance
     def _calc_max_significance(self) :
-        s = self.score
-        M = s.P + s.N
-        
-        dTP = s.maxTP
-        dM = M
-        dP = s.P
+
         if self.previous :
-            dTP -= self.previous.score.TP
-           # dP -= self.previous.score.TP
+            pTP = self.previous.score.TP
+            pFP = self.previous.score.FP
+        else :
+            pTP = 0.0
+            pFP = 0.0
+        pP = pTP
+        pN = pFP
+        pM = pP + pN
+
+        s = self.score
+        sTP = s.maxTP - pTP
+        sFP = s.FP - pFP
+        sP = s.P - pP
+        sN = s.N - pN
+        sM = sP + sN
         
-        ms = 2 * dTP * ( -math.log( dP / dM ) )
-        return ms
+
+        C = sTP
+        if C == 0 : return 0
+        
+        p_pos = sP / sM
+        
+        pos_log = -math.log(p_pos)
+        
+        l = 2*C * (pos_log)
+        
+        return l
+        # 
+        # if self.previous :
+        #     pTP = self.previous.score.TP
+        #     pFP = self.previous.score.FP
+        # else :
+        #     pTP = 0.0
+        #     pFP = 0.0
+        # pP = pTP
+        # pN = pFP
+        # pM = pP + pN
+        # 
+        # s = self.score
+        # sTP = s.maxTP - pTP
+        # #sFP = s.FP - pFP
+        # sP = s.P
+        # sN = s.N
+        # sM = sP + sN
+        # 
+        # s = self.score
+        # M = s.P + s.N
+        # 
+        # dTP = s.maxTP
+        # dM = M
+        # dP = s.P
+        # if self.previous :
+        #     dTP -= self.previous.score.TP
+        #    # dP -= self.previous.score.TP
+        # 
+        # ms = 2 * dTP * ( -math.log( dP / dM ) )
+        # return ms
     
     # Calculate actual significance
     def _calc_significance(self) :
+        
+        if self.previous :
+            pTP = self.previous.score.TP
+            pFP = self.previous.score.FP
+        else :
+            pTP = 0.0
+            pFP = 0.0
+        pP = pTP
+        pN = pFP
+        pM = pP + pN
+
         s = self.score
-        C = s.TP + s.FP
+        sTP = s.TP - pTP
+        sFP = s.FP - pFP
+        sP = s.P - pP
+        sN = s.N - pN
+        sM = sP + sN
+        
+
+        C = sTP + sFP
         if C == 0 : return 0
             
-        M = s.P + s.N
-        p_pos_c = s.TP / C
+        p_pos_c = sTP / C
         p_neg_c = 1 - p_pos_c
         
-        p_pos = s.P / M
-        p_neg = s.N / M
+        p_pos = sP / sM
+        p_neg = sN / sM
         
         pos_log = math.log(p_pos_c/p_pos) if p_pos_c > 0 else 0
         neg_log = math.log(p_neg_c/p_neg) if p_neg_c > 0 else 0
