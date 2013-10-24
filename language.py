@@ -267,6 +267,7 @@ class RuleHead(Rule) :
         self._body_vars = set([])
     
         self.score_predict = [1] * len(self.score_correct)
+        self.eval_nodes = [0] * len(self.score_correct)
                 
     def _get_target(self) :
         return self.previous.target
