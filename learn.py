@@ -76,10 +76,13 @@ class LearningProblem(object) :
             # Log progress
             with Log('rule_found', rule=new_H, score=new_H.score) : 
                 pass
-            with Log('stopping_criterion', old_score=H.globalScore, new_score=new_H.globalScore, full_score=new_H.score) : 
+            with Log('stopping_criterion', old_score=H.globalScore, new_score=new_H.globalScore, full_score=new_H.score, sign=new_H.significance) : 
                 pass
         
-            # TODO check significance level?
+            # Check significance level  => TODO FIXME significance not calculated for individual clause
+            if new_H.significance < self.SIGNIFICANCE :
+                # Clause not significant => STOP
+                break
             
             # Check stopping criterion
             if self.MINRULES > rule_count or new_H.globalScore >= H.globalScore :
@@ -203,7 +206,7 @@ class LearningProblem(object) :
             prev_score = r.previous.score
             parent_score = r.parent.score
             new_score = r.score
-                
+            
             if new_score.TP <= prev_score.TP :
                 # Rule doesn't cover any true positive examples => it's useless
                 with Log('rejected', reason="TP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
@@ -597,4 +600,4 @@ class PF2Score_NonIncremental(object) :
     def __str__(self) :
         return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
 
-PF2Score = PF2Score_NonIncremental
+PF2Score = PF2Score_Incremental
