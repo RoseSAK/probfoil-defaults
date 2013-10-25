@@ -19,6 +19,7 @@ from collections import namedtuple, defaultdict
 from itertools import product
 import math
 import time
+import sys
 from util import Log, Timer
 
 @total_ordering
@@ -486,7 +487,8 @@ class Language(object) :
             elif len(types) > 1 :
                 raise Exception("Multiple 'base' declarations for predicate '%s/%s'!" % (predicate,arity))
             else :
-                raise Exception("Missing 'base' declaration for predicate '%s/%s'!" % (predicate,arity))
+                self.setArgumentTypes( Literal( predicate, ['id'] * arity ) )
+                print ("Missing 'base' declaration for predicate '%s/%s'!" % (predicate,arity), file=sys.stderr)
             
             values = list(zip(*knowledge.query(literal,args)))
             for tp, vals in zip(types,values) :
