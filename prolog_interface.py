@@ -414,6 +414,10 @@ class Grounding(object) :
         # Put into fixed order
         content = tuple(sorted(content))
         
+        # Contains opposites: return 'TRUE' for or, 'FALSE' for and
+        if len(set(content)) > len(set(map(abs,content))) :
+            return t
+        
         # Lookup node for reuse
         key = (nodetype, content)
         node_id = self.__nodes_by_content.get(key, None)
