@@ -22,7 +22,7 @@ from util import Log, WorkEnv, Timer
 import os
 
 from language import Literal, Language, RootRule
-from prolog_interface_yap import YapPrologInterface
+from prolog_interface_yap import YapPrologInterface, PropPrologInterface
 from learn import ProbFOIL2, ProbFOIL1
 
 def parse_args(args) :
@@ -73,12 +73,18 @@ def main(arguments) :
       
     learn_time = time.time()  
     
+    
     with open(args.log, 'w') as Log.LOG_FILE :
      with WorkEnv(PROBLOGPATH=PROBLOGPATH) as env :    # Set up a temporary working directory
       with Log('log', **parameters) :
-        p = YapPrologInterface(env)
+       with Timer(category='') :    
+        if args.input.endswith('.arff') :
+            print ('USING PROPOSITIONAL ALGORITHM')
+            p = PropPrologInterface(env)
+        else :
+            p = YapPrologInterface(env)
         
-        p.engine.loadFile(args.input)
+        p.loadData(args.input)
         
         init_time1 = time.time()
         
@@ -110,26 +116,26 @@ def main(arguments) :
             with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
             with Log('error') : pass
             raise e
-
+            
         with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
-
-        print('##################################################################')
-        print('#########################     RESULT     #########################')
-        print('##################################################################')
-        if result.getTheory() :
-            print('\n'.join(result.getTheory()))
-        else :
-            print('%s :- fail.' % result.target )
-        print('#########################     SCORES     #########################')
-        print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
-        print('ACCURACY                     :', result.globalScore)
         
-        print('#########################     TIMING     #########################')
-        learn_time = time.time() - learn_time
-        for t in Timer.TIMERS :
-            print( '%s => %.3fs (%.3f%%)' % (t, Timer.TIMERS[t], 100*(Timer.TIMERS[t] / learn_time) ))    
-        print('total',' => ', learn_time, 's', sep='')
-        with Log('timers', total=learn_time, **Timer.TIMERS) : pass
+       print('##################################################################')
+       print('#########################     RESULT     #########################')
+       print('##################################################################')
+       if result.getTheory() :
+           print('\n'.join(result.getTheory()))
+       else :
+           print('%s :- fail.' % result.target )
+       print('#########################     SCORES     #########################')
+       print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
+       print('ACCURACY                     :', result.globalScore)
+       
+       print('#########################     TIMING     #########################')
+       learn_time = time.time() - learn_time
+       
+       print(Timer.showTimers())        
+       print('total',' => ', learn_time, 's', sep='')
+       with Log('timers', total=learn_time, **Timer.TIMERS) : pass
 
 if __name__ == '__main__' :
     main(sys.argv[1:])    

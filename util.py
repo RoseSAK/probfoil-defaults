@@ -116,10 +116,32 @@ class Timer(object) :
         return self
         
     def __exit__(self, *args) :
-        if self.category :
+        if self.category != None :
             self.TIMERS[self.category] += self.elapsed_time
         if self.desc :
             print ( '%s: %.5fs' % (self.desc, self.elapsed_time ))
+            
+    @classmethod
+    def showTimers(cls) :
+        r = ''
+        
+        
+        context = ['']
+        for t in sorted(Timer.TIMERS) :
+            while not t.startswith(context[-1]) :
+                context.pop(-1)
+            context.append(t)
+            prefix = '    ' * (len(context)-2)
+            total_time = Timer.TIMERS[''] # [context[-2]]
+            if t == '' :
+                ts = 'TOTAL'
+            elif context[-2] == '' :
+                ts = t
+            else :
+                ts = t[len(context[-2])+1:]
+            p = 100*(Timer.TIMERS[t] / total_time)
+            r += '%s%s => %.3fs (%.3f%%)\n' % (prefix, ts, Timer.TIMERS[t], p )    
+        return r
 
 class Beam(object) :
     
