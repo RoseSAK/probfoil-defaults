@@ -69,6 +69,7 @@ class PrologInterface(object) :
             
             if self.preground == None :
                 self.preground = []
+                self.__prob_cache = {}
                 
                 # There is a previous rule
                 for ex_id, example in self._get_examples_for_queue(rule.previous) :
@@ -200,7 +201,9 @@ class PrologInterface(object) :
         with Timer(category='evaluate_converting') :
             cnf, facts = self.engine.getGrounding().toCNF( nodes )
         
-        # print ('COMPILING CNF:', cnf[0])
+        print ('COMPILING CNF:', cnf[0])
+        
+        #print ('\n'.join(cnf))
         
         # Compile the CNF
         evaluator = self._compile_cnf(cnf, facts)
@@ -223,6 +226,7 @@ class PrologInterface(object) :
                             else :
                                 rule.score_predict[ex_id] = p
                     else :
+                        self.__prob_cache[ node_id ] = p
                         if negated :
                             rule.score_predict[ex_id] = 1-p
                         else :
@@ -314,7 +318,12 @@ class Grounding(object) :
     TRUE = 0
     FALSE = None
     
-    def __init__(self) :
+    def __init__(self, parent=None) :
+        if parent :
+            self.__offset = len(parent)
+        else :
+            self.__offset = 0
+        self.__parent = parent
         self.__nodes = []
         self.__fact_names = {}
         self.__nodes_by_content = {}
@@ -371,8 +380,10 @@ class Grounding(object) :
         content = tuple(sorted(content))
         
         # Contains opposites: return 'TRUE' for or, 'FALSE' for and
-        if len(set(content)) > len(set(map(abs,content))) :
-            return t
+        if len(set(content)) > len(set(map(abs,content))) : return t
+            
+        # If node has only one child, just return the child.
+        if len(content) == 1 : return content[0]
         
         # Lookup node for reuse
         key = (nodetype, content)
@@ -385,13 +396,15 @@ class Grounding(object) :
         return node_id
         
     def _addNode(self, nodetype, content) :
-        node_id = len(self.__nodes) + 1
+        node_id = len(self) + 1
         self.__nodes.append( (nodetype, content) )
         return node_id
         
     def getNode(self, index) :
-        assert(index > 0)
-        return self.__nodes[index-1]
+        if index <= self.__offset :
+            return self.__parent.getNode(index)
+        else :
+            return self.__nodes[index-self.__offset-1]
         
     def integrate(self, lines, rules) :
         # Dictionary query_name => node_id
@@ -469,7 +482,7 @@ class Grounding(object) :
                         self._selectNode(abs(subnode), node_selection)
         
     def __len__(self) :
-        return len(self.__nodes)
+        return len(self.__nodes) + self.__offset
         
     def toCNF(self, queries=None) :
         # if self.hasCycle :
