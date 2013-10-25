@@ -149,13 +149,13 @@ class LearningProblem(object) :
                         if best_score == None or  current_score > best_score :
                             best_score = current_score
                 
-                        if self.VERBOSE > 2 : print (new_rule, new_rule.score, new_rule.localScore)
+                        if self.VERBOSE > 2 : print (new_rule, new_rule.score, new_rule.localScore, new_rule.significance)
                 
                         # Early stopping
-                        if new_rule.score.FP == 0 and new_rule.score.FN == 0 :
+                        if new_rule.score.FP == current_rule.score.FP and new_rule.score.FN == 0 :
                            return new_rule   # we found a rule with maximal score => no better rule can be found
                         else :
-                            if new_rule.score.FP == 0 :
+                            if new_rule.score.FP == current_rule.score.FP :
                                 # There are no false positives => we cannot get better by extending this rule
                                 next_refs = None
                             else :
