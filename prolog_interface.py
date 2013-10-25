@@ -26,49 +26,6 @@ from language import Literal
 from collections import namedtuple, defaultdict
 
 
-# Goal: use existing ProbLog grounder
-#   but keep incremental grounding
-# Idea:
-#   - add already grounded information as facts for future
-#       => potential problem => predicates not grounded for all variables
-
-
-class PrologEngine(object) :
-    """Expected interface for PrologEngine."""
-    
-    def __init__(self) :
-        pass
-        
-    def loadFile(self, filename) :
-        """Load a Prolog source file."""
-        raise NotImplementedError('Calling an abstract method!')
-
-    def listing(self) :
-        """Return a string listing the content of the current Prolog database."""
-        raise NotImplementedError('Calling an abstract method!')
-        
-    def addClause(self, clause) :
-        """Add a clause to the database."""
-        raise NotImplementedError('Calling an abstract method!')
-
-    def query(self, literal) :
-        """Execute a query."""
-        raise NotImplementedError('Calling an abstract method!')
-
-    def groundQuery(self, literal) :
-        """Ground a query."""
-        raise NotImplementedError('Calling an abstract method!')
-    
-    def getFactProbability(self, literal) :
-        """Retrieve the fact probability."""
-        raise NotImplementedError('Calling an abstract method!')
-    
-    def getGrounding(self) :
-        """Get grounding information."""
-        raise NotImplementedError('Calling an abstract method!')
-
-    grounding = property(lambda s : s.getGrounding() )
-
 class PrologInterface(object) :
     
     def __init__(self, env) :
@@ -77,13 +34,10 @@ class PrologInterface(object) :
         self.last_id = 0
         self.__queue = []
         
-        # TODO FIXME __prob_cache => what if rule probabilities are updated?
         self.__prob_cache = {}
         
         self.preground = None
-
         
-                
     def _getRuleQuery(self, identifier) :
         return 'query_' + str(identifier)
         
@@ -91,7 +45,7 @@ class PrologInterface(object) :
         functor = self._getRuleQuery(rule.identifier)
         args = rule.body_variables
         return Literal(functor, args)
-
+        
     def _getRuleSetQueryAtom(self, rule, arguments=None) :
         functor = self._getRuleSetQuery(rule.identifier)
         if arguments == None :
@@ -246,6 +200,8 @@ class PrologInterface(object) :
         with Timer(category='evaluate_converting') :
             cnf, facts = self.engine.getGrounding().toCNF( nodes )
         
+        # print ('COMPILING CNF:', cnf[0])
+        
         # Compile the CNF
         evaluator = self._compile_cnf(cnf, facts)
         
@@ -254,9 +210,9 @@ class PrologInterface(object) :
             assert(not node_id in self.__prob_cache)
             
             with Timer(category='evaluate_evaluating') :
-
+                
                 p = evaluator.evaluate(node_id)
-
+                
                 # Store probability in rule
                 for rule, ex_id, negated in evaluation_queue[node_id] :
                     if ex_id == None :
