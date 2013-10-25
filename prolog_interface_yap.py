@@ -27,6 +27,7 @@ class PrologEngine(object) :
     
     def __init__(self, env) :
         self.__sources = []
+        self.__fixed_clauses = []
         self.__clauses = []
         self.__grounding = Grounding()
         self.__env = env
@@ -39,6 +40,10 @@ class PrologEngine(object) :
         """Return a string listing the content of the current Prolog database."""
         #raise NotImplementedError('Calling an abstract method!')
         return 'LISTING NOT SUPPORTED'
+        
+    def addFixedClause(self, clause) :
+        """Add a clause to engine."""
+        self.__fixed_clauses.append(str(clause) + '.')
         
     def addClause(self, clause) :
         """Add a clause to engine."""
@@ -91,23 +96,31 @@ class PrologEngine(object) :
         lines = []
 #        lines += [ ('0.5::%s.' % name) for name in self.grounding.names ]
         
-        pl_filename = self.__env.tmp_path('probfoil.pl')
-        with open(pl_filename, 'w') as pl_file : 
-            for sourcefile in self.__sources :
-                with open(sourcefile) as in_file :
-                    pl_file.write( in_file.read() )
+        with Timer(category='evaluate_grounding_writing') as tmr : 
+            pl_filename = self.__env.tmp_path('probfoil.pl')
+            with open(pl_filename, 'w') as pl_file : 
+                for sourcefile in self.__sources :
+                    with open(sourcefile) as in_file :
+                        pl_file.write( in_file.read() )
             
-            print ('\n'.join(lines), file=pl_file)          # Previous groundings
-            print ('\n'.join(self.__clauses), file=pl_file) # Stored clauses => only use new ones!!!!!
+                print ('\n'.join(lines), file=pl_file)          # Previous groundings
+                print ('\n'.join(self.__clauses), file=pl_file) # Stored clauses => only use new ones!!!!!
+                print ('\n'.join(self.__fixed_clauses), file=pl_file) # Stored clauses => only use new ones!!!!!
             
-            for literal in literals :
-                print ( 'query(%s).' % literal, file=pl_file ) # Query
+                # print ('\n'.join(self.__fixed_clauses)) # Stored clauses => only use new ones!!!!!
+                # print (' ==== ')
+                # print ('\n'.join(self.__clauses)) # Stored clauses => only use new ones!!!!!
+            
+                for literal in literals :
+                    print ( 'query(%s).' % literal, file=pl_file ) # Query
+
+        with Timer(category='evaluate_grounding_grounding') as tmr : 
+            # 2) Call grounder in Yap
+            grounder_result = self._call_grounder( pl_filename)
         
-        # 2) Call grounder in Yap
-        grounder_result = self._call_grounder( pl_filename)
-        
-        # 3) Read in grounding and insert new things into Grounding data structure
-        names_nodes = self.getGrounding().integrate(grounder_result, rules)
+        with Timer(category='evaluate_grounding_integrating') as tmr : 
+            # 3) Read in grounding and insert new things into Grounding data structure
+            names_nodes = self.getGrounding().integrate(grounder_result, rules)
         
         return [ names_nodes.get(lit,None) for lit in literals ]
     
@@ -186,6 +199,72 @@ class YapPrologInterface(PrologInterface) :
                 
     def _toProlog(self, term) :
         return str(term)
+
+class PropPrologInterface(YapPrologInterface) :
+    
+    def __init__(self, env) :
+        super().__init__(env)
+        self.__facts = defaultdict(dict)
+        
+    def _addFact(self, fact_name, ex_id, prob) :
+        fact_name = '%s(var_1)' % fact_name
+        c = len(self.engine.getGrounding())
+        fact_id = self.engine.getGrounding().addFact(fact_name, 0.5)
+        if ex_id == 0 :
+            # New fact name
+            self.engine.addFixedClause('0.5::%s' % fact_name)
+        
+        self.__facts[ex_id][fact_id] = prob
+   
+    def query(self, query, variables) :
+        if query.functor == 'base' :
+            return [ ('id',) ]
+        else :
+            return [ (x,) for x in range(0, len(self.__facts )) ]
+   
+    def loadData(self, filename) :
+        with open(filename) as f :
+            ex_id = 0
+            for line in f :
+                line = line.strip()
+
+                if line and not line.startswith('@') and not line.startswith('#') :
+                    line = list(map(float,line.split(',')))
+                    for att, val in enumerate(line) :
+                        self._addFact( 'att%s' % att, ex_id, val )
+                    ex_id += 1
+        #self.engine.loadFile(filename)
+        
+    def _rewrite_facts(self, facts) :
+        return facts
+    
+    def _get_examples_for_queue(self, rule) :
+        return [ (None, ('var_1',) ) ]
+            
+    def _construct_evaluator(self, ddnnf, facts) :
+        return PropositionalEvaluator(ddnnf, facts, self.__facts)
+    
+class PropositionalEvaluator(object) :
+    
+    def __init__(self, knowledge, facts, base_facts) :
+        self.__knowledge = knowledge
+        self.__facts = facts
+        self.__base_facts = base_facts
+                
+    def evaluate(self, node_id, rule=None, ex_id=None) :
+        if ex_id == None : return 0
+        facts = self.__base_facts[ex_id]
+        if node_id in facts :
+            return facts[node_id]
+        else :
+            from evaluation.evaluate import FileOptimizedEvaluator
+            base = FileOptimizedEvaluator()
+            result = base(knowledge=self.__knowledge, probabilities=facts, queries=None, env=None)[1]
+            return result[node_id]
+    
+    def example_dependent(self) :
+        return True
+
 
 def test1(*files) :
     g = Grounding()

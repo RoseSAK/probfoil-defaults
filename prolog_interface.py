@@ -82,6 +82,7 @@ class PrologInterface(object) :
         
         self.preground = None
 
+        
                 
     def _getRuleQuery(self, identifier) :
         return 'query_' + str(identifier)
@@ -116,7 +117,8 @@ class PrologInterface(object) :
                 self.preground = []
                 
                 # There is a previous rule
-                for ex_id, example in rule.previous.enum_examples() :
+                for ex_id, example in self._get_examples_for_queue(rule.previous) :
+                    if ex_id == None : ex_id = 0
                     prev_node = rule.previous.eval_nodes[ex_id]
                     if prev_node == 0 :
                         self.preground.append( 'pf_prev( %s )' % ','.join(example) )
@@ -156,12 +158,12 @@ class PrologInterface(object) :
         
     def getFact(self, fact) :
         return self.engine.getFactProbability( self._toProlog(fact) )
-        
+                
     def _add_to_queue(self, rule) :
         
         debug_case_counters = [0] * 3
         
-        for ex_id, example in rule.enum_examples() : # enumerate(rule.examples) :
+        for ex_id, example in self._get_examples_for_queue(rule) : # enumerate(rule.examples) :
             if not rule.previous : # evaluating root rule
                 query_head = self._toProlog(rule.target.withArgs(example))
                 self.__queue.append( ( rule, ex_id, query_head ) )
@@ -205,14 +207,17 @@ class PrologInterface(object) :
                 pass    # Don't do anything (score_predict is 0 by default)
                 debug_case_counters[0] += 1
             elif node_id == 0 :
+                assert(ex_id != None)
                 # Grounding is empty (query deterministically true)
                 # Set score for this examples and rule
                 rule.score_predict[ex_id] = 1
                 rule.eval_nodes[ex_id] = 0
                 debug_case_counters[1] += 1
             else :
+                ex_id_safe = ex_id
+                if ex_id == None : ex_id_safe = 0
                 negated = node_id < 0
-                rule.eval_nodes[ex_id] = node_id
+                rule.eval_nodes[ex_id_safe] = node_id
                 node_id = abs(node_id)
                 if node_id in self.__prob_cache :
                     # This node was evaluated earlier => reuse
@@ -250,17 +255,22 @@ class PrologInterface(object) :
             
             with Timer(category='evaluate_evaluating') :
 
-                if not evaluator.example_dependent() :
-                    p = evaluator.evaluate(node_id)
+                p = evaluator.evaluate(node_id)
 
                 # Store probability in rule
                 for rule, ex_id, negated in evaluation_queue[node_id] :
-                    if evaluator.example_dependent() :
-                        p = evaluator.evaluate(node_id, ex_id)
-                    if negated :
-                        rule.score_predict[ex_id] = 1-p
+                    if ex_id == None :
+                        for ex_id, example in rule.enum_examples() :
+                            p = evaluator.evaluate(node_id, rule, ex_id)
+                            if negated :
+                                rule.score_predict[ex_id] = 1-p
+                            else :
+                                rule.score_predict[ex_id] = p
                     else :
-                        rule.score_predict[ex_id] = p
+                        if negated :
+                            rule.score_predict[ex_id] = 1-p
+                        else :
+                            rule.score_predict[ex_id] = p
             
     def process_queue(self) :
         
@@ -282,6 +292,7 @@ class PrologInterface(object) :
           #with Log('compile', _timer=True) :
         
           with Timer(category='evaluate_compiling') :
+            #print ('compiling CNF', len(cnf), cnf[0])
 
             # Compile CNF to DDNNF
             cnf_file = self.env.tmp_path('probfoil_eval.cnf')
@@ -303,9 +314,19 @@ class PrologInterface(object) :
             ddnnf = DDNNFFile(nnf_file, None)
             ddnnf.atoms = lambda : list(range(1,len(self.engine.getGrounding())+1))   # OMFG what a hack
             return self._construct_evaluator(ddnnf, facts)
+    
+    def _rewrite_facts(self, facts) :
+        return facts
+    
+    def _get_examples_for_queue(self, rule) :
+        return rule.enum_examples()
             
     def _construct_evaluator(self, ddnnf, facts) :
-        return DefaultEvaluator(ddnnf, facts)
+        return DefaultEvaluator(ddnnf, self._rewrite_facts(facts))
+        
+    def loadData(self, filename) :
+        self.engine.loadFile(filename)
+
         
 class DefaultEvaluator(object) :
     
@@ -313,7 +334,6 @@ class DefaultEvaluator(object) :
         self.__knowledge = knowledge
         self.__facts = facts
         
-        print ('  evaluating...')
         if knowledge :
             from evaluation.evaluate import FileOptimizedEvaluator
             self.__base = FileOptimizedEvaluator()
@@ -321,33 +341,14 @@ class DefaultEvaluator(object) :
         else :
             self.__result = {}
         self.__result.update(facts)
-        print (self.__result)
         
     def example_dependent(self) :
         return False
         
-    def evaluate(self, node_id, ex_id=None) :
+    def evaluate(self, node_id, rule=None, ex_id=None) :
         return self.__result[node_id]
         
-class PropositionalEvaluator(object) :
-    
-    def __init__(self, knowledge, facts) :
-        self.__knowledge = knowledge
-        self.__facts = facts
-                
-    def evaluate(self, node_id, ex_id=None) :
-        facts = self.__facts[ex_id]
-        
-        if node_id in facts :
-            return facts[node_id]
-        else :
-            from evaluation.evaluate import FileOptimizedEvaluator
-            base = FileOptimizedEvaluator()
-            result = base(knowledge=self.__knowledge, probabilities=self.__facts, queries=[node_id], env=None)[1]
-            return result[node_id]
-    
-    def example_dependent(self) :
-        return True
+
     
 
 class Grounding(object) :
