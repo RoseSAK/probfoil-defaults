@@ -238,7 +238,8 @@ class PrologInterface(object) :
         if not nodes : return # Nothing to do
         
         # Convert grounding to CNF
-        cnf, facts = self.engine.getGrounding().toCNF( nodes )
+        with Timer(category='evaluate_converting') :
+            cnf, facts = self.engine.getGrounding().toCNF( nodes )
         
         # Compile the CNF
         evaluator = self._compile_cnf(cnf, facts)

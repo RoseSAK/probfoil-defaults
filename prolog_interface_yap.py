@@ -17,7 +17,7 @@
 from prolog_interface import PrologInterface, Grounding
 from collections import defaultdict, namedtuple
 from language import Literal
-
+from util import Timer
 import sys
 import os
 
@@ -57,7 +57,7 @@ class PrologEngine(object) :
                     self._write_file(fsrc, f, True)
             
             writes = ", write('|'), ".join( ('write(%s)' % v ) for v in variables )
-            
+            f.write( '\n')
             f.write( 'write_all :- %s, %s, nl, fail.\n' % (literal, writes) )
             f.write( 'write_all. \n')
             f.write( ':- write_all.')
