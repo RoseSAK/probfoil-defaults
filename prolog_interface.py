@@ -98,7 +98,7 @@ class PrologInterface(object) :
             clause_body = rule.literals
         else :
             clause_body = [None]
-        clause2 = self._toPrologClause(clause_head, *clause_body, probability=0.8 )
+        clause2 = self._toPrologClause(clause_head, *clause_body ) # , probability=0.8 )
         self.engine.addClause( clause2 )
         
 
@@ -159,7 +159,7 @@ class PrologInterface(object) :
             rule.eval_nodes[ex_id] = node_id
             
             if p == None :
-                evaluation_queue[node_id].append( (rule, ex_id, negated) )
+                evaluation_queue[abs(node_id)].append( (rule, ex_id, node_id < 0) )
                     
         # Return evaluation queue
         return evaluation_queue
@@ -231,8 +231,9 @@ class PrologInterface(object) :
                 for line in cnf :
                     print(line,file=f)
                  
-            executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
-            subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
+            with Timer('Compiling %s:' % cnf[0]) :
+                executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
+                subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
             if sys.path[-1] != self.env['PROBLOGPATH'] + '/src/' :
                 sys.path.append(self.env['PROBLOGPATH'] + '/src/')
@@ -299,6 +300,19 @@ class Grounding(object) :
         self.__fact_names = {}
         self.__nodes_by_content = {}
         self.__probabilities = []
+        self.__usedfacts = []
+        
+    def _getUsedFacts(self, index) :
+        if index < 0 :
+            return self.__usedfacts[-index-1]
+        else :
+            return self.__usedfacts[index-1]
+        
+    def _setUsedFacts(self, index, value) :
+        if index < 0 :
+            self.__usedfacts[-index-1] = frozenset(value)
+        else :
+            self.__usedfacts[index-1] = frozenset(value)
         
     def _negate(self, t) :
         if t == self.TRUE :
@@ -320,6 +334,7 @@ class Grounding(object) :
             self.__fact_names[name] = node_id
             # TODO check whether it is a meta-fact
             self.setProbability(node_id, probability)
+            self._setUsedFacts(node_id,[abs(node_id)])
         return node_id
         
     def addNode(self, nodetype, content) :
@@ -363,16 +378,45 @@ class Grounding(object) :
         key = (nodetype, content)
         node_id = self.__nodes_by_content.get(key, None)
         
+            
         if node_id == None :    
             # Node doesn't exist yet
             node_id = self._addNode( *key )
             self.__nodes_by_content[ key ] = node_id
+
+            facts = set([])
+            disjoint_facts = True
+            for child in content :
+                child_facts = self._getUsedFacts(child)
+                if facts & child_facts : disjoint_facts = False
+                facts |= child_facts
+            self._setUsedFacts(node_id, facts)
+        
+            if disjoint_facts :
+                if nodetype == 'or' :
+                    f = lambda a, b : a*(1-b)
+                    p = 1
+                elif nodetype == 'and' :
+                    f = lambda a, b : a*b
+                    p = 1
+                for child in content :
+                    p_c = self.getProbability(child)
+                    if p_c == None :
+                        p = None
+                        break
+                    else :
+                        p = f(p,p_c)
+                if p and nodetype == 'or' :
+                    p = 1 - p
+                self.setProbability(node_id, p)
+
         return node_id
         
     def _addNode(self, nodetype, content) :
         node_id = len(self) + 1
         self.__nodes.append( (nodetype, content) )
         self.__probabilities.append(None)
+        self.__usedfacts.append(frozenset([]))
         return node_id
         
     def getNode(self, index) :
@@ -380,6 +424,22 @@ class Grounding(object) :
             return self.__parent.getNode(index)
         else :
             return self.__nodes[index-self.__offset-1]
+    
+    def _calculateProbability(self, nodetype, content) :
+        if nodetype == 'or' :
+            f = lambda a, b : a+b
+            p = 0
+        elif nodetype == 'and' :
+            f = lambda a, b : a*b
+            p = 1
+            for child in content :
+                p_c = self.getProbability(child)
+                if p_c == None :
+                    p = None
+                    break
+                else :
+                    p = f(p,p_c)
+        return p
         
     def getProbability(self, index) :
         if index == 0 :
@@ -392,10 +452,13 @@ class Grounding(object) :
                 return None
             else :
                 return 1 - p
+        # elif self.getNode(index)[0] == 'choice' :
+        #     return self.getNode(index)[1].probability
         else :
             return self.__probabilities[index-1]
     
     def setProbability(self, index, p) :
+        #print ('SP', index, p, self.getNode(index))
         if index == 0 or index == None :
             pass
         elif index < 0 :

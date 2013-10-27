@@ -229,13 +229,55 @@ class Rule(object) :
     
     max_significance = property( _calc_max_significance ) # TODO get real value
     significance = property(_calc_significance)
-    probability = property(lambda self: self.score.max_x )
+    
+    def _getProbability(self) :
+        if self.hasScore() :
+            return self.score.max_x
+        else :
+            return 1
+    
+    probability = property(lambda self: self._getProbability() )
     
     def getTheory(self) :
         if self.previous :
             return self.previous.getTheory() + [ str(self) ]
         else :
             return []
+            
+    def consolidate(self) : 
+        
+        if self.probability != 1 :
+            p = self.probability
+            
+            # FIXME TODO only works for sets of max 2 rules
+            for i,n in enumerate(self.eval_nodes) :
+                if n != None :
+                    if self.previous.eval_nodes != n :
+                        nodetype, content = self.knowledge.engine.getGrounding().getNode(n)
+                        
+                        if nodetype == 'or' :
+                            rule_node = content[-1]
+                            fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
+                            new_fact = self.knowledge.engine.getGrounding().addFact(fact_name, p)
+                            new_node = self.knowledge.engine.getGrounding().addAndNode( (new_fact, rule_node) )
+            
+                            # TODO FIXME doesn't work in case of node reuse
+                            self.eval_nodes[i] = self.knowledge.engine.getGrounding().addNode( nodetype, content[:-1] + (new_node,) )
+            
+                            l = self.previous.score_predict[i] if self.previous else 0
+                            u = self.score_predict[ i ]
+                            self.score_predict[ i ] = (u-l) * p + l 
+                        else :
+                            #print (content, max(content))
+                            fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
+                            f = self.knowledge.engine.getGrounding().addFact(fact_name, p)
+                            self.eval_nodes[ i ] = self.knowledge.engine.getGrounding().addAndNode( (f, n) )
+                            l = self.previous.score_predict[i] if self.previous else 0
+                            u = self.score_predict[ i ]
+                            self.score_predict[ i ] = (u-l) * p + l 
+                    
+            
+        return self
     
 class RuleBody(Rule) :
     """Rule with at least one literal in the body."""
@@ -270,7 +312,7 @@ class RuleHead(Rule) :
     def __init__(self, previous) :
         """Adds a new empty rule with the given head to the given FOIL rule set."""
         super(RuleHead,self).__init__(None)
-        self.__previous = previous
+        self.__previous = previous.consolidate()
         
         current_vars = set(self.target.variables)
         self._all_vars = current_vars

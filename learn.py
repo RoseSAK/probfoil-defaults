@@ -381,6 +381,8 @@ class PF2Score_Incremental(object):
         
         dS_total = 0.0
         for p,l,u in zip(correct, predict_prev, predict ) :
+            
+            assert(u-l > -1e10)
             TP_previous += min(l,p)
             FP_previous += max(0,l-p)
             
@@ -473,9 +475,9 @@ class PF2Score_Incremental(object):
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
         
-        # Update score_predict
-        for i, l in enumerate(predict_prev) :
-            predict[i] = l + max_x*(predict[i]-l)
+        # # Update score_predict
+        # for i, l in enumerate(predict_prev) :
+        #     predict[i] = l + max_x*(predict[i]-l)
             
         
         
@@ -569,8 +571,8 @@ class PF2Score_NonIncremental(object) :
         # print ('PREDICT', predict_prev)
         # print ('PREDICT', predict)
         # Update score_predict
-        for i, l in enumerate(predict_prev) :
-            predict[i] = l + max_x*(predict[i]-l)
+        # for i, l in enumerate(predict_prev) :
+        #     predict[i] = l + max_x*(predict[i]-l)
         
         # print ('PREDICT SCALED', max_x, predict)
     
