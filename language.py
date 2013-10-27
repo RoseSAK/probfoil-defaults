@@ -192,7 +192,7 @@ class Rule(object) :
         s = self.score
         
         if calc_max :
-            sTP = s.maxTP
+            sTP = s.maxTP - pTP
             sFP = 0
         else :
             sTP = s.TP - pTP
