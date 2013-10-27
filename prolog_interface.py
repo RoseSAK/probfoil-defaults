@@ -148,45 +148,19 @@ class PrologInterface(object) :
         
         # Initialize evaluation queue
         evaluation_queue = defaultdict(list)
-        
-        # For debugging / logging
-        debug_case_counters = [0] * 4
-        
+                
         # Run through results and build evaluation queue
         for rule, ex_id, node_id in zip(rules, ex_ids, node_ids) :
             if rule.score_predict == None : rule.score_predict = [0] * len(rule.examples)
             if rule.eval_nodes == None : rule.eval_nodes = [None] * len(rule.examples)
             
-            if node_id == None:
-                # Grounding failed (query failed)
-                pass    # Don't do anything (score_predict is 0 by default)
-                debug_case_counters[0] += 1
-            elif node_id == 0 :
-                assert(ex_id != None)
-                # Grounding is empty (query deterministically true)
-                # Set score for this examples and rule
-                rule.score_predict[ex_id] = 1
-                rule.eval_nodes[ex_id] = 0
-                debug_case_counters[1] += 1
-            else :
-                ex_id_safe = ex_id
-                if ex_id == None : ex_id_safe = 0
-                negated = node_id < 0
-                rule.eval_nodes[ex_id_safe] = node_id
-                node_id = abs(node_id)
-                if node_id in self.__prob_cache :
-                    # This node was evaluated earlier => reuse
-                    p = self.__prob_cache[node_id]
-                    if negated : p = 1-p
-                    rule.score_predict[ex_id] = p
-                    debug_case_counters[2] += 1
-                else :
-                    # Add node to evaluation queue
-                    evaluation_queue[node_id].append( (rule, ex_id, negated) )
-                    debug_case_counters[3] += 1
-        
-        with Log('grounding', time=tmr.elapsed_time, queue_size=len(ground_queue), fail=debug_case_counters[0], true=debug_case_counters[1], cache=debug_case_counters[2], queue=debug_case_counters[3] ) : pass
-        
+            p = self.engine.getGrounding().getProbability(node_id)
+            rule.score_predict[ex_id] = p
+            rule.eval_nodes[ex_id] = node_id
+            
+            if p == None :
+                evaluation_queue[node_id].append( (rule, ex_id, negated) )
+                    
         # Return evaluation queue
         return evaluation_queue
         
@@ -324,6 +298,7 @@ class Grounding(object) :
         self.__nodes = []
         self.__fact_names = {}
         self.__nodes_by_content = {}
+        self.__probabilities = []
         
     def _negate(self, t) :
         if t == self.TRUE :
@@ -343,6 +318,8 @@ class Grounding(object) :
         if node_id == None : # Fact doesn't exist yet
             node_id = self._addNode( 'fact', (name, probability) )
             self.__fact_names[name] = node_id
+            # TODO check whether it is a meta-fact
+            self.setProbability(node_id, probability)
         return node_id
         
     def addNode(self, nodetype, content) :
@@ -395,6 +372,7 @@ class Grounding(object) :
     def _addNode(self, nodetype, content) :
         node_id = len(self) + 1
         self.__nodes.append( (nodetype, content) )
+        self.__probabilities.append(None)
         return node_id
         
     def getNode(self, index) :
@@ -402,6 +380,28 @@ class Grounding(object) :
             return self.__parent.getNode(index)
         else :
             return self.__nodes[index-self.__offset-1]
+        
+    def getProbability(self, index) :
+        if index == 0 :
+            return 1
+        elif index == None :
+            return 0
+        elif index < 0 :
+            p = self.getProbability(-index)
+            if p == None :
+                return None
+            else :
+                return 1 - p
+        else :
+            return self.__probabilities[index-1]
+    
+    def setProbability(self, index, p) :
+        if index == 0 or index == None :
+            pass
+        elif index < 0 :
+            self.__probabilities[-index-1] = 1 - p
+        else :
+            self.__probabilities[index-1] = p
         
     def integrate(self, lines, rules) :
         # Dictionary query_name => node_id
