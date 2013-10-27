@@ -41,6 +41,7 @@ class LearningProblem(object) :
         self.BEAM_SIZE = beam_size
         self.VERBOSE = verbose
         self.SIGNIFICANCE = calc_significance(significance_p_value)
+        if self.VERBOSE > 2 : print ('Significance set to:', self.SIGNIFICANCE )
         
         self.MINRULES = minrules
         self.MAXRULES = maxrules
@@ -71,7 +72,7 @@ class LearningProblem(object) :
             while new_H.parent and new_H.parent.localScore >= new_H.localScore :
                 new_H = new_H.parent
         
-            if self.VERBOSE > 1 : print ('RULE FOUND:', new_H, '%.5f' % new_H.globalScore)
+            if self.VERBOSE > 0 : print ('RULE FOUND:', new_H, '%.5f' % new_H.globalScore)
         
             # Log progress
             with Log('rule_found', rule=new_H, score=new_H.score) : 
@@ -149,7 +150,7 @@ class LearningProblem(object) :
                         if best_score == None or  current_score > best_score :
                             best_score = current_score
                 
-                        if self.VERBOSE > 2 : print ( '%s %s %.5f %.5f' % (new_rule,new_rule.score, new_rule.localScore, new_rule.significance) )
+                        if self.VERBOSE > 2 : print ( '%s %s %.5f %.5f %.5f' % (new_rule,new_rule.score, new_rule.localScore, new_rule.significance, new_rule.max_significance) )
                 
                         # Early stopping
                         if new_rule.score.FP == current_rule.score.FP and new_rule.score.FN == 0 :

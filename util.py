@@ -106,9 +106,10 @@ class Timer(object) :
     
     TIMERS = defaultdict(float)
     
-    def __init__(self, desc=None, category=None) :
+    def __init__(self, desc=None, category=None, verbose=False) :
         self.desc = desc
         self.category = category
+        self.verbose = verbose
     
     elapsed_time = property(lambda s : time.time()-s.start)
     
@@ -119,7 +120,7 @@ class Timer(object) :
     def __exit__(self, *args) :
         if self.category != None :
             self.TIMERS[self.category] += self.elapsed_time
-        if self.desc :
+        if self.desc and self.verbose :
             print ( '%s: %.5fs' % (self.desc, self.elapsed_time ))
             
     @classmethod

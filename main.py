@@ -75,7 +75,7 @@ def main(arguments) :
     
     
     with open(args.log, 'w') as Log.LOG_FILE :
-     with WorkEnv(PROBLOGPATH=PROBLOGPATH) as env :    # Set up a temporary working directory
+     with WorkEnv(PROBLOGPATH=PROBLOGPATH, verbose=args.verbose) as env :    # Set up a temporary working directory
       with Log('log', **parameters) :
        with Timer(category='') :    
         if args.input.endswith('.arff') :

@@ -231,7 +231,7 @@ class PrologInterface(object) :
                 for line in cnf :
                     print(line,file=f)
                  
-            with Timer('Compiling %s:' % cnf[0]) :
+            with Timer('Compiling %s:' % cnf[0], verbose=self.env['verbose']>1) :
                 executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
                 subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
