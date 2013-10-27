@@ -79,7 +79,7 @@ class PrologInterface(object) :
                         self.preground.append( 'pf_prev( %s )' % ','.join(example) )
                     elif prev_node != None :
                         if prev_node < 0 :
-                            prev_node = '9' + str(prev_node) + '1'
+                            prev_node = '9' + str(abs(prev_node)) + '1'
                         else :
                             prev_node = '0' + str(prev_node) + '1'
                         self.preground.append('0.%s::pf_prev( %s )' % ( prev_node, ','.join(example) ) )
@@ -201,10 +201,6 @@ class PrologInterface(object) :
         with Timer(category='evaluate_converting') :
             cnf, facts = self.engine.getGrounding().toCNF( nodes )
         
-        print ('COMPILING CNF:', cnf[0])
-        
-        #print ('\n'.join(cnf))
-        
         # Compile the CNF
         evaluator = self._compile_cnf(cnf, facts)
         
@@ -273,6 +269,7 @@ class PrologInterface(object) :
           with Timer(category='evaluate_evaluating') :
             ddnnf = DDNNFFile(nnf_file, None)
             ddnnf.atoms = lambda : list(range(1,len(self.engine.getGrounding())+1))   # OMFG what a hack
+            
             return self._construct_evaluator(ddnnf, facts)
     
     def _rewrite_facts(self, facts) :
@@ -372,13 +369,13 @@ class Grounding(object) :
         
         # Eliminate unneeded node nodes (false for OR, true for AND)
         content = filter( lambda x : x != f, content )
-        
-        # Empty OR node fails, AND node is true
-        if not content : return f
-        
+
         # Put into fixed order
         content = tuple(sorted(content))
         
+        # Empty OR node fails, AND node is true
+        if not content : return f
+                
         # Contains opposites: return 'TRUE' for or, 'FALSE' for and
         if len(set(content)) > len(set(map(abs,content))) : return t
             
