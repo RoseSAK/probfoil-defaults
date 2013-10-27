@@ -86,6 +86,7 @@ class Log(object) :
             v = self.atts[k]
             #if hasattr(v,'__call__') :
             #    v = v()
+            if k == '' : k = 'nil'
             string += '%s="%s" ' % (k, v)
         return string
                     
