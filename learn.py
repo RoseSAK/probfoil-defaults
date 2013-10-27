@@ -207,7 +207,7 @@ class LearningProblem(object) :
             parent_score = r.parent.score
             new_score = r.score
             
-            if new_score.TP <= prev_score.TP :
+            if new_score.TP <= prev_score.TP + 1e-10 :
                 # Rule doesn't cover any true positive examples => it's useless
                 with Log('rejected', reason="TP", literal=r.literal, score=r.score, localScore=r.localScore ) : pass
             elif r.max_significance < self.SIGNIFICANCE :
