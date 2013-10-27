@@ -260,23 +260,18 @@ class Rule(object) :
                             fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                             new_fact = self.knowledge.engine.getGrounding().addFact(fact_name, p)
                             new_node = self.knowledge.engine.getGrounding().addAndNode( (new_fact, rule_node) )
-            
+                            
                             # TODO FIXME doesn't work in case of node reuse
                             self.eval_nodes[i] = self.knowledge.engine.getGrounding().addNode( nodetype, content[:-1] + (new_node,) )
-            
-                            l = self.previous.score_predict[i] if self.previous else 0
-                            u = self.score_predict[ i ]
-                            self.score_predict[ i ] = (u-l) * p + l 
                         else :
-                            #print (content, max(content))
                             fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                             f = self.knowledge.engine.getGrounding().addFact(fact_name, p)
                             self.eval_nodes[ i ] = self.knowledge.engine.getGrounding().addAndNode( (f, n) )
-                            l = self.previous.score_predict[i] if self.previous else 0
-                            u = self.score_predict[ i ]
-                            self.score_predict[ i ] = (u-l) * p + l 
+                            
+                        l = self.previous.score_predict[i] if self.previous else 0
+                        u = self.score_predict[ i ]
+                        self.score_predict[ i ] = (u-l) * p + l 
                     
-            
         return self
     
 class RuleBody(Rule) :

@@ -71,7 +71,7 @@ class LearningProblem(object) :
             while new_H.parent and new_H.parent.localScore >= new_H.localScore :
                 new_H = new_H.parent
         
-            if self.VERBOSE > 1 : print ('RULE FOUND:', new_H, new_H.globalScore)
+            if self.VERBOSE > 1 : print ('RULE FOUND:', new_H, '%.5f' % new_H.globalScore)
         
             # Log progress
             with Log('rule_found', rule=new_H, score=new_H.score) : 
@@ -149,7 +149,7 @@ class LearningProblem(object) :
                         if best_score == None or  current_score > best_score :
                             best_score = current_score
                 
-                        if self.VERBOSE > 2 : print (new_rule, new_rule.score, new_rule.localScore, new_rule.significance)
+                        if self.VERBOSE > 2 : print ( '%s %s %.5f %.5f' % (new_rule,new_rule.score, new_rule.localScore, new_rule.significance) )
                 
                         # Early stopping
                         if new_rule.score.FP == current_rule.score.FP and new_rule.score.FN == 0 :
@@ -567,21 +567,7 @@ class PF2Score_NonIncremental(object) :
         self.maxTP = score(1.0)[0]
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
-        
-        # print ('PREDICT', predict_prev)
-        # print ('PREDICT', predict)
-        # Update score_predict
-        # for i, l in enumerate(predict_prev) :
-        #     predict[i] = l + max_x*(predict[i]-l)
-        
-        # print ('PREDICT SCALED', max_x, predict)
-    
-        # with Log('best', x=max_x, score=max_s, TP=self.TP, FP=self.FP, TN=self.TN, FN=self.FN, m_est=self.m_estimate(m)) : pass         
-
-    # def __eq__(self, other) :
-    #     if other == None : return False
-    #     return (self.TP, self.FP, self.TN, self.FN) == (other.TP, other.FP, other.TN, other.FN)
-    
+            
     def m_estimate(self) :
         m = self.M_ESTIMATE_M
         return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 

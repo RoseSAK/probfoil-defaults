@@ -107,7 +107,7 @@ def main(arguments) :
                 r0.initialize()
             
         if args.verbose > 1 :
-            print (r0.score_correct)
+            print ('Targets:', ', '.join(map(lambda x : '%.5f' % x, r0.score_correct) ) )
         
         if args.verbose: print('Start learning...')
         try :
