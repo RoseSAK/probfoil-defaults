@@ -31,8 +31,8 @@ def parse_args(args) :
     
     p = argparse.ArgumentParser(description="ProbFOIL learning algorithm")
     p.add_argument('input', metavar='FILE', help="Input data file.")
-    p.add_argument('target', metavar='TARGET', help="Target to learn as pred/arity (e.g. grandmother/2).")
-    p.add_argument('modes', metavar='MODE', nargs='+', help="Extension modes as pred/argmodes (e.g. mother/+-).")
+    p.add_argument('target', metavar='TARGET', help="Target to learn as pred/arity (e.g. grandmother/2).", nargs='?')
+    p.add_argument('modes', metavar='MODE', nargs='*', help="Extension modes as pred/argmodes (e.g. mother/+-).")
     p.add_argument('-m','--m_estimate_m', type=int, default=10, help="Value for m in m-estimate calculation.")
     p.add_argument('-b','--beam_size', type=int, default=5, help="Size of search beam.")
     p.add_argument('-p','--significance_p_value', type=float, default=0.99, help="P-value for rule significance.")
@@ -60,7 +60,19 @@ def main(arguments) :
             sys.exit(1)
     
     parameters = vars(args)
-        
+    
+    if args.target == None :
+        with open(args.input, 'r') as f:
+            for line in f :
+                line = line.strip()
+                if line.startswith('%LEARN') or line.startswith('#LEARN') :
+                    line = line.split()
+                    args.target = line[1]
+                    args.modes = line[2:]
+    if args.target == None :
+        print( 'No target specified.')
+        sys.exit(1)
+                        
     target_pred, target_arity = args.target.split('/')
     target_arity = int(target_arity)
     letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -68,7 +80,7 @@ def main(arguments) :
     for x in range(0, target_arity) :
         target_args.append(letters[x])
     target = Literal(target_pred, target_args)
-    
+
     modes = list(map(lambda x : Literal(*x.split('/')), args.modes))
       
     learn_time = time.time()  

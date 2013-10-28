@@ -231,7 +231,7 @@ class PrologInterface(object) :
                 for line in cnf :
                     print(line,file=f)
                  
-            with Timer('Compiling %s:' % cnf[0], verbose=self.env['verbose']>1) :
+            with Timer('Compiling %s' % cnf[0], verbose=self.env['verbose']>1) :
                 executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
                 subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
@@ -393,23 +393,8 @@ class Grounding(object) :
             self._setUsedFacts(node_id, facts)
         
             if disjoint_facts :
-                if nodetype == 'or' :
-                    f = lambda a, b : a*(1-b)
-                    p = 1
-                elif nodetype == 'and' :
-                    f = lambda a, b : a*b
-                    p = 1
-                for child in content :
-                    p_c = self.getProbability(child)
-                    if p_c == None :
-                        p = None
-                        break
-                    else :
-                        p = f(p,p_c)
-                if p and nodetype == 'or' :
-                    p = 1 - p
-                self.setProbability(node_id, p)
-
+                self.setProbability(node_id, self._calculateProbability(nodetype, content))
+                
         return node_id
         
     def _addNode(self, nodetype, content) :
@@ -427,18 +412,20 @@ class Grounding(object) :
     
     def _calculateProbability(self, nodetype, content) :
         if nodetype == 'or' :
-            f = lambda a, b : a+b
-            p = 0
+            f = lambda a, b : a*(1-b)
+            p = 1
         elif nodetype == 'and' :
             f = lambda a, b : a*b
             p = 1
-            for child in content :
-                p_c = self.getProbability(child)
-                if p_c == None :
-                    p = None
-                    break
-                else :
-                    p = f(p,p_c)
+        for child in content :
+            p_c = self.getProbability(child)
+            if p_c == None :
+                p = None
+                break
+            else :
+                p = f(p,p_c)
+        if p != None and nodetype == 'or' :
+            p = 1 - p
         return p
         
     def getProbability(self, index) :
@@ -452,8 +439,6 @@ class Grounding(object) :
                 return None
             else :
                 return 1 - p
-        # elif self.getNode(index)[0] == 'choice' :
-        #     return self.getNode(index)[1].probability
         else :
             return self.__probabilities[index-1]
     
@@ -488,6 +473,7 @@ class Grounding(object) :
         
         if line_type == 'fact' :
             if re.match('ad\d+_query_set_', line_alias) :
+                assert(False)
                 query = line_alias[len(re.match('ad\d+_', line_alias).group()):]
                 node_id = self.addChoice(rules[query])
             elif line_alias.startswith('pf_') :

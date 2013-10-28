@@ -248,21 +248,26 @@ class Rule(object) :
         
         if self.probability != 1 :
             p = self.probability
-            
-            # FIXME TODO only works for sets of max 2 rules
             for i,n in enumerate(self.eval_nodes) :
                 if n != None :
-                    if self.previous.eval_nodes != n :
+                    prev_node = self.previous.eval_nodes[i]
+                    if prev_node != n :
                         nodetype, content = self.knowledge.engine.getGrounding().getNode(n)
                         
                         if nodetype == 'or' :
-                            rule_node = content[-1]
+                            assert(len(content) == 2 )
+                            
+                            if content[0] == prev_node :
+                                rule_node = content[1]
+                            else :
+                                rule_node = content[0]
+                                
                             fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                             new_fact = self.knowledge.engine.getGrounding().addFact(fact_name, p)
                             new_node = self.knowledge.engine.getGrounding().addAndNode( (new_fact, rule_node) )
                             
                             # TODO FIXME doesn't work in case of node reuse
-                            self.eval_nodes[i] = self.knowledge.engine.getGrounding().addNode( nodetype, content[:-1] + (new_node,) )
+                            self.eval_nodes[i] = self.knowledge.engine.getGrounding().addNode( nodetype, (prev_node, new_node) )
                         else :
                             fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                             f = self.knowledge.engine.getGrounding().addFact(fact_name, p)
