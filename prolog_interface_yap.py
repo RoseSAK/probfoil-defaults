@@ -26,7 +26,7 @@ import os
 class PrologEngine(object) :
     
     def __init__(self, env) :
-        self.__sources = []
+        self._sources = []
         self.__fixed_clauses = []
         self.__clauses = []
         self.__grounding = Grounding()
@@ -34,7 +34,7 @@ class PrologEngine(object) :
         
     def loadFile(self, filename) :
         """Load a Prolog source file."""
-        self.__sources.append(os.path.abspath(filename))
+        self._sources.append(os.path.abspath(filename))
 
     def listing(self) :
         """Return a string listing the content of the current Prolog database."""
@@ -57,7 +57,7 @@ class PrologEngine(object) :
         
         program_file = self.__env.tmp_path('probfoil.pl')
         with open(program_file, 'w') as f :
-            for sourcefile in self.__sources :
+            for sourcefile in self._sources :
                 with open(sourcefile) as fsrc :
                     self._write_file(fsrc, f, True)
             
@@ -81,6 +81,28 @@ class PrologEngine(object) :
                 line = regex.sub('', line)
                 line = line.replace('<-', ':-')
             file_out.write(line)
+    
+    def ground(self, program) :
+        """Ground a query."""
+        
+    
+        with Timer(category='evaluate_grounding_writing') as tmr : 
+            pl_filename = self.__env.tmp_path('probfoil.pl')
+            with open(pl_filename, 'w') as pl_file : 
+                for sourcefile in self._sources :
+                    with open(sourcefile) as in_file :
+                        pl_file.write( in_file.read() )
+                print ('\n'.join(program), file=pl_file)
+                
+        with Timer(category='evaluate_grounding_grounding') as tmr : 
+            # 2) Call grounder in Yap
+            grounder_result = self._call_grounder( pl_filename)
+    
+        with Timer(category='evaluate_grounding_integrating') as tmr : 
+            # 3) Read in grounding and insert new things into Grounding data structure
+            names_nodes = self.getGrounding().integrate(grounder_result)
+    
+        return [ names_nodes.get(lit,None) for lit in literals ]
         
     def groundQuery(self, literals, rules) :
         """Ground a query."""
@@ -99,7 +121,7 @@ class PrologEngine(object) :
         with Timer(category='evaluate_grounding_writing') as tmr : 
             pl_filename = self.__env.tmp_path('probfoil.pl')
             with open(pl_filename, 'w') as pl_file : 
-                for sourcefile in self.__sources :
+                for sourcefile in self._sources :
                     with open(sourcefile) as in_file :
                         pl_file.write( in_file.read() )
             

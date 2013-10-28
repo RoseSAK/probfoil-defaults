@@ -40,6 +40,7 @@ class Rule(object) :
         Rule.ids += 1
         
         self.eval_nodes = None
+        self.examples_to_evaluate = None
         
     def __add__(self, literal) :
         """Adds the given literal to the body of the rule and returns the new rule."""
@@ -79,7 +80,11 @@ class Rule(object) :
         return set(map(lambda x : x[0], self._body_vars))
         
     def enum_examples(self) :
-        if self.parent :
+        if self.examples_to_evaluate != None :
+            for ex_id in self.examples_to_evaluate :
+                yield ex_id, self.examples[ex_id]
+        
+        elif self.parent :
             for ex_id, example in self.parent.enum_examples() :
                 if self.parent.score_predict[ex_id] != 0 :
                     yield ex_id, example
@@ -149,8 +154,8 @@ class Rule(object) :
         
     def _get_score(self) :
         if self.__score == None :
-            if self.score_predict == None :
-                self.knowledge.process_queue()
+#            if self.score_predict == None :
+            self.knowledge.process_queue()
             with Timer(category='scoring') :
                 self.__score = self.learning_problem.calculateScore(self)
         return self.__score
@@ -449,6 +454,15 @@ class Literal(object) :
             return 'not(%s)'  % r
         else :
             return r
+            
+    def __neg__(self) :
+        return Literal(self.functor, self.arguments, not self.is_negated)
+            
+    def __abs__(self) :
+        if self.is_negated :
+            return -self
+        else :
+            return self
             
     def __hash__(self) :
         return hash(str(self))

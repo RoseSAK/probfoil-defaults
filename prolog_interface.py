@@ -33,7 +33,12 @@ class PrologInterface(object) :
         self.engine = self._createPrologEngine()
         self.last_id = 0
         self.__queue = []
+        self.toGround = []
+        self.toScore = []
+        self.toEvaluate = set([])
         
+    grounding = property(lambda s : s.engine.getGrounding() )
+
     def _getRuleQuery(self, identifier) :
         return 'query_' + str(identifier)
         
@@ -69,6 +74,9 @@ class PrologInterface(object) :
         
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
+        
+        #self._process_rule_stage1(rule)
+        
         with Timer(category='enqueue') :
             with Timer(category='enqueue_prepare') :
                 self._prepare_rule(rule)
@@ -77,6 +85,168 @@ class PrologInterface(object) :
         
     def getFact(self, fact) :
         return self.engine.getFactProbability( self._toProlog(fact) )
+    
+    
+    # def _process_rule_stage1(self, rule) :
+    #     # Pre-grounding: determine which nodes need grounding for this rule and store grounding information.
+    #     
+    #     # Without literal there is nothing to do.
+    #     if not rule.literal : 
+    #         if not rule.eval_nodes :
+    #             rule.eval_nodes = [None] * len(rule.examples)
+    #             rule.score_predict = [0] * len(rule.examples)
+    #             self.toGround.append((rule,[ x for x,y in rule.enum_examples() ]))
+    #             self.toScore.append((rule,[ x for x,y in rule.enum_examples() ]))
+    #     else :
+    #         # Initialize eval_nodes and score_predict structures in rule
+    #         rule.eval_nodes = [None] * len(rule.examples)
+    #         rule.score_predict = [0] * len(rule.examples)
+    #     
+    #         # Set up toGround, toScore and toEvaluate queues
+    #         toGround = []
+    #         toScore = []
+    #         toEvaluate = set([])
+    #     
+    #         # Check whether we can do some simple pre-grounding
+    #         if rule.literal.arguments == rule.target.arguments :
+    #             # Example fully defines literal instance, check whether we grounded it before.
+    #             for ex_id, example in rule.enum_examples() :
+    #                 fact_id = self.grounding.getFact(self._toProlog( Literal( rule.literal.functor, example) ) )
+    #                 if fact_id == None :
+    #                     # Fact wasn't found, we'll still need to do normal grounding
+    #                     toGround.append( ex_id )
+    #                     #toScore.append( ex_id )
+    #                 else :
+    #                     # Fact was found! We can do a bit of grounding here.
+    #                     if rule.literal.is_negated : fact_id = -fact_id
+    #                     # Get the node id.
+    #                     parent_node = rule.parent.eval_nodes[ex_id]
+    #                     node_id = self.grounding.addAndNode( (parent_node, fact_id ) )
+    #                     rule.eval_nodes[ex_id] = node_id
+    #                 
+    #                     # And get the probability.
+    #                     p = self.grounding.getProbability(node_id)
+    #                     if p == None :
+    #                         # Calculation failed: needs advanced evaluation
+    #                         toEvaluate.add( node_id )
+    #                         toScore.append( ex_id )
+    #                     else :
+    #                         # Probability available: store it, this rule+ex_id has been completely evaluated
+    #                         rule.score_predict[ex_id] = p
+    #         else :
+    #             # We can't do any grounding yet
+    #             toGround = [ x for x,y in rule.enum_examples() ]
+    #             toScore = [ x for x,y in rule.enum_examples() ]
+    #         
+    #         # Add information to global queues, but only if any action is needed.    
+    #         if toGround : self.toGround.append( (rule, toGround) )
+    #         if toScore : self.toScore.append( (rule, toScore) )
+    #         self.toEvaluate |= toEvaluate
+            
+    # def process_queue(self) :
+    #     
+    #     gp = []
+    #     # Create ground program.
+    #     for rule_id, rule_exids in enumerate(self.toGround) :
+    #         rule, ex_ids = rule_exids
+    #         
+    #         if not rule.parent :
+    #             clause_pred =  str(rule.target.functor)
+    #         else :
+    #             clause_pred =  'pf_rule_%s' % rule_id
+    #         
+    #         clause = str(Literal( clause_pred, rule.target.arguments))
+    #         if rule.parent :
+    #             clause += ':-' + ','.join(map(str,rule.literals) )
+    #             clause += '.'
+    #             gp.append( clause )
+    #         
+    #         for ex_id in ex_ids :
+    #             query = Literal('pf_query_%s_%s' % (rule_id, ex_id), [])
+    #             real_query = Literal( clause_pred, rule.examples[ex_id] )
+    #             gp.append( '%s :- %s.' % (query, real_query) )
+    #             gp.append( 'query(%s).' % (query, ) )
+    #     
+    #     # Clear ground queue
+    #             
+    #     # Call grounder
+    #     if gp :
+    #         ground_result = self._ground(gp)
+    #     else :
+    #         ground_result = []
+    #     
+    #     
+    #     # Add nodes for previous rules
+    #     for rule, ex_id, node_id in ground_result :
+    #         rule = self.toGround[int(rule_id)][0]
+    #         ex_id = int(ex_id)
+    #         # if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes
+    #         #     prev_node = rule.previous.eval_nodes[ ex_id ]
+    #         #     if node_id == None :    # Rule fail
+    #         #         new_node = prev_node    # => new theory predicts same as old theory
+    #         #     elif node_id == 0 :     # Rule true 
+    #         #         new_node = 0
+    #         #     else :
+    #         #         new_node = self.grounding.addOrNode( ( prev_node, node_id ) ) 
+    #         # else :
+    #         #     new_node = node_id
+    # 
+    #         new_node = node_id
+    #         
+    #         rule.eval_nodes[ex_id] = new_node
+    #         p = self.grounding.getProbability(new_node)
+    #         if p == None :
+    #             # Calculation failed: needs advanced evaluation
+    #             toEvaluate.add( new_node )
+    #             toScore.append( ex_id )
+    #         else :
+    #             # Probability available: store it, this rule+ex_id has been completely evaluated
+    #             rule.score_predict[ex_id] = p
+    # 
+    #     # Evaluate nodes in toEvaluate queue
+    #     if self.toEvaluate : 
+    #         # Convert grounding to CNF
+    #         with Timer(category='evaluate_converting') :
+    #             cnf, facts = self.grounding.toCNF( self.toEvaluate )
+    #     
+    #         # Compile the CNF
+    #         evaluator = self._compile_cnf(cnf, facts)
+    #     
+    #         for node_id in toEvaluate :            
+    #             with Timer(category='evaluate_evaluating') :
+    #                 self.grounding.setProbability(node_id, p)
+    #         self.toEvaluate = set([])
+    #     # Score
+    #     for rule, ex_ids in self.toScore :
+    #         for ex_id in ex_ids :
+    #             rule.score_predict[ex_id] = self.grounding.getProbability(rule.eval_nodes[ex_id])
+    #     
+    #     self.toGround = []
+    #     self.toScore = []
+
+    def _ground(self, program) :
+        with Timer(category='evaluate_grounding_writing') as tmr : 
+            pl_filename = self.env.tmp_path('probfoil.pl')
+            with open(pl_filename, 'w') as pl_file : 
+                for sourcefile in self.engine._sources :
+                    with open(sourcefile) as in_file :
+                        pl_file.write( in_file.read() )
+                print ('\n'.join(program), file=pl_file)
+                
+        with Timer(category='evaluate_grounding_grounding') as tmr : 
+            # 2) Call grounder in Yap
+            grounder_result = self.engine._call_grounder( pl_filename)
+    
+        with Timer(category='evaluate_grounding_integrating') as tmr : 
+            # 3) Read in grounding and insert new things into Grounding data structure
+            names_nodes = self.grounding.integrate(grounder_result)
+    
+        result = []
+        for name, value in names_nodes.items() :
+            if name.startswith('pf_query_') :
+                rule, ex_id = name.split('_')[2:]
+                result.append( (rule, ex_id, value ))
+        return result
                 
     def _add_to_queue(self, rule) :
         
@@ -92,6 +262,7 @@ class PrologInterface(object) :
                 query_head = self._toProlog(self._getRuleSetQueryAtom(rule, example))
                 self.__queue.append( ( rule, ex_id, query_head ) )
                 debug_case_counters[2] += 1
+        rule.examples_to_evaluate = None
         
     def _ground_queue(self, ground_queue) :
         
@@ -117,7 +288,7 @@ class PrologInterface(object) :
                 elif node_id == 0 :     # Rule true 
                     new_node_ids.append(0)
                 else :
-                    new_node_ids.append(self.engine.getGrounding().addOrNode( ( prev_node, node_id ) ) ) 
+                    new_node_ids.append(self.grounding.addOrNode( ( prev_node, node_id ) ) ) 
             else :
                 new_node_ids.append( node_id )
         node_ids = new_node_ids
@@ -132,7 +303,7 @@ class PrologInterface(object) :
             if rule.score_predict == None : rule.score_predict = [0] * len(rule.examples)
             if rule.eval_nodes == None : rule.eval_nodes = [None] * len(rule.examples)
             
-            p = self.engine.getGrounding().getProbability(node_id)
+            p = self.grounding.getProbability(node_id)
             rule.score_predict[ex_id] = p
             rule.eval_nodes[ex_id] = node_id
             
@@ -151,7 +322,7 @@ class PrologInterface(object) :
         
         # Convert grounding to CNF
         with Timer(category='evaluate_converting') :
-            cnf, facts = self.engine.getGrounding().toCNF( nodes )
+            cnf, facts = self.grounding.toCNF( nodes )
         
         # Compile the CNF
         evaluator = self._compile_cnf(cnf, facts)
@@ -182,9 +353,11 @@ class PrologInterface(object) :
         
       with Timer(category='evaluate') :
         
+        if not self.__queue : return
+        
         # Ground stored queries => returns nodes to be evaluated
         evaluations = self._ground_queue(self.__queue)
-
+    
         # Clear queue
         self.__queue = []
             
@@ -219,7 +392,7 @@ class PrologInterface(object) :
         
           with Timer(category='evaluate_evaluating') :
             ddnnf = DDNNFFile(nnf_file, None)
-            ddnnf.atoms = lambda : list(range(1,len(self.engine.getGrounding())+1))   # OMFG what a hack
+            ddnnf.atoms = lambda : list(range(1,len(self.grounding)+1))   # OMFG what a hack
             
             return self._construct_evaluator(ddnnf, facts)
     
@@ -278,6 +451,9 @@ class Grounding(object) :
         self.__probabilities = []
         self.__usedfacts = []
         
+    def getFact(self, name) :
+        return self.__fact_names.get(name, None)
+        
     def _getUsedFacts(self, index) :
         if index < 0 :
             return self.__usedfacts[-index-1]
@@ -304,7 +480,7 @@ class Grounding(object) :
     def addFact(self, name, probability) :
         """Add a named fact to the grounding."""
         assert(not name.startswith('pf_'))
-        node_id = self.__fact_names.get(name,None)
+        node_id = self.getFact(name)
         if node_id == None : # Fact doesn't exist yet
             node_id = self._addNode( 'fact', (name, probability) )
             self.__fact_names[name] = node_id
@@ -426,7 +602,7 @@ class Grounding(object) :
         else :
             self.__probabilities[index-1] = p
         
-    def integrate(self, lines, rules) :
+    def integrate(self, lines, rules=None) :
         # Dictionary query_name => node_id
         result = {}
         
@@ -447,18 +623,7 @@ class Grounding(object) :
             if node_id != '?' : return node_id
         
         if line_type == 'fact' :
-            if re.match('ad\d+_query_set_', line_alias) :
-                assert(False)
-                query = line_alias[len(re.match('ad\d+_', line_alias).group()):]
-                node_id = self.addChoice(rules[query])
-            elif line_alias.startswith('pf_') :
-                node_id = str(line_content)[2:]
-                if node_id[0] == '9' :
-                    node_id = -int(node_id[1:-1])
-                else :
-                    node_id = int(node_id[1:-1])
-            else :
-                node_id = self.addFact(line_alias, line_content)
+            node_id = self.addFact(line_alias, line_content)
         else :
             # Compound node => process content recursively
             subnodes = []
