@@ -450,8 +450,6 @@ class PF2Score(object):
                 TN_x = N - FP_x
                 FN_x = P - TP_x
                 
-                    # TN_x = M - tau_p + sigma_p - (sigma_u - sigma_l) * x - sigma_l
-                    # FN_x = tau_p - sigma_p - (tau_u - tau_l - sigma_u + sigma_l) * x - tau_l + sigma_l
                 max_score_details = (TP_x, TN_x, FP_x, FN_x)
                 max_score = score_x
                 max_x = x
@@ -471,15 +469,10 @@ class PF2Score(object):
         self.TP, self.TN, self.FP, self.FN = max_score_details
         self.P = P
         self.N = M-P
-
+        
         self.maxTP = TP_x
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
-        
-        # # Update score_predict
-        # for i, l in enumerate(predict_prev) :
-        #     predict[i] = l + max_x*(predict[i]-l)
-            
         
         
     def accuracy(self) :

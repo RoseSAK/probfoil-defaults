@@ -404,7 +404,8 @@ class RootRule(Rule) :
         #   => requires access to 'facts'
         #   => scores are 1 - p where p is probability of the fact
         
-        self.knowledge.enqueue( self )    # TODO check if this works
+        
+        self.knowledge.enqueue( self )  
         self.knowledge.process_queue()
         self.__score_correct = self.score_predict
         self.score_predict = [0] * len(self.__score_correct)
