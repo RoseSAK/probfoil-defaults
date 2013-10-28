@@ -80,7 +80,7 @@ class LearningProblem(object) :
             with Log('stopping_criterion', old_score=H.globalScore, new_score=new_H.globalScore, full_score=new_H.score, sign=new_H.significance) : 
                 pass
         
-            # Check significance level  => TODO FIXME significance not calculated for individual clause
+            # Check significance level 
             if new_H.significance < self.SIGNIFICANCE :
                 # Clause not significant => STOP
                 break
@@ -309,7 +309,7 @@ class ProbFOIL2(LearningProblem) :
             result = PF2Score(rule.score_correct, rule.score_predict, previous_prediction, self.M_ESTIMATE_M)
             return result
 
-class PF2Score_Incremental(object):
+class PF2Score(object):
 
     def _calc_y(self, p,l,u) :
         if l == u :
@@ -498,95 +498,3 @@ class PF2Score_Incremental(object):
     def __str__(self) :
         return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
         
-
-class PF2Score_NonIncremental(object) :
-
-    def _calc_y(self, p,l,u) :
-        if l == u :
-            return 0
-        else :
-            v = (p-l) / (u-l)
-            if v < 0 :
-                return 0
-            elif v > 1 :
-                return 1
-            else :
-                return v
-                
-    def __init__(self, correct, predict, predict_prev, m) :
-        self.M_ESTIMATE_M = m
-        self.MIN_RULE_PROB = 0.01
-    
-        values = sorted( (self._calc_y(p,l,u), p,l,u) for p,l,u in zip(correct, predict_prev, predict) )
-      # with Log('calcscore') :
-      #   with Log('values', _child=values) : pass
-    
-        P = 0.0
-        N = 0.0
-        ys = set([])
-        for y, p, l, u in values :
-            ys.add(y)
-            P += p
-            N += (1-p)
-        
-        # TODO incremental computation
-        def score(x) :
-            r = [ ((u-l)*x + l, p) for y,p,l,u in values ]
-            TP = sum( ri for ri, pi in r if ri < pi ) + sum( pi for ri, pi in r if ri >= pi )
-            #with Log('fp', lst=r, x=x) : pass
-            FP = sum( ri - pi for ri, pi in r if ri > pi )
-            TN = sum( 1 - pi for ri, pi in r if ri <= pi ) + sum ( 1-ri for ri, pi in r if ri > pi )
-            FN = sum( pi - ri for ri, pi in r if ri <= pi )
-            return TP, FP, TN, FN
-    
-        max_s = None
-        max_x = None
-    
-        # for x1 in range(0,101) :
-        #     x = float(x1) / 100.0
-        for x in sorted(ys) :
-            TP, FP, TN, FN = score(x)
-            s = self._m_estimate(m, TP, TN, FP, FN, P, N)
-            # with Log('candidate', x=x, score=s, TP=TP, FP=FP, TN=TN, FN=FN) : pass
-            if x >= self.MIN_RULE_PROB and ( max_s == None or s > max_s ) :
-                max_s = s
-                max_x = x
-        if max_x == None :
-            max_x = 1
-            TP, FP, TN, FN = score(max_x)
-            max_s = self._m_estimate(m, TP, TN, FP, FN, P, N)
-            
-        if max_x > 1 - 1e-5 :
-            max_x = 1
-            
-        self.max_s = max_s
-        self.max_x = max_x
-        self.TP, self.FP, self.TN, self.FN = score(max_x)
-        self.P = P
-        self.N = N
-    
-        self.maxTP = score(1.0)[0]
-        self.localScore = self.m_estimate()
-        self.localScoreMax = self.m_estimate_max()
-            
-    def m_estimate(self) :
-        m = self.M_ESTIMATE_M
-        return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 
-        
-    def m_estimate_max(self) :
-        m = self.M_ESTIMATE_M
-        return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + m) 
-
-    def accuracy(self) :
-        M = self.P + self.N
-        return (self.TP + self.TN ) / M
-    
-
-    def _m_estimate(self, m, TP, TN, FP, FN, P, N) :
-        #if (TP == 0 and FP == 0 and m == 0) : m = 1
-        return (TP + m * (P / (N + P))) / (TP + FP + m) 
-
-    def __str__(self) :
-        return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
-
-PF2Score = PF2Score_Incremental
