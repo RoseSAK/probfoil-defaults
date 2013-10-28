@@ -400,6 +400,7 @@ class RootRule(Rule) :
         self.knowledge.process_queue()
         self.__score_correct = self.score_predict
         self.score_predict = [0] * len(self.__score_correct)
+        self.eval_nodes = None
             
     def _str_parts(self) :
         return []

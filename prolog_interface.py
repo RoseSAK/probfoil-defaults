@@ -34,8 +34,6 @@ class PrologInterface(object) :
         self.last_id = 0
         self.__queue = []
         
-        self.__prob_cache = {}
-        
     def _getRuleQuery(self, identifier) :
         return 'query_' + str(identifier)
         
@@ -112,7 +110,7 @@ class PrologInterface(object) :
         # Add nodes for previous rules
         new_node_ids = []
         for rule, ex_id, node_id in zip(rules, ex_ids, node_ids) :
-            if rule.previous and rule.previous.previous :   # Previous rule has nodes
+            if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes
                 prev_node = rule.previous.eval_nodes[ ex_id ]
                 if node_id == None :    # Rule fail
                     new_node_ids.append(prev_node)    # => new theory predicts same as old theory
@@ -160,7 +158,6 @@ class PrologInterface(object) :
         
         for node_id in evaluation_queue :
             assert(node_id != 0 and node_id != None)
-            assert(not node_id in self.__prob_cache)
             
             with Timer(category='evaluate_evaluating') :
                 
@@ -176,7 +173,6 @@ class PrologInterface(object) :
                             else :
                                 rule.score_predict[ex_id] = p
                     else :
-                        self.__prob_cache[ node_id ] = p
                         if negated :
                             rule.score_predict[ex_id] = 1-p
                         else :
