@@ -250,13 +250,16 @@ class Rule(object) :
             p = self.probability
             for i,n in enumerate(self.eval_nodes) :
                 if n != None :
-                    prev_node = self.previous.eval_nodes[i]
-                    if prev_node != n :
-                        
+                    if self.previous.eval_nodes :
+                        prev_node = self.previous.eval_nodes[i]
+                    else :
+                        prev_node = None
+
+                    if prev_node != n :                        
                         if n == 0 :
                             fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                             new_fact = self.knowledge.engine.getGrounding().addFact(fact_name, p)
-                            self.eval_nodes[i] = self.knowledge.engine.getGrounding().addNode( nodetype, (prev_node, new_fact) )                            
+                            self.eval_nodes[i] = self.knowledge.engine.getGrounding().addOrNode( (prev_node, new_fact) )                            
                         else :
                             nodetype, content = self.knowledge.engine.getGrounding().getNode(n)  
                         
@@ -270,7 +273,7 @@ class Rule(object) :
                                 new_fact = self.knowledge.engine.getGrounding().addFact(fact_name, p)
                                 new_node = self.knowledge.engine.getGrounding().addAndNode( (new_fact, rule_node) )
                             
-                                self.eval_nodes[i] = self.knowledge.engine.getGrounding().addNode( nodetype, (prev_node, new_node) )
+                                self.eval_nodes[i] = self.knowledge.engine.getGrounding().addOrNode( (prev_node, new_node) )
                             else :
                                 fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                                 f = self.knowledge.engine.getGrounding().addFact(fact_name, p)
