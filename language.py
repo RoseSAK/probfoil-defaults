@@ -266,7 +266,7 @@ class Rule(object) :
                             new_fact = self.knowledge.engine.getGrounding().addFact(fact_name, p)
                             self.eval_nodes[i] = self.knowledge.engine.getGrounding().addOrNode( (prev_node, new_fact) )                            
                         else :
-                            nodetype, content = self.knowledge.engine.getGrounding().getNode(n)  
+                            nodetype, content = self.knowledge.engine.getGrounding().getNode(abs(n))  
                         
                             if nodetype == 'or' :
                                 if content[0] == prev_node :
