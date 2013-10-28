@@ -36,8 +36,6 @@ class PrologInterface(object) :
         
         self.__prob_cache = {}
         
-        self.preground = None
-        
     def _getRuleQuery(self, identifier) :
         return 'query_' + str(identifier)
         
@@ -64,44 +62,12 @@ class PrologInterface(object) :
         
         clause_head = self._getRuleSetQueryAtom(rule)
         
-        if rule.previous.identifier :
-            prev_head = Literal('pf_prev', rule.target.arguments)
-            
-            if self.preground == None :
-                self.preground = []
-                self.__prob_cache = {}
-                
-                # There is a previous rule
-                for ex_id, example in self._get_examples_for_queue(rule.previous) :
-                    if ex_id == None : ex_id = 0
-                    prev_node = rule.previous.eval_nodes[ex_id]
-                    if prev_node == 0 :
-                        self.preground.append( 'pf_prev( %s )' % ','.join(example) )
-                    elif prev_node != None :
-                        if prev_node < 0 :
-                            prev_node = '9' + str(abs(prev_node)) + '1'
-                        else :
-                            prev_node = '0' + str(prev_node) + '1'
-                        self.preground.append('0.%s::pf_prev( %s )' % ( prev_node, ','.join(example) ) )
-                for c in self.preground :
-                    self.engine.addClause(c)
-        else :
-            prev_head = None
-            
-        clause_body = self._getRuleQueryAtom(rule)
-            
-        if prev_head :  # not the first rule
-            clause1 = self._toPrologClause(clause_head, prev_head )
-            self.engine.addClause( clause1 )
-            
         if rule.parent :
             clause_body = rule.literals
         else :
             clause_body = [None]
         clause2 = self._toPrologClause(clause_head, *clause_body ) # , probability=0.8 )
         self.engine.addClause( clause2 )
-        
-
         
     def enqueue(self, rule) :
         """Enqueue rule for evaluation."""
@@ -143,7 +109,21 @@ class PrologInterface(object) :
         # Ground all queries simultaneously (returns node_ids for each individual query)
         node_ids = list(self.engine.groundQuery(queries, rules_dict))
         
-        self.preground = None
+        # Add nodes for previous rules
+        new_node_ids = []
+        for rule, ex_id, node_id in zip(rules, ex_ids, node_ids) :
+            if rule.previous and rule.previous.previous :   # Previous rule has nodes
+                prev_node = rule.previous.eval_nodes[ ex_id ]
+                if node_id == None :    # Rule fail
+                    new_node_ids.append(prev_node)    # => new theory predicts same as old theory
+                elif node_id == 0 :     # Rule true 
+                    new_node_ids.append(0)
+                else :
+                    new_node_ids.append(self.engine.getGrounding().addOrNode( ( prev_node, node_id ) ) ) 
+            else :
+                new_node_ids.append( node_id )
+        node_ids = new_node_ids
+        
         self.engine.clearClauses()
         
         # Initialize evaluation queue
@@ -378,12 +358,11 @@ class Grounding(object) :
         key = (nodetype, content)
         node_id = self.__nodes_by_content.get(key, None)
         
-            
         if node_id == None :    
             # Node doesn't exist yet
             node_id = self._addNode( *key )
             self.__nodes_by_content[ key ] = node_id
-
+            
             facts = set([])
             disjoint_facts = True
             for child in content :
@@ -391,9 +370,9 @@ class Grounding(object) :
                 if facts & child_facts : disjoint_facts = False
                 facts |= child_facts
             self._setUsedFacts(node_id, facts)
-        
+            
             if disjoint_facts :
-                self.setProbability(node_id, self._calculateProbability(nodetype, content))
+                self.setProbability(node_id, self.calculateProbability(nodetype, content))
                 
         return node_id
         
@@ -410,7 +389,7 @@ class Grounding(object) :
         else :
             return self.__nodes[index-self.__offset-1]
     
-    def _calculateProbability(self, nodetype, content) :
+    def calculateProbability(self, nodetype, content) :
         if nodetype == 'or' :
             f = lambda a, b : a*(1-b)
             p = 1
