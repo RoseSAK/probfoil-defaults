@@ -47,12 +47,14 @@ class PrologInterface(object) :
                 # Without literal there is nothing to do, except initialize data structures.
                 if not rule.eval_nodes :
                     rule.eval_nodes = [None] * len(rule.examples)
+                    rule.self_nodes = [None] * len(rule.examples)
                     rule.score_predict = [0] * len(rule.examples)
                     self.toGround.append((rule,[ x for x,y in rule.enum_examples() ]))
                     self.toScore.append((rule,[ x for x,y in rule.enum_examples() ]))
             else :
                 # Initialize eval_nodes and score_predict structures in rule
                 rule.eval_nodes = [None] * len(rule.examples)
+                rule.self_nodes = [None] * len(rule.examples)
                 rule.score_predict = [0] * len(rule.examples)
         
                 # Set up toGround, toScore and toEvaluate queues
@@ -60,6 +62,7 @@ class PrologInterface(object) :
                 toScore = []
                 toEvaluate = set([])
         
+                success = True
                 # Check whether we can do some simple pre-grounding
                 if rule.literal.arguments == rule.target.arguments :
                     # Example fully defines literal instance, check whether we grounded it before.
@@ -72,10 +75,21 @@ class PrologInterface(object) :
                         else :
                             # Fact was found! We can do a bit of grounding here.
                             if rule.literal.is_negated : fact_id = -fact_id
+                            
                             # Get the node id.
-                            parent_node = rule.parent.eval_nodes[ex_id]
-                            node_id = self.grounding.addAndNode( (parent_node, fact_id ) )
-                        
+                            parent_node = rule.parent.self_nodes[ex_id]
+                            if parent_node != None and parent_node > 0 :
+                                p_type, p_content = self.grounding.getNode(parent_node)
+                                if p_type == 'and' :
+                                    node_id = self.grounding.addAndNode( p_content + (fact_id,) )
+                                else :
+                                    node_id = self.grounding.addAndNode( (parent_node, fact_id ) )
+                            else :
+                                node_id = self.grounding.addAndNode( (parent_node, fact_id ) )
+                            
+                            # Store the self_node (i.e. the node used to evaluate just this rule)
+                            rule.self_nodes[ex_id] = node_id
+                            
                             if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes                
                                 prev_node = rule.previous.eval_nodes[ ex_id ]
                                 if node_id == None :    # Rule fail
@@ -84,6 +98,10 @@ class PrologInterface(object) :
                                     new_node = 0
                                 else :
                                     new_node = self.grounding.addOrNode( ( prev_node, node_id ) ) 
+                                    
+                                    if self.grounding.getProbability(new_node) == None :
+                                        success = False
+                                    
                             else :
                                 new_node = node_id
                         
@@ -98,13 +116,16 @@ class PrologInterface(object) :
                             else :
                                 # Probability available: store it, this rule+ex_id has been completely evaluated
                                 rule.score_predict[ex_id] = p
+                    if not success :
+                        print ('NEEDS EVALUATION:', rule, rule.previous)
                 else :
                     # We can't do any grounding yet
                     toGround = [ x for x,y in rule.enum_examples() ]
                     toScore = [ x for x,y in rule.enum_examples() ]
-            
+                    
                 # Add information to global queues, but only if any action is needed.    
                 if toGround : self.toGround.append( (rule, toGround) )
+                
                 if toScore : self.toScore.append( (rule, toScore) )
                 self.toEvaluate |= toEvaluate
             
@@ -158,6 +179,7 @@ class PrologInterface(object) :
                         new_node = node_id
             
                     # Store node information in rule and determine which nodes still need to be evaluated
+                    rule.self_nodes[ex_id] = node_id
                     rule.eval_nodes[ex_id] = new_node
                     p = self.grounding.getProbability(new_node)
                     if p == None :
@@ -460,14 +482,17 @@ class Grounding(object) :
             
             facts = set([])
             disjoint_facts = True
+            cf = []
             for child in content :
                 child_facts = self._getUsedFacts(child)
                 if facts & child_facts : disjoint_facts = False
                 facts |= child_facts
+                cf.append(child_facts)
             self._setUsedFacts(node_id, facts)
             
             if disjoint_facts :
-                self.setProbability(node_id, self.calculateProbability(nodetype, content))
+                p = self.calculateProbability(nodetype, content)
+                self.setProbability(node_id, p)
                 
         return node_id
         

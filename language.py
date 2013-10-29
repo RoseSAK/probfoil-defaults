@@ -40,6 +40,7 @@ class Rule(object) :
         Rule.ids += 1
         
         self.eval_nodes = None
+        self.self_nodes = None
         self.examples_to_evaluate = None
         
     def __add__(self, literal) :
@@ -264,7 +265,7 @@ class Rule(object) :
                         if n == 0 :
                             fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                             new_fact = self.knowledge.grounding.addFact(fact_name, p)
-                            self.eval_nodes[i] = self.knowledge.grounding.addOrNode( (prev_node, new_fact) )                            
+                            self.eval_nodes[i] = self.knowledge.grounding.addOrNode( (prev_node, new_fact) )
                         else :
                             nodetype, content = self.knowledge.grounding.getNode(abs(n))  
                         
@@ -332,6 +333,7 @@ class RuleHead(Rule) :
     
         self.score_predict = [1] * len(self.score_correct)
         self.eval_nodes = [0] * len(self.score_correct)
+        self.self_nodes = [0] * len(self.score_correct)
                 
     def _get_target(self) :
         return self.previous.target
@@ -410,6 +412,7 @@ class RootRule(Rule) :
         self.__score_correct = self.score_predict
         self.score_predict = [0] * len(self.__score_correct)
         self.eval_nodes = None
+        self.self_nodes = None
             
     def _str_parts(self) :
         return []
