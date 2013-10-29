@@ -22,7 +22,7 @@ from util import Log, WorkEnv, Timer
 import os
 
 from language import Literal, Language, RootRule
-from prolog_interface_yap import YapPrologInterface, PropPrologInterface
+from prolog_interface import PrologInterface
 from learn import ProbFOIL2, ProbFOIL1
 
 def parse_args(args) :
@@ -97,7 +97,7 @@ def main(arguments) :
 
       with Log('log', **parameters) :
        with Timer(category='') :    
-        p = YapPrologInterface(env)
+        p = PrologInterface(env)
         
         p.loadData(args.input)
         
@@ -128,11 +128,11 @@ def main(arguments) :
         try :
             result = lp.learn(r0)
         except Exception as e :
-            with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
+            with Log('grounding_stats', **vars(p.grounding.stats())) : pass
             with Log('error') : pass
             raise e
             
-        with Log('grounding_stats', **vars(p.engine.getGrounding().stats())) : pass
+        with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         
        print('##################################################################')
        print('#########################     RESULT     #########################')

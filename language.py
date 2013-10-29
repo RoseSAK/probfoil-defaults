@@ -263,10 +263,10 @@ class Rule(object) :
                     if prev_node != n :                        
                         if n == 0 :
                             fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
-                            new_fact = self.knowledge.engine.getGrounding().addFact(fact_name, p)
-                            self.eval_nodes[i] = self.knowledge.engine.getGrounding().addOrNode( (prev_node, new_fact) )                            
+                            new_fact = self.knowledge.grounding.addFact(fact_name, p)
+                            self.eval_nodes[i] = self.knowledge.grounding.addOrNode( (prev_node, new_fact) )                            
                         else :
-                            nodetype, content = self.knowledge.engine.getGrounding().getNode(abs(n))  
+                            nodetype, content = self.knowledge.grounding.getNode(abs(n))  
                         
                             if nodetype == 'or' :
                                 if content[0] == prev_node :
@@ -275,14 +275,14 @@ class Rule(object) :
                                     rule_node = content[0]
                                 
                                 fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
-                                new_fact = self.knowledge.engine.getGrounding().addFact(fact_name, p)
-                                new_node = self.knowledge.engine.getGrounding().addAndNode( (new_fact, rule_node) )
+                                new_fact = self.knowledge.grounding.addFact(fact_name, p)
+                                new_node = self.knowledge.grounding.addAndNode( (new_fact, rule_node) )
                             
-                                self.eval_nodes[i] = self.knowledge.engine.getGrounding().addOrNode( (prev_node, new_node) )
+                                self.eval_nodes[i] = self.knowledge.grounding.addOrNode( (prev_node, new_node) )
                             else :
                                 fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
-                                f = self.knowledge.engine.getGrounding().addFact(fact_name, p)
-                                self.eval_nodes[ i ] = self.knowledge.engine.getGrounding().addAndNode( (f, n) )
+                                f = self.knowledge.grounding.addFact(fact_name, p)
+                                self.eval_nodes[ i ] = self.knowledge.grounding.addAndNode( (f, n) )
                             
                         l = self.previous.score_predict[i] if self.previous else 0
                         u = self.score_predict[ i ]
