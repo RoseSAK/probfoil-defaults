@@ -116,8 +116,8 @@ class PrologInterface(object) :
                             else :
                                 # Probability available: store it, this rule+ex_id has been completely evaluated
                                 rule.score_predict[ex_id] = p
-                    if not success :
-                        print ('NEEDS EVALUATION:', rule, rule.previous)
+                    if not success and self.env['verbose'] > 1 :
+                         print ('Requires evaluation:', '\t'.join(rule.getTheory()))
                 else :
                     # We can't do any grounding yet
                     toGround = [ x for x,y in rule.enum_examples() ]
@@ -504,6 +504,7 @@ class Grounding(object) :
         return node_id
         
     def getNode(self, index) :
+        assert (index != None and index > 0)
         if index <= self.__offset :
             return self.__parent.getNode(index)
         else :
