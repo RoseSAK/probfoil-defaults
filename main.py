@@ -42,6 +42,7 @@ def parse_args(args) :
     p.add_argument('--minrules', type=int, default=0, help="Minimal number of rules to learn.")
     p.add_argument('--maxrules', type=int, default=-1, help="Maximal number of rules to learn.")
     p.add_argument('--dont_pack_queries', dest='pack_queries', action="store_false", help="Run ProbLog for individual refinements.")
+    p.add_argument('-o', '--output', type=str, default='probfoil.out', help="Output file.")
     
     return p.parse_args(args)
 
@@ -151,6 +152,30 @@ def main(arguments) :
        print(Timer.showTimers())        
        print('total',' => ', learn_time, 's', sep='')
        with Log('timers', total=learn_time, **Timer.TIMERS) : pass
+       
+       with open(args.output, 'w') as f_out :
+           write_evaluator_model(f_out, result, args.input)
+       
+def write_evaluator_model(outfile, result, infilename) :
+    
+    target = result.target
+    rule = result
+    output = []
+
+    with open(infilename) as f :
+        print(f.read(), file=outfile)
+    
+    while rule.previous :
+        body, prob = rule._str_parts()[0]
+        if not body : body = ['true']
+        output = ['%.8f::pf_eval_%s <- %s.' % (prob, target, ','.join(body) )] + output
+        rule = rule.previous
+    print ('\n'.join(output), file=outfile)
+    
+    for ex in result.examples :
+        print ('query(pf_eval_%s).' % target.withArgs(ex), file=outfile )
+        print ('query(%s).' % target.withArgs(ex), file=outfile )
+        
 
 def arff_to_pl(filename_in, filename_out) :
     with open(filename_in) as file_in :
