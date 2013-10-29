@@ -42,168 +42,176 @@ class PrologInterface(object) :
         # Put the rule in queue for evaluation.
         # Already computes as much grounding and evaluation as it can.
         
-        if not rule.literal : 
-            # Without literal there is nothing to do, except initialize data structures.
-            if not rule.eval_nodes :
+        with Timer(category="enqueue") :
+            if not rule.literal : 
+                # Without literal there is nothing to do, except initialize data structures.
+                if not rule.eval_nodes :
+                    rule.eval_nodes = [None] * len(rule.examples)
+                    rule.score_predict = [0] * len(rule.examples)
+                    self.toGround.append((rule,[ x for x,y in rule.enum_examples() ]))
+                    self.toScore.append((rule,[ x for x,y in rule.enum_examples() ]))
+            else :
+                # Initialize eval_nodes and score_predict structures in rule
                 rule.eval_nodes = [None] * len(rule.examples)
                 rule.score_predict = [0] * len(rule.examples)
-                self.toGround.append((rule,[ x for x,y in rule.enum_examples() ]))
-                self.toScore.append((rule,[ x for x,y in rule.enum_examples() ]))
-        else :
-            # Initialize eval_nodes and score_predict structures in rule
-            rule.eval_nodes = [None] * len(rule.examples)
-            rule.score_predict = [0] * len(rule.examples)
         
-            # Set up toGround, toScore and toEvaluate queues
-            toGround = []
-            toScore = []
-            toEvaluate = set([])
+                # Set up toGround, toScore and toEvaluate queues
+                toGround = []
+                toScore = []
+                toEvaluate = set([])
         
-            # Check whether we can do some simple pre-grounding
-            if rule.literal.arguments == rule.target.arguments :
-                # Example fully defines literal instance, check whether we grounded it before.
-                for ex_id, example in rule.enum_examples() :
-                    fact_id = self.grounding.getFact( str( Literal( rule.literal.functor, example) ) )
-                    if fact_id == None :
-                        # Fact wasn't found, we'll still need to do normal grounding
-                        toGround.append( ex_id )
-                        #toScore.append( ex_id )
-                    else :
-                        # Fact was found! We can do a bit of grounding here.
-                        if rule.literal.is_negated : fact_id = -fact_id
-                        # Get the node id.
-                        parent_node = rule.parent.eval_nodes[ex_id]
-                        node_id = self.grounding.addAndNode( (parent_node, fact_id ) )
+                # Check whether we can do some simple pre-grounding
+                if rule.literal.arguments == rule.target.arguments :
+                    # Example fully defines literal instance, check whether we grounded it before.
+                    for ex_id, example in rule.enum_examples() :
+                        fact_id = self.grounding.getFact( str( Literal( rule.literal.functor, example) ) )
+                        if fact_id == None :
+                            # Fact wasn't found, we'll still need to do normal grounding
+                            toGround.append( ex_id )
+                            #toScore.append( ex_id )
+                        else :
+                            # Fact was found! We can do a bit of grounding here.
+                            if rule.literal.is_negated : fact_id = -fact_id
+                            # Get the node id.
+                            parent_node = rule.parent.eval_nodes[ex_id]
+                            node_id = self.grounding.addAndNode( (parent_node, fact_id ) )
                         
-                        if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes                
-                            prev_node = rule.previous.eval_nodes[ ex_id ]
-                            if node_id == None :    # Rule fail
-                                new_node = prev_node    # => new theory predicts same as old theory
-                            elif node_id == 0 :     # Rule true 
-                                new_node = 0
+                            if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes                
+                                prev_node = rule.previous.eval_nodes[ ex_id ]
+                                if node_id == None :    # Rule fail
+                                    new_node = prev_node    # => new theory predicts same as old theory
+                                elif node_id == 0 :     # Rule true 
+                                    new_node = 0
+                                else :
+                                    new_node = self.grounding.addOrNode( ( prev_node, node_id ) ) 
                             else :
-                                new_node = self.grounding.addOrNode( ( prev_node, node_id ) ) 
-                        else :
-                            new_node = node_id
+                                new_node = node_id
                         
-                        rule.eval_nodes[ex_id] = new_node
+                            rule.eval_nodes[ex_id] = new_node
                     
-                        # And get the probability.
-                        p = self.grounding.getProbability(new_node)
-                        if p == None :
-                            # Calculation failed: needs advanced evaluation
-                            self.toEvaluate.add( new_node )
-                            toScore.append( ex_id )
-                        else :
-                            # Probability available: store it, this rule+ex_id has been completely evaluated
-                            rule.score_predict[ex_id] = p
-            else :
-                # We can't do any grounding yet
-                toGround = [ x for x,y in rule.enum_examples() ]
-                toScore = [ x for x,y in rule.enum_examples() ]
+                            # And get the probability.
+                            p = self.grounding.getProbability(new_node)
+                            if p == None :
+                                # Calculation failed: needs advanced evaluation
+                                self.toEvaluate.add( new_node )
+                                toScore.append( ex_id )
+                            else :
+                                # Probability available: store it, this rule+ex_id has been completely evaluated
+                                rule.score_predict[ex_id] = p
+                else :
+                    # We can't do any grounding yet
+                    toGround = [ x for x,y in rule.enum_examples() ]
+                    toScore = [ x for x,y in rule.enum_examples() ]
             
-            # Add information to global queues, but only if any action is needed.    
-            if toGround : self.toGround.append( (rule, toGround) )
-            if toScore : self.toScore.append( (rule, toScore) )
-            self.toEvaluate |= toEvaluate
+                # Add information to global queues, but only if any action is needed.    
+                if toGround : self.toGround.append( (rule, toGround) )
+                if toScore : self.toScore.append( (rule, toScore) )
+                self.toEvaluate |= toEvaluate
             
     def process_queue(self) :
-        
-        gp = []
-        # Create ground program.
-        for rule_id, rule_exids in enumerate(self.toGround) :
-            rule, ex_ids = rule_exids
+        with Timer(category="grounding") :
+            with Timer(category="grounding_generateprogram") :
+                gp = []
+                # Create ground program.
+                for rule_id, rule_exids in enumerate(self.toGround) :
+                    rule, ex_ids = rule_exids
             
-            if not rule.parent :
-                clause_pred =  str(rule.target.functor)
-            else :
-                clause_pred =  'pf_rule_%s' % rule_id
+                    if not rule.parent :
+                        # We are evaluating the target => everything we need is in the data.
+                        clause_pred =  str(rule.target.functor)
+                    else :
+                        # We are evaluating a candidate rule => add it to the ground program.
+                        clause_pred =  'pf_rule_%s' % rule_id
+                        clause = str(Literal( clause_pred, rule.target.arguments))
+                        clause += ':-' + ','.join(map(str,rule.literals) )
+                        clause += '.'
+                        gp.append( clause )
             
-            clause = str(Literal( clause_pred, rule.target.arguments))
-            if rule.parent :
-                clause += ':-' + ','.join(map(str,rule.literals) )
-                clause += '.'
-                gp.append( clause )
-            
-            for ex_id in ex_ids :
-                query = Literal('pf_query_%s_%s' % (rule_id, ex_id), [])
-                real_query = Literal( clause_pred, rule.examples[ex_id] )
-                gp.append( '%s :- %s.' % (query, real_query) )
-                gp.append( 'query(%s).' % (query, ) )
-                
-        # Call grounder
-        ground_result = []
-        if gp :
+                    # Add queries to ground program.
+                    for ex_id in ex_ids :
+                        query = Literal('pf_query_%s_%s' % (rule_id, ex_id), [])
+                        real_query = Literal( clause_pred, rule.examples[ex_id] )
+                        gp.append( '%s :- %s.' % (query, real_query) )
+                        gp.append( 'query(%s).' % (query, ) )
+
+            # Call grounder
+            ground_result = []
             names_nodes = self._ground(gp)            
             for name, value in names_nodes.items() :
                 if name.startswith('pf_query_') :
                     rule, ex_id = name.split('_')[2:]
                     ground_result.append( ( self.toGround[int(rule)][0], int(ex_id), int(value) ))
+
+            with Timer(category="grounding_process") :
+                # Process the grounding
+                for rule, ex_id, node_id in ground_result :
+                    # Add nodes for previous rules.
+                    if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes
+                        prev_node = rule.previous.eval_nodes[ ex_id ]
+                        if node_id == None :    # Rule fail
+                            new_node = prev_node    # => new theory predicts same as old theory
+                        elif node_id == 0 :     # Rule true 
+                            new_node = 0            # => new theory predicts true
+                        else :
+                            new_node = self.grounding.addOrNode( ( prev_node, node_id ) ) 
+                    else :
+                        new_node = node_id
+            
+                    # Store node information in rule and determine which nodes still need to be evaluated
+                    rule.eval_nodes[ex_id] = new_node
+                    p = self.grounding.getProbability(new_node)
+                    if p == None :
+                        # Calculation failed: needs advanced evaluation
+                        self.toEvaluate.add( new_node )
+                        self.toScore.append( (rule, (ex_id,)) )
+                    else :
+                        # Probability available: store it, this rule/example combination has been completely evaluated
+                        rule.score_predict[ex_id] = p
         
-        # Add nodes for previous rules
-        for rule, ex_id, node_id in ground_result :
-            if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes
+        with Timer(category="evaluate") :       
+            # Evaluate nodes in toEvaluate queue
+            if self.toEvaluate : 
+                # Convert grounding to CNF
+                with Timer(category='evaluate_converting') :
+                    cnf, facts = self.grounding.toCNF( self.toEvaluate )
+    
+                # Compile the CNF
+                evaluator = self._compile_cnf(cnf, facts)
+    
+                for node_id in self.toEvaluate :            
+                    with Timer(category='evaluate_evaluating') :
+                        p = evaluator.evaluate(node_id)
+                        self.grounding.setProbability(node_id, p)
                 
-                prev_node = rule.previous.eval_nodes[ ex_id ]
-                if node_id == None :    # Rule fail
-                    new_node = prev_node    # => new theory predicts same as old theory
-                elif node_id == 0 :     # Rule true 
-                    new_node = 0
-                else :
-                    new_node = self.grounding.addOrNode( ( prev_node, node_id ) ) 
-            else :
-                new_node = node_id
-                        
-            rule.eval_nodes[ex_id] = new_node
-            p = self.grounding.getProbability(new_node)
-            if p == None :
-                # Calculation failed: needs advanced evaluation
-                self.toEvaluate.add( new_node )
-                self.toScore.append( (rule, (ex_id,)) )
-            else :
-                # Probability available: store it, this rule+ex_id has been completely evaluated
-                rule.score_predict[ex_id] = p
-                
-        # Evaluate nodes in toEvaluate queue
-        if self.toEvaluate : 
-            # Convert grounding to CNF
-            with Timer(category='evaluate_converting') :
-                cnf, facts = self.grounding.toCNF( self.toEvaluate )
-        
-            # Compile the CNF
-            evaluator = self._compile_cnf(cnf, facts)
-        
-            for node_id in self.toEvaluate :            
-                with Timer(category='evaluate_evaluating') :
-                    p = evaluator.evaluate(node_id)
-                    self.grounding.setProbability(node_id, p)
-                    
-        # Score
-        for rule, ex_ids in self.toScore :
-            for ex_id in ex_ids :
-                node_id = rule.eval_nodes[ex_id]
-                p = self.grounding.getProbability(node_id)
-                rule.score_predict[ex_id] = p
-        
+            # Score
+            for rule, ex_ids in self.toScore :
+                for ex_id in ex_ids :
+                    node_id = rule.eval_nodes[ex_id]
+                    p = self.grounding.getProbability(node_id)
+                    rule.score_predict[ex_id] = p
+    
         # Clear queues
         self.toEvaluate = set([])        
         self.toGround = []
         self.toScore = []
 
     def _ground(self, program) :
-        with Timer(category='evaluate_grounding_writing') as tmr : 
-            pl_filename = self.env.tmp_path('probfoil.pl')
-            with open(pl_filename, 'w') as pl_file : 
-                print ('\n'.join(self.data), file=pl_file)
-                print ('\n'.join(program), file=pl_file)
+        if program :
+            with Timer(category='grounding_writing') as tmr : 
+                pl_filename = self.env.tmp_path('probfoil.pl')
+                with open(pl_filename, 'w') as pl_file : 
+                    print ('\n'.join(self.data), file=pl_file)
+                    print ('\n'.join(program), file=pl_file)
                 
-        with Timer(category='evaluate_grounding_grounding') as tmr : 
-            # 2) Call grounder in Yap
-            grounder_result = self._call_grounder( pl_filename)
+            with Timer(category='grounding_grounding') as tmr : 
+                # 2) Call grounder in Yap
+                grounder_result = self._call_grounder( pl_filename)
     
-        with Timer(category='evaluate_grounding_integrating') as tmr : 
-            # 3) Read in grounding and insert new things into Grounding data structure
-            return self.grounding.integrate(grounder_result)
+            with Timer(category='grounding_integrating') as tmr : 
+                # 3) Read in grounding and insert new things into Grounding data structure
+                return self.grounding.integrate(grounder_result)
+        else :
+            return {}
             
     def _call_grounder(self, in_file) :
         PROBLOG_GROUNDER=self.env['PROBLOGPATH'] + '/assist/ground_compact.pl'
