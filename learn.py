@@ -279,7 +279,7 @@ class PF1Score(object) :
         return (self.TP + self.TN ) / M
         
     def __str__(self) :
-        return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
+        return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
     
 class ProbFOIL1(LearningProblem) :
     
@@ -489,5 +489,5 @@ class PF2Score(object):
         return (TP + self.mPNP) / (TP + FP + self.M_ESTIMATE_M) 
 
     def __str__(self) :
-        return '%.3g %.3g %.3g %.3g' % (self.TP, self.TN, self.FP, self.FN )
+        return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
         

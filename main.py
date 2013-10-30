@@ -161,9 +161,6 @@ def write_evaluator_model(outfile, result, infilename) :
     target = result.target
     rule = result
     output = []
-
-    with open(infilename) as f :
-        print(f.read(), file=outfile)
     
     while rule.previous :
         body, prob = rule._str_parts()[0]
@@ -172,9 +169,8 @@ def write_evaluator_model(outfile, result, infilename) :
         rule = rule.previous
     print ('\n'.join(output), file=outfile)
     
-    for ex in result.examples :
-        print ('query(pf_eval_%s).' % target.withArgs(ex), file=outfile )
-        print ('query(%s).' % target.withArgs(ex), file=outfile )
+    print ('query(pf_eval_%s).' % target, file=outfile )
+    print ('query(%s).' % target, file=outfile )
         
 
 def arff_to_pl(filename_in, filename_out) :
