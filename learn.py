@@ -445,7 +445,7 @@ class PF2Score(object):
             if max_x == None or max_x > 1 - 1e-5 :
                 x = 1
                 TP_x = pl_running + x * (dS_total - dS_running) + x * TP_base + TP_previous
-                FP_x = x * dS_running - pl_running
+                FP_x = x * dS_running - pl_running + FP_previous
             
                 TN_x = N - FP_x
                 FN_x = P - TP_x
