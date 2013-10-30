@@ -120,6 +120,9 @@ class Rule(object) :
     learning_problem = property( lambda s : s._get_learning_problem() )
     root = property( lambda s : s._get_root() )
     
+    def __repr__(self) :
+        return str(self)
+    
     def __str__(self) :
         parts = self._str_parts()
         lines = []
