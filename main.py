@@ -61,33 +61,7 @@ def main(arguments) :
             sys.exit(1)
     
     parameters = vars(args)
-    
-    if args.target == None :
-        with open(args.input, 'r') as f:
-            for line in f :
-                line = line.strip()
-                if line.startswith('%LEARN') or line.startswith('#LEARN') :
-                    line = line.split()
-                    args.target = line[1]
-                    args.modes = line[2:]
-    if args.target == None :
-        print( 'No target specified.')
-        sys.exit(1)
-                        
-    target_pred, target_arity = args.target.split('/')
-    target_arity = int(target_arity)
-    letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    target_args = [] 
-    for x in range(0, target_arity) :
-        target_args.append(letters[x])
-    target = Literal(target_pred, target_args)
 
-    modes = list(map(lambda x : Literal(*x.split('/')), args.modes))
-      
-    learn_time = time.time()  
-
-    
-    
     with open(args.log, 'w') as Log.LOG_FILE :
      with WorkEnv(PROBLOGPATH=PROBLOGPATH, verbose=args.verbose) as env :    # Set up a temporary working directory
 
@@ -95,6 +69,34 @@ def main(arguments) :
           pl_file = env.tmp_path(os.path.splitext(os.path.split( args.input )[1])[0] + '.pl')
           arff_to_pl( args.input, pl_file )
           args.input = pl_file
+
+    
+      if args.target == None :
+        with open(args.input, 'r') as f:
+            for line in f :
+                line = line.strip()
+                if line.startswith('%LEARN') or line.startswith('#LEARN') :
+                    line = line.split()
+                    args.target = line[1]
+                    args.modes = line[2:]
+      if args.target == None :
+          print( 'No target specified.')
+          sys.exit(1)
+                        
+      target_pred, target_arity = args.target.split('/')
+      target_arity = int(target_arity)
+      letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+      target_args = [] 
+      for x in range(0, target_arity) :
+         target_args.append(letters[x])
+      target = Literal(target_pred, target_args)
+
+      modes = list(map(lambda x : Literal(*x.split('/')), args.modes))
+      
+      learn_time = time.time()  
+
+    
+    
 
       with Log('log', **parameters) :
        with Timer(category='') :    
@@ -162,15 +164,19 @@ def write_evaluator_model(outfile, result, infilename) :
     rule = result
     output = []
     
+    print ('%%TARGET: %s' % target, file=outfile)
+    
     while rule.previous :
         body, prob = rule._str_parts()[0]
         if not body : body = ['true']
-        output = ['%.8f::pf_eval_%s <- %s.' % (prob, target, ','.join(body) )] + output
+        output += ['%.8f::pf_eval_%s <- %s.' % (prob, target, ','.join(body) )]
         rule = rule.previous
-    print ('\n'.join(output), file=outfile)
+    print ('\n'.join(reversed(output)), file=outfile)
     
-    print ('query(pf_eval_%s).' % target, file=outfile )
-    print ('query(%s).' % target, file=outfile )
+
+    
+    # print ('query(pf_eval_%s).' % target, file=outfile )
+    # print ('query(%s).' % target, file=outfile )
         
 
 def arff_to_pl(filename_in, filename_out) :

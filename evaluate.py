@@ -1,6 +1,26 @@
 #! /usr/bin/env python3
 import sys, os
 
+def arff_to_pl(filename_in, file_out) :
+    with open(filename_in) as file_in :
+        line_num = 0
+        for line_in in file_in :
+            line_in = line_in.strip()
+            if line_in and not line_in.startswith('@') and not line_in.startswith('#') :
+                values = list(map(float,line_in.split(',')))
+                num_atts = len(values)
+                line_out = '\n'.join( '%.6f::att%s(%s).' % (float(val), att, line_num) for att, val in enumerate(values) ) + '\n\n'
+                
+                if line_num == 0 :
+                    # write LEARN header
+                    line_out = '%%LEARN att%s/1 ' % (len(values)-1) + ' '.join( 'att%s/+' % att for att, val in enumerate(values[:-1]) )  + '\n'
+                    file_out.write(line_out)
+                line_out = '\n'.join( '%.6f::att%s(%s).' % (float(val), att, line_num) for att, val in enumerate(values) ) + '\n\n'
+                file_out.write(line_out)
+                line_num += 1
+        line_out = '\n'.join( 'base(att%s(id)).' % att for att in range(0, num_atts) ) + '\n\n'
+        file_out.write(line_out)    
+
 
 def main( probfoil_output_file, test_file ) :
 
@@ -23,17 +43,48 @@ def main( probfoil_output_file, test_file ) :
     
     with WorkEnv(None,Logger(), persistent=WorkEnv.NEVER_KEEP) as env :
         
+        # First evaluate 'correct'
+
         file_in = env.tmp_path('model.pl')
+
+        with open(probfoil_output_file) as f_in :
+            for line in f_in :
+                line = line.strip()
+                if line.startswith('%TARGET: ') :
+                    target = line[9:]
+                    break
+
         
         with open(file_in, 'w') as f_out :
-            with open(test_file) as f_in :
-                print( f_in.read(), file=f_out )
+            if test_file.endswith('.arff') :
+                arff_to_pl(test_file, f_out)
+            else :
+                with open(test_file) as f_in :
+                    print( f_in.read(), file=f_out )
+            print ('query(%s).' % target, file=f_out )
+                    
+        result_correct = engine.execute(file_in, env)
+        
+        with open(file_in, 'w') as f_out :
+            if test_file.endswith('.arff') :
+                arff_to_pl(test_file, f_out)
+            else :
+                with open(test_file) as f_in :
+                    print( f_in.read(), file=f_out )
             with open(probfoil_output_file) as f_in :
-                print( f_in.read(), file=f_out )
+                print (f_in.read(), file=f_out)
+            
+            for x in result_correct :
+                print ('query(pf_eval_%s).' % x, file=f_out )
+            
+        result_predict = engine.execute(file_in, env)
         
-        result = engine.execute(file_in, env)
+        result_all = {}
+        result_all.update(result_correct)
+        result_all.update(result_predict)
         
-        evaluate( result.items() )
+        
+        evaluate( result_all.items() )
 
 def evaluate( problog_results ) :
             
@@ -49,7 +100,10 @@ def evaluate( problog_results ) :
         else :
             correct[key] = float(value)
     
-    assert( len(correct) == len(predict) )
+    if len(correct) != len(predict) :
+        print (correct, predict)
+        raise Exception('Number of predictions does not match number of examples.')
+        
     
     pairs = [ (correct[k], predict[k]) for k in correct ]
     

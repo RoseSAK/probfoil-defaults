@@ -116,7 +116,7 @@ class PrologInterface(object) :
                             else :
                                 # Probability available: store it, this rule+ex_id has been completely evaluated
                                 rule.score_predict[ex_id] = p
-                    if not success and self.env['verbose'] > 1 :
+                    if not success and self.env['verbose'] > 3 :
                          print ('Requires evaluation:', '\t'.join(rule.getTheory()))
                 else :
                     # We can't do any grounding yet
