@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
+
 import math
 from util import Log, Beam, Timer
 from language import RuleHead
@@ -283,18 +285,18 @@ class PF1Score(object) :
     
 class ProbFOIL1(LearningProblem) :
     
-    def __init__(self, *args, m_estimate_m=10, **kwdargs) :
-        super().__init__(*args, **kwdargs)
-        self.M_ESTIMATE_M = m_estimate_m
+    def __init__(self, *args,  **kwdargs) :
+        super(ProbFOIL1,self).__init__(*args, **kwdargs)
+        self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
     
     def calculateScore(self, rule) :
         return PF1Score(rule.score_correct, rule.score_predict, self.M_ESTIMATE_M)
 
 class ProbFOIL2(LearningProblem) :
     
-    def __init__(self, *args, m_estimate_m=10, **kwdargs) :
-        super().__init__(*args, **kwdargs)
-        self.M_ESTIMATE_M = m_estimate_m
+    def __init__(self, *args, **kwdargs) :
+        super(ProbFOIL2,self).__init__(*args, **kwdargs)
+        self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
     
     def calculateScore(self, rule) :
         if not rule.previous :

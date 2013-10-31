@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
+
 import os
 import time
 import math
@@ -327,14 +329,13 @@ class PrologInterface(object) :
             if sys.path[-1] != self.env['PROBLOGPATH'] + '/src/' :
                 sys.path.append(self.env['PROBLOGPATH'] + '/src/')
             # Evaluate DDNNF
-            from compilation.compile import DDNNFFile
-            from evaluation.evaluate import FileOptimizedEvaluator
+            # from compilation.compile import DDNNFFile
+            # from evaluation.evaluate import FileOptimizedEvaluator
         
           with Timer(category='evaluate_evaluating') :
-            ddnnf = DDNNFFile(nnf_file, None)
-            ddnnf.atoms = lambda : list(range(1,len(self.grounding)+1))   # OMFG what a hack
-            
-            return self._construct_evaluator(ddnnf, facts)
+            # ddnnf = DDNNFFile(nnf_file, None)
+            # ddnnf.atoms = lambda : list(range(1,len(self.grounding)+1))   # OMFG what a hack
+            return self._construct_evaluator(nnf_file, facts, list(range(1,len(self.grounding)+1)))
     
     def _rewrite_facts(self, facts) :
         return facts
@@ -342,8 +343,8 @@ class PrologInterface(object) :
     def _get_examples_for_queue(self, rule) :
         return rule.enum_examples()
             
-    def _construct_evaluator(self, ddnnf, facts) :
-        return DefaultEvaluator(ddnnf, self._rewrite_facts(facts))
+    def _construct_evaluator(self, ddnnf, facts, atoms) :
+        return DefaultEvaluator(ddnnf, self._rewrite_facts(facts), atoms)
         
     def loadData(self, filename) :
         
@@ -356,14 +357,37 @@ class PrologInterface(object) :
         
 class DefaultEvaluator(object) :
     
-    def __init__(self, knowledge, facts) :
+    def __init__(self, knowledge, facts, atoms) :
         self.__knowledge = knowledge
         self.__facts = facts
         
         if knowledge :
-            from evaluation.evaluate import FileOptimizedEvaluator
-            self.__base = FileOptimizedEvaluator()
-            self.__result = self.__base(knowledge=self.__knowledge, probabilities=self.__facts, queries=None, env=None)[1]
+            probabilities = self.__facts
+            # 1) extract atoms
+            weights = []
+            names = atoms
+            for atom in names :
+                try :
+                    weight = probabilities[atom]
+                    weights.append( (weight, 1-weight) )
+                except KeyError :
+                    weights.append( (1.0, 1.0) )
+
+            # 2) reverse the DDNNF
+            with open(knowledge, 'r') as f_in :
+                with open(knowledge + '.reverse', 'w') as f_out :
+                    for line in reversed(f_in.readlines()) :
+                        f_out.write(line.strip() + '\n')
+
+                    
+            # 3) call the existing code for evaluating the DDNNF
+            import evaluatennf as ennf
+            trueProbs = ennf.evaluate(knowledge, weights)
+        
+            # 4) read probabilities and link them to atom names
+            atom_prob = dict(zip(names, trueProbs))
+            
+            self.__result = atom_prob
         else :
             self.__result = {}
         self.__result.update(facts)

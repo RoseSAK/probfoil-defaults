@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 
 import sys, time
 from util import Log, WorkEnv, Timer
@@ -128,12 +129,12 @@ def main(arguments) :
             print ('Targets:', ', '.join(map(lambda x : '%.5f' % x, r0.score_correct) ) )
         
         if args.verbose: print('Start learning...')
-        try :
-            result = lp.learn(r0)
-        except Exception as e :
-            with Log('grounding_stats', **vars(p.grounding.stats())) : pass
-            with Log('error') : pass
-            raise e
+        #try :
+        result = lp.learn(r0)
+        # except Exception as e :
+        #     with Log('grounding_stats', **vars(p.grounding.stats())) : pass
+        #     with Log('error') : pass
+        #     raise e
             
         with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         
