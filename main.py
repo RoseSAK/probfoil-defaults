@@ -50,21 +50,11 @@ def parse_args(args) :
 def main(arguments) :
     
     args = parse_args(arguments)
-    
-    if 'PROBLOGPATH' in os.environ :
-        PROBLOGPATH = os.environ['PROBLOGPATH']
-    else :
-        try :
-            import settings
-            PROBLOGPATH = settings.PROBLOGPATH
-        except Exception :
-            print('PROBLOGPATH environment variable not set. Set it with \'export PROBLOGPATH=<path to problog>\' or define it in the file \'settings.py\'.', file=sys.stderr)
-            sys.exit(1)
-    
+        
     parameters = vars(args)
 
     with open(args.log, 'w') as Log.LOG_FILE :
-     with WorkEnv(PROBLOGPATH=PROBLOGPATH, verbose=args.verbose) as env :    # Set up a temporary working directory
+     with WorkEnv(verbose=args.verbose) as env :    # Set up a temporary working directory
 
       if args.input.endswith('.arff') :
           pl_file = env.tmp_path(os.path.splitext(os.path.split( args.input )[1])[0] + '.pl')

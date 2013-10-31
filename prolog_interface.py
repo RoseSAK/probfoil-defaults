@@ -22,6 +22,11 @@ import sys
 import re
 import subprocess
 
+def bin_path(relative) :
+    return os.path.join( os.path.split( os.path.abspath(__file__) )[0], relative )
+
+sys.path.append( bin_path('/problog/') )
+
 from util import Log, Timer
 from language import Literal
 
@@ -238,7 +243,7 @@ class PrologInterface(object) :
             return {}
             
     def _call_grounder(self, in_file) :
-        PROBLOG_GROUNDER=self.env['PROBLOGPATH'] + '/assist/ground_compact.pl'
+        PROBLOG_GROUNDER= bin_path('problog/ground_compact.pl')
                 
         # 2) Call yap to do the actual grounding
         ground_program = self.env.tmp_path('probfoil.ground')
@@ -247,12 +252,8 @@ class PrologInterface(object) :
         
         evidence = '/dev/null'
         queries = '/dev/null'
-        
-        if sys.path[-1] != self.env['PROBLOGPATH'] + '/src/' :
-            sys.path.append(self.env['PROBLOGPATH'] + '/src/')
-        
+                
         import subprocess
-        self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
         output = subprocess.check_output(['yap', "-L", PROBLOG_GROUNDER , '--', in_file, ground_program, evidence, queries ])
                 
         return self._read_grounding(ground_program)
@@ -323,11 +324,9 @@ class PrologInterface(object) :
                     print(line,file=f)
                  
             with Timer('Compiling %s' % cnf[0], verbose=self.env['verbose']>1) :
-                executable = self.env['PROBLOGPATH'] + '/assist/linux_x86_64/dsharp'
+                executable = bin_path('problog/dsharp')
                 subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
         
-            if sys.path[-1] != self.env['PROBLOGPATH'] + '/src/' :
-                sys.path.append(self.env['PROBLOGPATH'] + '/src/')
             # Evaluate DDNNF
             # from compilation.compile import DDNNFFile
             # from evaluation.evaluate import FileOptimizedEvaluator
