@@ -376,7 +376,7 @@ class PrologInterface(object) :
         return rule.enum_examples()
             
     def _construct_evaluator(self, ddnnf, facts) :
-        return DefaultEvaluator(ddnnf, self._rewrite_facts(facts))
+        return DefaultEvaluator(ddnnf, self._rewrite_facts(facts), self)
         
     def loadData(self, datafile) :
         self.datafile = datafile
@@ -384,9 +384,10 @@ class PrologInterface(object) :
         
 class DefaultEvaluator(object) :
     
-    def __init__(self, knowledge, facts) :
+    def __init__(self, knowledge, facts, pl) :
         self.__knowledge = knowledge
         self.__facts = facts
+        self.__pl = pl
         
         if knowledge :
             # 2) reverse the DDNNF
@@ -398,13 +399,8 @@ class DefaultEvaluator(object) :
                     
           with Timer(category='evaluate_evaluating_evaluating') :
              
-            for x in self.__facts :
-                f1 = self.__facts[x]
-                try :
-                    dims = len(f1)
-                except TypeError :
-                    dims = None
-                break
+            dims = self.__pl.datafile.dimension
+                
             # 3) call the existing code for evaluating the DDNNF
             import evaluatennf as ennf
             trueProbs = ennf.evaluate(knowledge, self, dims)
@@ -733,6 +729,7 @@ class DataFile(object) :
         self._pl_data = []
         self.target = None
         self.modes = None
+        self.dimension = None
 
         self._read()
         
@@ -787,6 +784,7 @@ class ARFFDataFile(DataFile) :
     
     def __init__(self, filename) :
         super(ARFFDataFile, self).__init__(filename)
+        self.dimension = self.value_matrix.shape[1]
         
     def toProlog(self) :
         return '\n'.join(self._pl_data)
