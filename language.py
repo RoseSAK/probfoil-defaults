@@ -32,7 +32,7 @@ class Rule(object) :
         self.parent = parent
         self.literal = None
         self.__score = None
-        self.score_predict = None
+        self.__score_predict = None
         self.__identifier = Rule.ids
         if parent :
             self.__length = len(parent) + 1
@@ -40,9 +40,39 @@ class Rule(object) :
             self.__length = 1
         Rule.ids += 1
         
-        self.eval_nodes = None
-        self.self_nodes = None
+        self.__eval_nodes = None
+        self.__self_nodes = None
         self.examples_to_evaluate = None
+        
+    def initSelfNodes(self, value=None) :
+        self.__self_nodes = [value] * len( self.examples )
+    
+    def initEvalNodes(self, value=None) :
+        self.__eval_nodes = [value] * len( self.examples )
+        
+    def initScorePredict(self, value=0) :
+        self.__score_predict = [value] * len( self.examples )
+        
+    def getSelfNode(self, ex_id) :
+        return self.__self_nodes[ex_id]
+    
+    def getEvalNode(self, ex_id) :
+        return self.__eval_nodes[ex_id]
+        
+    def setSelfNode(self, ex_id, node_id) :
+        self.__self_nodes[ex_id] = node_id
+    
+    def setEvalNode(self, ex_id, node_id) :
+        self.__eval_nodes[ex_id] = node_id
+        
+    def getScorePredict(self, ex_id=None) :
+        if ex_id == None :
+            return self.__score_predict
+        else :
+            return self.__score_predict[ex_id]
+        
+    def setScorePredict(self, ex_id, score) :
+        self.__score_predict[ex_id] = score
         
     def __add__(self, literal) :
         """Adds the given literal to the body of the rule and returns the new rule."""
@@ -88,7 +118,7 @@ class Rule(object) :
         
         elif self.parent :
             for ex_id, example in self.parent.enum_examples() :
-                if self.parent.score_predict[ex_id] != 0 :
+                if self.parent.getScorePredict(ex_id) != 0 :
                     yield ex_id, example
         else :
             for x in enumerate(self.examples) :
@@ -229,7 +259,7 @@ class Rule(object) :
         return l
     
     score_correct = property( lambda s: s._get_score_correct() )
-    score_predict = property( lambda s : s._get_score_predict(), lambda s,v : s._set_score_predict(v) )
+    #score_predict = property( lambda s : s._get_score_predict(), lambda s,v : s._set_score_predict(v) )
         
     score = property ( lambda s : s._get_score() )
     
@@ -258,10 +288,12 @@ class Rule(object) :
         
         if self.probability != 1 :
             p = self.probability
-            for i,n in enumerate(self.eval_nodes) :
+            for i, ex in self.enum_examples() :
+                n = self.getEvalNode(i)
+                
                 if n != None :
-                    if self.previous.eval_nodes :
-                        prev_node = self.previous.eval_nodes[i]
+                    if self.previous.previous :
+                        prev_node = self.previous.getEvalNode(i)
                     else :
                         prev_node = None
 
@@ -283,15 +315,15 @@ class Rule(object) :
                                 new_fact = self.knowledge.grounding.addFact(fact_name, p)
                                 new_node = self.knowledge.grounding.addAndNode( (new_fact, rule_node) )
                             
-                                self.eval_nodes[i] = self.knowledge.grounding.addOrNode( (prev_node, new_node) )
+                                self.setEvalNode(i, self.knowledge.grounding.addOrNode( (prev_node, new_node) ) )
                             else :
                                 fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                                 f = self.knowledge.grounding.addFact(fact_name, p)
-                                self.eval_nodes[ i ] = self.knowledge.grounding.addAndNode( (f, n) )
+                                self.setEvalNode( i, self.knowledge.grounding.addAndNode( (f, n) ) )
                             
-                        l = self.previous.score_predict[i] if self.previous else 0
-                        u = self.score_predict[ i ]
-                        self.score_predict[ i ] = (u-l) * p + l 
+                        l = self.previous.getScorePredict(i) if self.previous else 0
+                        u = self.getScorePredict(i)
+                        self.setScorePredict(i, (u-l) * p + l )
                     
         return self
     
@@ -335,10 +367,11 @@ class RuleHead(Rule) :
         self._new_vars = set([])
         self._body_vars = set([])
     
-        self.score_predict = [1] * len(self.score_correct)
-        self.eval_nodes = [0] * len(self.score_correct)
-        self.self_nodes = [0] * len(self.score_correct)
-                
+        self.initScorePredict(1)
+        
+        self.initEvalNodes(0)
+        self.initSelfNodes(0)
+                        
     def _get_target(self) :
         return self.previous.target
     
@@ -413,8 +446,8 @@ class RootRule(Rule) :
         
         self.knowledge.enqueue( self )  
         self.knowledge.process_queue()
-        self.__score_correct = self.score_predict
-        self.score_predict = [0] * len(self.__score_correct)
+        self.__score_correct = self.getScorePredict()
+        self.initScorePredict()
         self.eval_nodes = None
         self.self_nodes = None
             

@@ -52,17 +52,17 @@ class PrologInterface(object) :
         with Timer(category="enqueue") :
             if not rule.literal : 
                 # Without literal there is nothing to do, except initialize data structures.
-                if not rule.eval_nodes :
-                    rule.eval_nodes = [None] * len(rule.examples)
-                    rule.self_nodes = [None] * len(rule.examples)
-                    rule.score_predict = [0] * len(rule.examples)
+                if not rule.previous :  # Root rule
+                    rule.initEvalNodes()
+                    rule.initSelfNodes()
+                    rule.initScorePredict()
                     self.toGround.append((rule,[ x for x,y in rule.enum_examples() ]))
                     self.toScore.append((rule,[ x for x,y in rule.enum_examples() ]))
             else :
                 # Initialize eval_nodes and score_predict structures in rule
-                rule.eval_nodes = [None] * len(rule.examples)
-                rule.self_nodes = [None] * len(rule.examples)
-                rule.score_predict = [0] * len(rule.examples)
+                rule.initEvalNodes()
+                rule.initSelfNodes()
+                rule.initScorePredict()
         
                 # Set up toGround, toScore and toEvaluate queues
                 toGround = []
@@ -84,7 +84,7 @@ class PrologInterface(object) :
                             if rule.literal.is_negated : fact_id = -fact_id
                             
                             # Get the node id.
-                            parent_node = rule.parent.self_nodes[ex_id]
+                            parent_node = rule.parent.getSelfNode(ex_id)
                             if parent_node != None and parent_node > 0 :
                                 p_type, p_content = self.grounding.getNode(parent_node)
                                 if p_type == 'and' :
@@ -95,10 +95,10 @@ class PrologInterface(object) :
                                 node_id = self.grounding.addAndNode( (parent_node, fact_id ) )
                             
                             # Store the self_node (i.e. the node used to evaluate just this rule)
-                            rule.self_nodes[ex_id] = node_id
+                            rule.setSelfNode(ex_id, node_id)
                             
-                            if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes                
-                                prev_node = rule.previous.eval_nodes[ ex_id ]
+                            if rule.previous and rule.previous.previous :   # Previous rule is not root
+                                prev_node = rule.previous.getEvalNode(ex_id)
                                 if node_id == None :    # Rule fail
                                     new_node = prev_node    # => new theory predicts same as old theory
                                 elif node_id == 0 :     # Rule true 
@@ -112,7 +112,7 @@ class PrologInterface(object) :
                             else :
                                 new_node = node_id
                         
-                            rule.eval_nodes[ex_id] = new_node
+                            rule.setEvalNode(ex_id, new_node)
                     
                             # And get the probability.
                             p = self.grounding.getProbability(new_node)
@@ -122,7 +122,7 @@ class PrologInterface(object) :
                                 toScore.append( ex_id )
                             else :
                                 # Probability available: store it, this rule+ex_id has been completely evaluated
-                                rule.score_predict[ex_id] = p
+                                rule.setScorePredict(ex_id, p)
                     if not success and self.env['verbose'] > 3 :
                          print ('Requires evaluation:', '\t'.join(rule.getTheory()))
                 else :
@@ -174,8 +174,8 @@ class PrologInterface(object) :
                 # Process the grounding
                 for rule, ex_id, node_id in ground_result :
                     # Add nodes for previous rules.
-                    if rule.previous and rule.previous.eval_nodes :   # Previous rule has nodes
-                        prev_node = rule.previous.eval_nodes[ ex_id ]
+                    if rule.previous and rule.previous.previous :   # Previous rule has nodes
+                        prev_node = rule.previous.getEvalNode( ex_id )
                         if node_id == None :    # Rule fail
                             new_node = prev_node    # => new theory predicts same as old theory
                         elif node_id == 0 :     # Rule true 
@@ -186,8 +186,8 @@ class PrologInterface(object) :
                         new_node = node_id
             
                     # Store node information in rule and determine which nodes still need to be evaluated
-                    rule.self_nodes[ex_id] = node_id
-                    rule.eval_nodes[ex_id] = new_node
+                    rule.setSelfNode(ex_id, node_id)
+                    rule.setEvalNode(ex_id, new_node)
                     p = self.grounding.getProbability(new_node)
                     if p == None :
                         # Calculation failed: needs advanced evaluation
@@ -195,7 +195,7 @@ class PrologInterface(object) :
                         self.toScore.append( (rule, (ex_id,)) )
                     else :
                         # Probability available: store it, this rule/example combination has been completely evaluated
-                        rule.score_predict[ex_id] = p
+                        rule.setScorePredict(ex_id, p)
         
         with Timer(category="evaluate") :       
             # Evaluate nodes in toEvaluate queue
@@ -215,9 +215,9 @@ class PrologInterface(object) :
             # Score
             for rule, ex_ids in self.toScore :
                 for ex_id in ex_ids :
-                    node_id = rule.eval_nodes[ex_id]
+                    node_id = rule.getEvalNode(ex_id)
                     p = self.grounding.getProbability(node_id)
-                    rule.score_predict[ex_id] = p
+                    rule.setScorePredict(ex_id, p)
     
         # Clear queues
         self.toEvaluate = set([])        
@@ -356,11 +356,13 @@ class DefaultEvaluator(object) :
         
         if knowledge :
             # 2) reverse the DDNNF
+          with Timer(category='evaluate_evaluating_reversing') :
             with open(knowledge, 'r') as f_in :
                 with open(knowledge + '.reverse', 'w') as f_out :
                     for line in reversed(f_in.readlines()) :
                         f_out.write(line.strip() + '\n')
                     
+          with Timer(category='evaluate_evaluating_evaluating') :
             # 3) call the existing code for evaluating the DDNNF
             import evaluatennf as ennf
             trueProbs = ennf.evaluate(knowledge, self)

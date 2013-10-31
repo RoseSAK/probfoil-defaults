@@ -216,7 +216,7 @@ class LearningProblem(object) :
             elif r.max_significance < self.SIGNIFICANCE :
                 # Rule cannot reach required significance => it's useless
                 with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
-            elif not r._new_vars and r.score_predict == r.parent.score_predict :
+            elif not r._new_vars and r.getScorePredict() == r.parent.getScorePredict() :
                 # Predictions are indentical and new rule does not introduce a new variable
                 with Log('rejected', reason="no improvement", literal=r.literal, score=r.score ) : pass
             elif best_score != None and r.localScoreMax <= best_score and r.localScore < best_score :
@@ -290,7 +290,7 @@ class ProbFOIL1(LearningProblem) :
         self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
     
     def calculateScore(self, rule) :
-        return PF1Score(rule.score_correct, rule.score_predict, self.M_ESTIMATE_M)
+        return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M)
 
 class ProbFOIL2(LearningProblem) :
     
@@ -300,15 +300,15 @@ class ProbFOIL2(LearningProblem) :
     
     def calculateScore(self, rule) :
         if not rule.previous :
-            return PF1Score(rule.score_correct, rule.score_predict, self.M_ESTIMATE_M)
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M)
         else :
             # TODO store this information somewhere
-            previous_prediction = rule.previous.score_predict
+            previous_prediction = rule.previous.getScorePredict()
             # if rule.previous.probability != 1 :
             #     p = rule.previous.probability
             #     previous_prediction = [ a + (b-a)*p   for a,b in zip(rule.previous.previous.score_predict, previous_prediction) ]
             
-            result = PF2Score(rule.score_correct, rule.score_predict, previous_prediction, self.M_ESTIMATE_M)
+            result = PF2Score(rule.score_correct, rule.getScorePredict(), previous_prediction, self.M_ESTIMATE_M)
             return result
 
 class PF2Score(object):
