@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python
 
 
 # Copyright (C) 2013 Anton Dries (anton.dries@cs.kuleuven.be)
