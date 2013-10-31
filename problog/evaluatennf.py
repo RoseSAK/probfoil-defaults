@@ -296,8 +296,8 @@ def evaluate(ddnnf, weights, dims=None) :
     else :
         if not dims :
             counter = C2DAsAC(ddnnf, MathMath())
-            pEvidence, trueProbs = counter.probs(lambda variable: weights[variable-1])
+            pEvidence, trueProbs = counter.probs(lambda variable: weights[variable])
         else :    
             counter = C2DAsAC(ddnnf, MathNP(dims))
-            pEvidence, trueProbs = counter.probs(lambda variable: weights[variable-1])
+            pEvidence, trueProbs = counter.probs(lambda variable: weights[variable])
         return trueProbs     

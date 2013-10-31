@@ -326,15 +326,9 @@ class PrologInterface(object) :
             with Timer('Compiling %s' % cnf[0], verbose=self.env['verbose']>1) :
                 executable = bin_path('problog/dsharp')
                 subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
-        
-            # Evaluate DDNNF
-            # from compilation.compile import DDNNFFile
-            # from evaluation.evaluate import FileOptimizedEvaluator
-        
+                
           with Timer(category='evaluate_evaluating') :
-            # ddnnf = DDNNFFile(nnf_file, None)
-            # ddnnf.atoms = lambda : list(range(1,len(self.grounding)+1))   # OMFG what a hack
-            return self._construct_evaluator(nnf_file, facts, list(range(1,len(self.grounding)+1)))
+            return self._construct_evaluator(nnf_file, facts)
     
     def _rewrite_facts(self, facts) :
         return facts
@@ -342,8 +336,8 @@ class PrologInterface(object) :
     def _get_examples_for_queue(self, rule) :
         return rule.enum_examples()
             
-    def _construct_evaluator(self, ddnnf, facts, atoms) :
-        return DefaultEvaluator(ddnnf, self._rewrite_facts(facts), atoms)
+    def _construct_evaluator(self, ddnnf, facts) :
+        return DefaultEvaluator(ddnnf, self._rewrite_facts(facts))
         
     def loadData(self, filename) :
         
@@ -356,37 +350,25 @@ class PrologInterface(object) :
         
 class DefaultEvaluator(object) :
     
-    def __init__(self, knowledge, facts, atoms) :
+    def __init__(self, knowledge, facts) :
         self.__knowledge = knowledge
         self.__facts = facts
         
         if knowledge :
-            probabilities = self.__facts
-            # 1) extract atoms
-            weights = []
-            names = atoms
-            for atom in names :
-                try :
-                    weight = probabilities[atom]
-                    weights.append( (weight, 1-weight) )
-                except KeyError :
-                    weights.append( (1.0, 1.0) )
-
             # 2) reverse the DDNNF
             with open(knowledge, 'r') as f_in :
                 with open(knowledge + '.reverse', 'w') as f_out :
                     for line in reversed(f_in.readlines()) :
                         f_out.write(line.strip() + '\n')
-
                     
             # 3) call the existing code for evaluating the DDNNF
             import evaluatennf as ennf
-            trueProbs = ennf.evaluate(knowledge, weights)
+            trueProbs = ennf.evaluate(knowledge, self)
         
             # 4) read probabilities and link them to atom names
-            atom_prob = dict(zip(names, trueProbs))
-            
-            self.__result = atom_prob
+            self.__result = {}
+            for i, p in enumerate(trueProbs) :
+                self.__result[i+1] = p
         else :
             self.__result = {}
         self.__result.update(facts)
@@ -397,6 +379,12 @@ class DefaultEvaluator(object) :
     def evaluate(self, node_id, rule=None, ex_id=None) :
         return self.__result[node_id]
         
+    def __getitem__(self, index) :
+        if index in self.__facts :
+            p = self.__facts[index]
+            return (p, 1-p)
+        else :
+            return (1.0,1.0)
 
     
 
