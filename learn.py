@@ -216,7 +216,7 @@ class LearningProblem(object) :
             elif r.max_significance < self.SIGNIFICANCE :
                 # Rule cannot reach required significance => it's useless
                 with Log('rejected', reason="s", literal=r.literal, score=r.score, max_significance=r.max_significance ) : pass
-            elif not r._new_vars and r.getScorePredict() == r.parent.getScorePredict() :
+            elif not r._new_vars and r.samePredictions(r.parent) :
                 # Predictions are indentical and new rule does not introduce a new variable
                 with Log('rejected', reason="no improvement", literal=r.literal, score=r.score ) : pass
             elif best_score != None and r.localScoreMax <= best_score and r.localScore < best_score :

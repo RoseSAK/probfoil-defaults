@@ -23,7 +23,7 @@ from util import Log, WorkEnv, Timer
 import os
 
 from language import Literal, Language, RootRule
-from prolog_interface import PrologInterface
+from prolog_interface import PrologInterface, DataFile
 from learn import ProbFOIL2, ProbFOIL1
 
 def parse_args(args) :
@@ -56,20 +56,15 @@ def main(arguments) :
     with open(args.log, 'w') as Log.LOG_FILE :
      with WorkEnv(verbose=args.verbose) as env :    # Set up a temporary working directory
 
-      if args.input.endswith('.arff') :
-          pl_file = env.tmp_path(os.path.splitext(os.path.split( args.input )[1])[0] + '.pl')
-          arff_to_pl( args.input, pl_file )
-          args.input = pl_file
-
+      # if args.input.endswith('.arff') :
+      #     pl_file = env.tmp_path(os.path.splitext(os.path.split( args.input )[1])[0] + '.pl')
+      #     arff_to_pl( args.input, pl_file )
+      #     args.input = pl_file
+      inputfile = DataFile.load(args.input)
     
       if args.target == None :
-        with open(args.input, 'r') as f:
-            for line in f :
-                line = line.strip()
-                if line.startswith('%LEARN') or line.startswith('#LEARN') :
-                    line = line.split()
-                    args.target = line[1]
-                    args.modes = line[2:]
+          args.target = inputfile.target
+          args.modes = inputfile.modes
       if args.target == None :
           print( 'No target specified.')
           sys.exit(1)
@@ -86,14 +81,11 @@ def main(arguments) :
       
       learn_time = time.time()  
 
-    
-    
-
       with Log('log', **parameters) :
        with Timer(category='') :    
         p = PrologInterface(env)
         
-        p.loadData(args.input)
+        p.loadData(inputfile)
         
         init_time1 = time.time()
         

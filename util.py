@@ -174,10 +174,10 @@ class Beam(object) :
             r1, rf1 = self.content[p]
             r2, rf2 = self.content[p+1]
             
-            r1scores = r1.getScorePredict()
-            r2scores = r2.getScorePredict()
+            # r1scores = r1.getScorePredict()
+            # r2scores = r2.getScorePredict()
             
-            if r1.localScore == r2.localScore and r1scores == r2scores :
+            if r1.localScore == r2.localScore and r1.samePredictions(r2) :
                 if rf2 == None or (rf1 != None and len(rf1) > len(rf2)) : #len(r1.variables) > len(r2.variables) :                
                     best, worst = r1, r2
                     self.content[p+1] = self.content[p]

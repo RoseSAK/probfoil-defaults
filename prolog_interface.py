@@ -35,40 +35,56 @@ from collections import namedtuple, defaultdict
 
 class PrologInterface(object) :
     
-    def __init__(self, env) :
+    def __init__(self, env, propositional=False) :
         self.env = env
         self.last_id = 0
         self.toGround = []
         self.toScore = []
         self.toEvaluate = set([])
+        self.isPropositional = propositional
         
         self.grounding = Grounding()
-        self.data = []
+        self.datafile = None
                     
     def enqueue(self, rule) :
         # Put the rule in queue for evaluation.
         # Already computes as much grounding and evaluation as it can.
         
         with Timer(category="enqueue") :
+        
+            toGround = []
+            toScore = []
+            toEvaluate = set([])
+        
+        
             if not rule.literal : 
                 # Without literal there is nothing to do, except initialize data structures.
-                if not rule.previous :  # Root rule
+                if not rule.previous :  # Root rule -> we are evaluating the target
                     rule.initEvalNodes()
                     rule.initSelfNodes()
                     rule.initScorePredict()
-                    self.toGround.append((rule,[ x for x,y in rule.enum_examples() ]))
-                    self.toScore.append((rule,[ x for x,y in rule.enum_examples() ]))
+                    
+                    for ex_id, example in rule.enum_examples() :
+                        fact_id = self.grounding.getFact( str( Literal( rule.target.functor, example) ) )
+                        if fact_id == None :
+                            toGround.append( ex_id )
+                        
+                        rule.setEvalNode(ex_id, fact_id)
+                        p = self.grounding.getProbability(fact_id)
+                        if p == None :
+                            # Calculation failed: needs advanced evaluation
+                            self.toEvaluate.add( fact_id )
+                            toScore.append( fact_id )
+                        else :
+                            # Probability available: store it, this rule+ex_id has been completely evaluated
+                            rule.setScorePredict(ex_id, p)                                        
             else :
                 # Initialize eval_nodes and score_predict structures in rule
                 rule.initEvalNodes()
                 rule.initSelfNodes()
                 rule.initScorePredict()
         
-                # Set up toGround, toScore and toEvaluate queues
-                toGround = []
-                toScore = []
-                toEvaluate = set([])
-        
+                # Set up toGround, toScore and toEvaluate queues        
                 success = True
                 # Check whether we can do some simple pre-grounding
                 if rule.literal.arguments == rule.target.arguments :
@@ -130,11 +146,11 @@ class PrologInterface(object) :
                     toGround = [ x for x,y in rule.enum_examples() ]
                     toScore = [ x for x,y in rule.enum_examples() ]
                     
-                # Add information to global queues, but only if any action is needed.    
-                if toGround : self.toGround.append( (rule, toGround) )
-                
-                if toScore : self.toScore.append( (rule, toScore) )
-                self.toEvaluate |= toEvaluate
+            # Add information to global queues, but only if any action is needed.    
+            if toGround : self.toGround.append( (rule, toGround) )
+            
+            if toScore : self.toScore.append( (rule, toScore) )
+            self.toEvaluate |= toEvaluate
             
     def process_queue(self) :
         with Timer(category="grounding") :
@@ -158,7 +174,11 @@ class PrologInterface(object) :
                     # Add queries to ground program.
                     for ex_id in ex_ids :
                         query = Literal('pf_query_%s_%s' % (rule_id, ex_id), [])
-                        real_query = Literal( clause_pred, rule.examples[ex_id] )
+                        
+                        if ex_id == None :
+                            real_query = Literal( clause_pred, [] )
+                        else :
+                            real_query = Literal( clause_pred, rule.examples[ex_id] )
                         gp.append( '%s :- %s.' % (query, real_query) )
                         gp.append( 'query(%s).' % (query, ) )
 
@@ -229,7 +249,7 @@ class PrologInterface(object) :
             with Timer(category='grounding_writing') as tmr : 
                 pl_filename = self.env.tmp_path('probfoil.pl')
                 with open(pl_filename, 'w') as pl_file : 
-                    print ('\n'.join(self.data), file=pl_file)
+                    print (self.datafile.toProlog(), file=pl_file)
                     print ('\n'.join(program), file=pl_file)
                 
             with Timer(category='grounding_grounding') as tmr : 
@@ -258,6 +278,25 @@ class PrologInterface(object) :
                 
         return self._read_grounding(ground_program)
     
+    def base(self, predicate, arity) :
+        result = self.datafile.base(predicate, arity)
+        
+        if result == None :
+            args = [ 'V' + str(i) for i in range(0,arity) ]
+            literal = Literal(predicate, args)
+            base_literal = Literal( 'base', [literal] )
+            result = list(self.query( base_literal, args ))
+        return result
+
+    def values(self, predicate, arity) :
+        result = self.datafile.values(predicate, arity)
+        
+        if result == None :
+            args = [ 'V' + str(i) for i in range(0,arity) ]
+            literal = Literal(predicate, args)
+            result = list(self.query( literal, args ))
+        return result
+    
     def query(self, literal, variables) :
         """Execute a query."""
         
@@ -272,7 +311,7 @@ class PrologInterface(object) :
             return line
         
         with open(program_file, 'w') as f :
-            print( '\n'.join(map(make_det, self.data)), file=f)  
+            print( '\n'.join(map(make_det, self.datafile.toProlog().split('\n') )), file=f)  
             
             writes = ", write('|'), ".join( ('write(%s)' % v ) for v in variables )
             f.write( '\n')
@@ -339,14 +378,9 @@ class PrologInterface(object) :
     def _construct_evaluator(self, ddnnf, facts) :
         return DefaultEvaluator(ddnnf, self._rewrite_facts(facts))
         
-    def loadData(self, filename) :
-        
-        with open(filename) as datafile :
-            for line in datafile :
-                line = line.strip()
-                if line and not line[0] in '%' :
-                    self.data.append(line)
-
+    def loadData(self, datafile) :
+        self.datafile = datafile
+        self.datafile.initialize_grounding( self )
         
 class DefaultEvaluator(object) :
     
@@ -363,9 +397,17 @@ class DefaultEvaluator(object) :
                         f_out.write(line.strip() + '\n')
                     
           with Timer(category='evaluate_evaluating_evaluating') :
+             
+            for x in self.__facts :
+                f1 = self.__facts[x]
+                try :
+                    dims = len(f1)
+                except TypeError :
+                    dims = None
+                break
             # 3) call the existing code for evaluating the DDNNF
             import evaluatennf as ennf
-            trueProbs = ennf.evaluate(knowledge, self)
+            trueProbs = ennf.evaluate(knowledge, self, dims)
         
             # 4) read probabilities and link them to atom names
             self.__result = {}
@@ -403,6 +445,9 @@ class Grounding(object) :
         else :
             self.__offset = 0
         self.__parent = parent
+        self.clear()
+    
+    def clear(self) :
         self.__nodes = []
         self.__fact_names = {}
         self.__nodes_by_content = {}
@@ -680,4 +725,99 @@ class Grounding(object) :
         
     def __str__(self) :
         return '\n'.join('%s: %s' % (i+1,n) for i, n in enumerate(self.__nodes))   
-         
+
+class DataFile(object) :
+    
+    def __init__(self, filename) :
+        self._filename = filename
+        self._pl_data = []
+        self.target = None
+        self.modes = None
+
+        self._read()
+        
+    def toProlog(self) :
+        pass
+        
+    def _read(self) :
+        raise NotImplementedError('This is an abstract method!')
+        
+    def getTarget(self) :
+        return self.target
+        
+    def getModes(self) :
+        return self.modes
+        
+    @classmethod 
+    def load(cls, filename) :
+        if filename.endswith('.arff') :
+            return ARFFDataFile(filename)
+        else :
+            return PrologDataFile(filename)
+
+class PrologDataFile(DataFile) :
+
+    def __init__(self, filename) :
+        super(PrologDataFile, self).__init__(filename)
+        
+    def base(self, predicate, arity) :
+        return None
+        
+    def values(self, predicate, arity) :
+        return None
+        
+    def toProlog(self) :
+        return '\n'.join(self._pl_data)
+
+    def _read(self) :
+        with open(self._filename) as datafile :
+            for line in datafile :
+                line = line.strip()
+                if line.startswith('%LEARN') or line.startswith('#LEARN') :
+                    line = line.split()
+                    self.target = line[1]
+                    self.modes = line[2:]
+                elif line and not line[0] in '%' :
+                    self._pl_data.append(line)
+    
+    def initialize_grounding(self, grounding) :
+        pass
+
+class ARFFDataFile(DataFile) :
+    
+    def __init__(self, filename) :
+        super(ARFFDataFile, self).__init__(filename)
+        
+    def toProlog(self) :
+        return '\n'.join(self._pl_data)
+        
+    def base(self, predicate, arity) :
+        return [('id',)]
+        
+    def values(self, predicate, arity) :
+        return ([ (str(x),) for x in range(0, self.value_matrix.shape[1] ) ])
+    
+    def _read(self) :
+        import numpy as np
+        value_matrix = []
+        with open(self._filename) as file_in :
+            line_num = 0
+            for line_in in file_in :
+                line_in = line_in.strip()
+                if line_in and not line_in.startswith('@') and not line_in.startswith('#') :
+                    values = list(map(float,line_in.split(',')))
+                    num_atts = len(values)
+                    value_matrix.append(np.array( values ))
+                    self._pl_data += [ '%.6f::att%s(%s).' % (float(val), att, line_num) for att, val in enumerate(values) ]
+                    line_num += 1
+            
+        self.target = 'att%s/1' % (num_atts - 1)
+        self.modes = [ 'att%s/+' % att for att in range(0, num_atts-1) ]
+        
+        self.value_matrix = np.transpose(np.row_stack(value_matrix))
+        
+    def initialize_grounding(self, pl) :
+        for i, row in enumerate(self.value_matrix) :
+            name = 'att%s' % i
+            pl.grounding.addFact( name, row )
+        pl.isPropositional = True

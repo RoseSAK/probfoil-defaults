@@ -23,6 +23,8 @@ import time
 import sys
 from util import Log, Timer
 
+import numpy as np
+
 @total_ordering
 class Rule(object) :
     
@@ -45,24 +47,44 @@ class Rule(object) :
         self.examples_to_evaluate = None
         
     def initSelfNodes(self, value=None) :
-        self.__self_nodes = [value] * len( self.examples )
+        if self.knowledge.isPropositional :
+            self.__self_nodes = [value]
+        else :
+            self.__self_nodes = [value] * len( self.examples )
     
     def initEvalNodes(self, value=None) :
-        self.__eval_nodes = [value] * len( self.examples )
+        if self.knowledge.isPropositional :
+            self.__eval_nodes = [value]
+        else :
+            self.__eval_nodes = [value] * len( self.examples )
         
     def initScorePredict(self, value=0) :
-        self.__score_predict = [value] * len( self.examples )
-        
+        if value == 0 :
+            self.__score_predict = np.zeros( len(self.examples))
+        elif value == 1 :
+            self.__score_predict = np.ones( len(self.examples))
+        else :
+            raise ValueError('Invalid initial value: %s' % value)
+            
+    def samePredictions(self, other) :
+        for x, y in zip(self.getScorePredict(), other.getScorePredict()) :
+            if x != y : return False
+        return True
+
     def getSelfNode(self, ex_id) :
+        if ex_id == None : ex_id = 0
         return self.__self_nodes[ex_id]
     
     def getEvalNode(self, ex_id) :
+        if ex_id == None : ex_id = 0
         return self.__eval_nodes[ex_id]
         
     def setSelfNode(self, ex_id, node_id) :
+        if ex_id == None : ex_id = 0        
         self.__self_nodes[ex_id] = node_id
     
     def setEvalNode(self, ex_id, node_id) :
+        if ex_id == None : ex_id = 0
         self.__eval_nodes[ex_id] = node_id
         
     def getScorePredict(self, ex_id=None) :
@@ -112,10 +134,8 @@ class Rule(object) :
         return set(map(lambda x : x[0], self._body_vars))
         
     def enum_examples(self) :
-        if self.examples_to_evaluate != None :
-            for ex_id in self.examples_to_evaluate :
-                yield ex_id, self.examples[ex_id]
-        
+        if self.knowledge.isPropositional :
+            yield (None, () )
         elif self.parent :
             for ex_id, example in self.parent.enum_examples() :
                 if self.parent.getScorePredict(ex_id) != 0 :
@@ -301,7 +321,7 @@ class Rule(object) :
                         if n == 0 :
                             fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                             new_fact = self.knowledge.grounding.addFact(fact_name, p)
-                            self.eval_nodes[i] = self.knowledge.grounding.addOrNode( (prev_node, new_fact) )
+                            self.setEvalNode(i, self.knowledge.grounding.addOrNode( (prev_node, new_fact) ) )
                         else :
                             nodetype, content = self.knowledge.grounding.getNode(abs(n))  
                         
@@ -527,10 +547,7 @@ class Language(object) :
         predicates = list(self.__modes) + self.__targets
         for predicate, arity in predicates :
             # Load types
-            args = [ 'V' + str(i) for i in range(0,arity) ]
-            literal = Literal(predicate, args)
-            base_literal = Literal( 'base', [literal] )
-            types = list(knowledge.query( base_literal, args ))
+            types = knowledge.base( predicate, arity )
             if len(types) == 1 :
                 types = types[0]
                 self.setArgumentTypes( Literal( predicate, types ) )
@@ -540,7 +557,7 @@ class Language(object) :
                 self.setArgumentTypes( Literal( predicate, ['id'] * arity ) )
                 print ("Missing 'base' declaration for predicate '%s/%s'!" % (predicate,arity), file=sys.stderr)
             
-            values = list(zip(*knowledge.query(literal,args)))
+            values = list(zip(*knowledge.values( predicate, arity )))
             for tp, vals in zip(types,values) :
                 self.__values[tp] |= set(vals)
         
