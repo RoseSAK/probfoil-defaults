@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # encoding: utf-8
 """
 evaluatennf.py
@@ -294,11 +294,48 @@ def evaluate(ddnnf, weights, dims=None) :
     if not weights :
         return []
     else :
-        
         if not dims :
             counter = C2DAsAC(ddnnf, MathMath())
             pEvidence, trueProbs = counter.probs(lambda variable: weights[variable])
         else :    
             counter = C2DAsAC(ddnnf, MathNP(dims))
             pEvidence, trueProbs = counter.probs(lambda variable: weights[variable])
-        return trueProbs     
+        return trueProbs
+
+def main(ddnnf, weights_file) :
+    from collections import defaultdict
+    not_found = lambda : (1.0,1.0) 
+    
+    with open(ddnnf) as f :
+        with open(ddnnf + '.reverse', 'w') as f1 :
+            for line in reversed(f.readlines()) :
+                print( line.strip(), file=f1 )
+    
+    weights = defaultdict(not_found)
+    dims = None
+    # 1) read weights
+    with open(weights_file) as f :
+        for line in f :
+            line = line.strip().split()
+            identifier = int(line[0])
+            if dims == None : dims = len(line) - 1
+            
+            if len(line) > 2 :
+                line_weights = np.array([ float(x) for x in line[1:] ])
+            else :
+                line_weights = float(line[1])
+
+            weights[identifier] = (line_weights, 1-line_weights)
+            
+    for i in range(0,10) :
+        print 
+    
+    if dims == 1 :
+        dims = None
+    
+    # 2) evaluate
+    probs = evaluate(ddnnf, weights, dims)    
+    print (probs[-1])
+    
+if __name__ == '__main__' :
+    main(*sys.argv[1:])
