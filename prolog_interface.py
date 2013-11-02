@@ -25,7 +25,7 @@ import subprocess
 def bin_path(relative) :
     return os.path.join( os.path.split( os.path.abspath(__file__) )[0], relative )
 
-sys.path.append( bin_path('/problog/') )
+sys.path.append( bin_path('problog/') )
 
 from util import Log, Timer
 from language import Literal
