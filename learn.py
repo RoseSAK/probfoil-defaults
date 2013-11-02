@@ -88,7 +88,7 @@ class LearningProblem(object) :
                 break
             
             # Check stopping criterion
-            if self.MINRULES > rule_count or new_H.globalScore >= H.globalScore :
+            if self.MINRULES > rule_count or new_H.globalScore > H.globalScore :
                 # Clause improves hypothesis => continue
                 H = new_H
                 rule_count += 1
@@ -180,7 +180,10 @@ class LearningProblem(object) :
             print ("INTERRUPT")
         
         # Return head of beam.
-        return beam.content[0][0]
+        if beam :
+            return beam.content[0][0]
+        else :
+            return current_rule
 
     def update_refinements(self, rule, refine, best_score) :
 
