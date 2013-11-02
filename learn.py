@@ -495,4 +495,23 @@ class PF2Score(object):
 
     def __str__(self) :
         return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
-        
+
+
+def test( correctF, predict_prevF, predictF ) :
+    
+    with open(correctF) as f :
+        correct = map(float,f.readlines())
+
+    with open(predict_prevF) as f :
+        predict_prev = map(float,f.readlines())
+
+    with open(predictF) as f :
+        predict = map(float,f.readlines())
+
+    s = PF2Score(correct, predict, predict_prev, 10)
+    
+    print (s, s.max_x)
+
+if __name__ == '__main__' :
+    import sys
+    test(*sys.argv[1:])
