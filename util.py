@@ -216,6 +216,9 @@ class Beam(object) :
             res += str(c) + ': ' + str(c.score) +  ' | ' + str(r) + '\n'
         return res
         
+    def __nonzero__(self) :
+        return bool(self.content)
+        
     def toXML(self) :
         res = ''
         for c, r in self.content :
