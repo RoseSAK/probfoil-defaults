@@ -508,7 +508,7 @@ class Grounding(object) :
         assert( content )   # Content should not be empty
         
         # If there is a t node, (true for OR, false for AND)
-        if t in content : return self.TRUE
+        if t in content : return t
         
         # Eliminate unneeded node nodes (false for OR, true for AND)
         content = filter( lambda x : x != f, content )
@@ -621,12 +621,16 @@ class Grounding(object) :
     def _integrate_line(self, line_num, line_type, line_content, line_alias, lines, ln_to_ni, rules) :
         # TODO make it work for cycles
         
+        debg = False
         if line_num != None :
             node_id = ln_to_ni[line_num]
             if node_id != '?' : return node_id
         
         if line_type == 'fact' :
-            node_id = self.addFact(line_alias, line_content)
+            if line_content > 1.0 - 1e-10 :
+                node_id = 0
+            else :
+                node_id = self.addFact(line_alias, line_content)
         else :
             # Compound node => process content recursively
             subnodes = []
