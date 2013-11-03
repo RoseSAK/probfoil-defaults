@@ -36,7 +36,7 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
 class LearningProblem(object) :
     """Base class for FOIL learning algorithm."""
     
-    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, verbose=False, minrules=0, maxrules=-1, pack_queries=True, **other_args ) :
+    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, verbose=False, minrules=0, maxrules=-1, pack_queries=True, use_recall=False, **other_args ) :
         self.language = language
         self.knowledge = knowledge
         
@@ -48,6 +48,7 @@ class LearningProblem(object) :
         self.MINRULES = minrules
         self.MAXRULES = maxrules
         self.PACK_QUERIES = pack_queries
+        self.USE_RECALL = use_recall
         
     def calculateScore(self, rule) :
         raise NotImplementedError('calculateScore')
@@ -283,6 +284,9 @@ class PF1Score(object) :
         M = self.P + self.N
         return (self.TP + self.TN ) / M
         
+    def recall(self) :
+        return self.TP / (self.TP + self.FN)
+        
     def __str__(self) :
         return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
     
@@ -496,6 +500,8 @@ class PF2Score(object):
     def __str__(self) :
         return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
 
+    def recall(self) :
+        return self.TP / (self.TP + self.FN)
 
 def test( correctF, predict_prevF, predictF ) :
     

@@ -10,7 +10,7 @@ This code has the following dependencies:
 
     - ProbLog2 - which can be downloaded from http://dtai.cs.kuleuven.be/problog/
     - YAP Prolog (also a dependency of ProbLog2)
-    - Python 3 (also a dependency of ProbLog2)
+    - Python 2
     
 After installing ProbLog2 you need to set the PROBLOGPATH environment variable to the top-level path of your ProbLog installation.
 
@@ -25,6 +25,10 @@ export PROBLOGPATH=/somedir/problog2/
 
 2. DATA FORMAT
 ==============
+
+This implementation support two input formats:
+
+* ProbLog
 
 The algorithm uses ProbLog's data format, that is Prolog files augmented with probabilities.
 
@@ -41,7 +45,6 @@ parent(X,Y) :- father(X,Y).
 
 0.8::grandfather(john, tom).
 
-
 Additionally, the input file should contain type information for all predicates to be used in the learning algorithm.
 For example,
 
@@ -50,6 +53,10 @@ base(mother(person,person)).
 base(parent(person,person)).
 base(grandfather(person,person)).
 
+* ARFF
+
+For propositional data, Weka's ARFF format can (should) be used.
+For this case the algorithm uses optimized evaluation which significantly improves performance.
 
 3. USAGE
 ========
@@ -69,6 +76,11 @@ where
 With the previous setting, the parent/2 predicate is not used.
 We can enable it by using        
     ./main.py family.pl grandfather/2 father/+- mother/+- parent/+-
+    
+These declarations can also be added directly to the data file by adding a line
+
+    %LEARN grandfather/2 father/+- mother/+- parent/+-
+    
 
 There are several parameters available. See './main.py --help' for more information.
 

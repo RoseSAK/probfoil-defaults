@@ -44,6 +44,7 @@ def parse_args(args) :
     p.add_argument('--maxrules', type=int, default=-1, help="Maximal number of rules to learn.")
     p.add_argument('--dont_pack_queries', dest='pack_queries', action="store_false", help="Run ProbLog for individual refinements.")
     p.add_argument('-o', '--output', type=str, default='probfoil.out', help="Output file.")
+    p.add_argument('-r', '--use_recall', action='store_true', default=False, help="Use recall instead of accuracy.")
     
     return p.parse_args(args)
 
@@ -107,7 +108,7 @@ def main(arguments) :
                 r0 = RootRule(target, lp)
                 r0.initialize()
             
-        if args.verbose > 1 :
+        if args.verbose > 3 :
             print ('Targets:', ', '.join(map(lambda x : '%.5f' % x, r0.score_correct) ) )
         
         if args.verbose: print('Start learning...')
@@ -129,7 +130,11 @@ def main(arguments) :
            print('%s :- fail.' % result.target )
        print('#########################     SCORES     #########################')
        print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
-       print('ACCURACY                     :', result.globalScore)
+       
+       if args.use_recall :
+           print('RECALL                       :', result.globalScore)
+       else :
+           print('ACCURACY                     :', result.globalScore)
        
        print('#########################     TIMING     #########################')
        learn_time = time.time() - learn_time

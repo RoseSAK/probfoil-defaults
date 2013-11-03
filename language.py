@@ -294,8 +294,15 @@ class Rule(object) :
         
     score = property ( lambda s : s._get_score() )
     
-    globalScore = property( lambda s : s._get_score().accuracy() )
-    localScore = property( lambda s : s._get_score().localScore )    
+    def _get_global_score(self) :
+        if self.learning_problem.USE_RECALL : 
+            return self._get_score().recall() 
+        else : 
+            return self._get_score().accuracy()
+        
+    
+    globalScore = property( lambda s : s._get_global_score() )
+    localScore = property( lambda s : s._get_score().localScore )
     localScoreMax = property( lambda s : s._get_score().localScoreMax )  
     
     max_significance = property( _calc_max_significance ) # TODO get real value
