@@ -102,8 +102,19 @@ class Rule(object) :
         self.knowledge.enqueue(result)
         
         if not self.learning_problem.PACK_QUERIES :
-            self.knowledge.process_queue()
-            x = result._get_score()
+            
+            if not (self.getScorePredict() >= result.getScorePredict() - 1e-10  ).all() :
+                print ('PARENT', self, self.score)
+                print ('NEW', result, x)
+
+                i = 0
+                for x, y in zip(result.getScorePredict(),self.getScorePredict()) :
+                    if y >= x + 1e-10  :
+                        print (i, y, x, self.examples[i])
+                    i += 1
+                raise Exception('PREDICTION CANNOT INCREASE!!!!')
+                
+                
         return result
         
     def _get_language(self) :
