@@ -73,7 +73,6 @@ class LearningProblem(object) :
             #   Explanation: in case of equal score the search procedure prefers rules with more variables
             #                once the search is over we prefer shorter rules
             while new_H.parent and new_H.parent.localScore >= new_H.localScore :
-                assert(False)   # This should never happen.
                 new_H = new_H.parent
         
             if self.VERBOSE > 0 : print ('RULE FOUND:', new_H, '%.5f' % new_H.globalScore)
@@ -409,7 +408,7 @@ class PF2Score(PFScore):
         #           Take pl = p-l
         #           Take dS = u-l
         #           At position n, value[n] = x
-        #               TP_x = x \sum_{i=n+1}^{M} dS_i = \sum_{i=1}^{n} pl_i 
+        #               TP_x = x \sum_{i=n+1}^{M} dS_i + \sum_{i=1}^{n} pl_i 
         #               FP_x = x \sum_{i=1}^{n} dS_i - \sum_{i=1}^{n} pl_i
         #           We can compute this by maintaining the running sums:
         #               dS_running = \sum_{i=1}^{n} dS_i
