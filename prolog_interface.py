@@ -115,6 +115,7 @@ class PrologInterface(object) :
                             
                             if rule.previous and rule.previous.previous :   # Previous rule is not root
                                 prev_node = rule.previous.getEvalNode(ex_id)
+                                
                                 if node_id == None :    # Rule fail
                                     new_node = prev_node    # => new theory predicts same as old theory
                                 elif node_id == 0 :     # Rule true 
@@ -124,7 +125,6 @@ class PrologInterface(object) :
                                     
                                     if self.grounding.getProbability(new_node) == None :
                                         success = False
-                                    
                             else :
                                 new_node = node_id
                         
@@ -156,6 +156,7 @@ class PrologInterface(object) :
         with Timer(category="grounding") :
             with Timer(category="grounding_generateprogram") :
                 gp = []
+                qr = []
                 # Create ground program.
                 for rule_id, rule_exids in enumerate(self.toGround) :
                     rule, ex_ids = rule_exids
@@ -181,15 +182,19 @@ class PrologInterface(object) :
                             real_query = Literal( clause_pred, rule.examples[ex_id] )
                         gp.append( '%s :- %s.' % (query, real_query) )
                         gp.append( 'query(%s).' % (query, ) )
+                        qr.append(str(query))
 
             # Call grounder
             ground_result = []
-            names_nodes = self._ground(gp)            
-            for name, value in names_nodes.items() :
-                if name.startswith('pf_query_') :
-                    rule, ex_id = name.split('_')[2:]
-                    ground_result.append( ( self.toGround[int(rule)][0], int(ex_id), int(value) ))
-
+            names_nodes = self._ground(gp)
+            
+            # Extract node ids from grounder result
+            for name in qr :
+                node_id = names_nodes.get(name, None)
+                rule, ex_id = name.split('_')[2:]
+                if node_id != None : node_id = int(node_id)
+                ground_result.append( ( self.toGround[int(rule)][0], int(ex_id), node_id ))
+            
             with Timer(category="grounding_process") :
                 # Process the grounding
                 for rule, ex_id, node_id in ground_result :
@@ -204,6 +209,8 @@ class PrologInterface(object) :
                             new_node = self.grounding.addOrNode( ( prev_node, node_id ) ) 
                     else :
                         new_node = node_id
+                        
+                    
             
                     # Store node information in rule and determine which nodes still need to be evaluated
                     rule.setSelfNode(ex_id, node_id)

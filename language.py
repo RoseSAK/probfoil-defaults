@@ -361,8 +361,7 @@ class Rule(object) :
                             
                         l = self.previous.getScorePredict(i) if self.previous else 0
                         u = self.getScorePredict(i)
-                        self.setScorePredict(i, (u-l) * p + l )
-                    
+                        self.setScorePredict(i, (u-l) * p + l )            
         return self
     
 class RuleBody(Rule) :

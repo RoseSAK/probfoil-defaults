@@ -433,8 +433,9 @@ class PF2Score(PFScore):
         
         dS_total = 0.0
         for p,l,u in zip(correct, predict_prev, predict ) :
-            
-            assert(u-l > -1e10)
+                        
+            assert( u > l - 1e-10)
+        
             TP_previous += min(l,p)
             FP_previous += max(0,l-p)
             
