@@ -243,7 +243,52 @@ class Rule(object) :
         
     def __eq__(self, other) :
         return str(self) == str(other)
-                
+            
+    # Calculate maximal achievable significance
+    def _calc_max_significance(self) :
+        return self._calc_significance(calc_max=True)
+        
+    # Calculate actual significance
+    def _calc_significance(self, calc_max=False) :
+        if self.previous :
+            pTP = self.previous.score.TP
+            pFP = self.previous.score.FP
+        else :
+            pTP = 0.0
+            pFP = 0.0
+        pP = pTP
+        pN = pFP
+        pM = pP + pN
+
+        s = self.score
+        
+        if calc_max :
+            sTP = s.maxTP - pTP
+            sFP = 0
+        else :
+            sTP = s.TP - pTP
+            sFP = s.FP - pFP
+            
+        sP = s.P # - pP
+        sN = s.N # - pN
+        sM = sP + sN
+
+        C = sTP + sFP           # max: C == sTP (sFP == 0)
+        if C == 0 : return 0
+            
+        p_pos_c = sTP / C       # max: p_pos_c == 1 
+        p_neg_c = 1 - p_pos_c   # max: p_neg_c == 0
+        
+        p_pos = sP / sM
+        p_neg = sN / sM
+        
+        pos_log = math.log(p_pos_c/p_pos) if p_pos_c > 0 else 0     # max: pos_log = -log(sP / sM)
+        neg_log = math.log(p_neg_c/p_neg) if p_neg_c > 0 else 0     # max: neg_log = 0
+        
+        l = 2*C * (p_pos_c * pos_log  + p_neg_c * neg_log  )        # max: 2 * sTP * -log(sP/sM)
+        
+        return l
+    
     score_correct = property( lambda s: s._get_score_correct() )
     #score_predict = property( lambda s : s._get_score_predict(), lambda s,v : s._set_score_predict(v) )
         
@@ -260,8 +305,8 @@ class Rule(object) :
     localScore = property( lambda s : s._get_score().localScore )
     localScoreMax = property( lambda s : s._get_score().localScoreMax )  
     
-    max_significance = property( lambda s : s.score.significance_max )
-    significance = property( lambda s : s.score.significance_max )
+    max_significance = property( _calc_max_significance ) # TODO get real value
+    significance = property(_calc_significance)
     
     def _getProbability(self) :
         if self.hasScore() :
