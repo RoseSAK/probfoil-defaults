@@ -73,6 +73,7 @@ class LearningProblem(object) :
             #   Explanation: in case of equal score the search procedure prefers rules with more variables
             #                once the search is over we prefer shorter rules
             while new_H.parent and new_H.parent.localScore >= new_H.localScore :
+                assert(False)   # This should never happen.
                 new_H = new_H.parent
         
             if self.VERBOSE > 0 : print ('RULE FOUND:', new_H, '%.5f' % new_H.globalScore)
@@ -118,7 +119,7 @@ class LearningProblem(object) :
         beam.push( init_rule, refinements )
         
         # Keep track of best score so far.
-        best_score = None
+        best_rule = None
         try :
             # While there are untested refinements in the beam.
             while beam.has_active() :
@@ -131,15 +132,17 @@ class LearningProblem(object) :
                 for old_rule, refs in beam :
                 
                   with Log('refining', rule=old_rule, score=old_rule.score, localScore=old_rule.localScore, _timer=True) :
-                    if best_score != None and old_rule.localScoreMax < best_score :
+                    if best_rule != None and old_rule.localScoreMax < best_rule.localScore :
                         # Prune this rule, it can never reach the top of the beam.
-                        with Log('abort', reason="maxscore", bestscore=best_score, maxscore=old_rule.localScoreMax) : pass
+                        with Log('abort', reason="maxscore", bestscore=best_rule.localScore, maxscore=old_rule.localScoreMax) : pass
                         continue 
             
                     # Add current rule to beam and mark it as tested (refinements=None)
-                    new_beam.push( old_rule, None )
+                    # new_beam.push( old_rule, None )
                         
                     # Update scores of available refinements and add new refinements if a new variable was introduced.
+                    best_score = None
+                    if best_rule : best_score = best_rule.localScore
                     new_rules = self.update_refinements(old_rule, refs, best_score)
             
                     # Extract refinement literals
@@ -150,8 +153,8 @@ class LearningProblem(object) :
                         
                         # Update best score
                         current_score = new_rule.localScore
-                        if best_score == None or  current_score > best_score :
-                            best_score = current_score
+                        if best_rule == None or current_score > best_rule.localScore :
+                            best_rule = new_rule
                 
                         if self.VERBOSE > 2 : print ( '%s %s %.5f %.5f %.5f' % (new_rule,new_rule.score, new_rule.localScore, new_rule.significance, new_rule.max_significance) )
                 
@@ -181,8 +184,8 @@ class LearningProblem(object) :
             print ("INTERRUPT")
         
         # Return head of beam.
-        if beam :
-            return beam.content[0][0]
+        if best_rule :
+            return best_rule
         else :
             return current_rule
 
