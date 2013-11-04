@@ -483,7 +483,6 @@ class Grounding(object) :
         if node_id == None : # Fact doesn't exist yet
             node_id = self._addNode( 'fact', (name, probability) )
             self.__fact_names[name] = node_id
-            # TODO check whether it is a meta-fact
             self.setProbability(node_id, probability)
             self._setUsedFacts(node_id,[abs(node_id)])
         return node_id

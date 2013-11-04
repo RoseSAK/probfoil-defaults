@@ -238,11 +238,102 @@ class LearningProblem(object) :
                 if best_score == None or r.localScore > best_score : best_score = r.localScore
     
         return result
+    
+class ProbFOIL1(LearningProblem) :
+    
+    def __init__(self, *args,  **kwdargs) :
+        super(ProbFOIL1,self).__init__(*args, **kwdargs)
+        self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
+    
+    def calculateScore(self, rule) :
+        if not rule.previous :
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0)
+        else :
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, rule.previous.score.TP, rule.previous.score.FP)
 
+class ProbFOIL2(LearningProblem) :
+    
+    def __init__(self, *args, **kwdargs) :
+        super(ProbFOIL2,self).__init__(*args, **kwdargs)
+        self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
+    
+    def calculateScore(self, rule) :
+        if not rule.previous :
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0)
+        else :
+            previous_prediction = rule.previous.getScorePredict()            
+            result = PF2Score(rule.score_correct, rule.getScorePredict(), previous_prediction, self.M_ESTIMATE_M)
+            return result
 
-class PF1Score(object) :
+class PFScore(object) :
+    
+    def __init__(self) :
+        pass
+        
+    # Calculate actual significance
+    def calculate_significance(self, calc_max=False) :
+        
+        pTP = self.pTP
+        pFP = self.pFP
+        
+        pP = pTP
+        pN = pFP
+        pM = pP + pN
 
-    def __init__(self, correct, predict, m) :
+        s = self
+        
+        if calc_max :
+            sTP = s.maxTP - pTP
+            sFP = 0
+        else :
+            sTP = s.TP - pTP
+            sFP = s.FP - pFP
+            
+        sP = s.P # - pP
+        sN = s.N # - pN
+        sM = sP + sN
+
+        C = sTP + sFP           # max: C == sTP (sFP == 0)
+        if C == 0 : return 0
+            
+        p_pos_c = sTP / C       # max: p_pos_c == 1 
+        p_neg_c = 1 - p_pos_c   # max: p_neg_c == 0
+        
+        p_pos = sP / sM
+        p_neg = sN / sM
+        
+        pos_log = math.log(p_pos_c/p_pos) if p_pos_c > 0 else 0     # max: pos_log = -log(sP / sM)
+        neg_log = math.log(p_neg_c/p_neg) if p_neg_c > 0 else 0     # max: neg_log = 0
+        
+        l = 2*C * (p_pos_c * pos_log  + p_neg_c * neg_log  )        # max: 2 * sTP * -log(sP/sM)
+        
+        return l
+    
+        
+    def accuracy(self) :
+        M = self.P + self.N
+        return (self.TP + self.TN ) / M
+            
+    def m_estimate(self) :
+        return self._m_estimate_m(self.TP, self.FP)
+        
+    def m_estimate_max(self) :
+        return self._m_estimate_m(self.maxTP, 0)
+            
+    def _m_estimate_m(self, TP, FP) :
+        return (TP + self.mPNP) / (TP + FP + self.M_ESTIMATE_M) 
+
+    def __str__(self) :
+        return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
+
+    def recall(self) :
+        return self.TP / (self.TP + self.FN)
+
+    
+
+class PF1Score(PFScore) :
+
+    def __init__(self, correct, predict, m, pTP, pFP) :
         self.M_ESTIMATE_M = m
         self.max_x = 1
         self.TP = 0.0
@@ -251,6 +342,8 @@ class PF1Score(object) :
         self.TN = 0.0
         self.P = 0.0
         self.N = 0.0
+        self.pTP = pTP
+        self.pFP = pFP
             
         for p, ph in zip(correct,predict) :
             n = 1-p
@@ -267,71 +360,17 @@ class PF1Score(object) :
             self.P += p
             self.N += n
         self.maxTP = self.TP
+        M = self.P + self.N
+        self.mPNP = self.M_ESTIMATE_M  * ( self.P / M )
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
-        
-    def m_estimate(self) :
-        m = self.M_ESTIMATE_M
-        if (self.TP == 0 and self.FP == 0 and m == 0) : return 0
-        return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + self.FP + m) 
-        
-    def m_estimate_max(self) :
-        m = self.M_ESTIMATE_M
-        if (self.TP == 0 and m == 0) : return 0
-        return (self.TP + m * (self.P / (self.N + self.P))) / (self.TP + m) 
-    
-    def accuracy(self) :
-        M = self.P + self.N
-        return (self.TP + self.TN ) / M
-        
-    def recall(self) :
-        return self.TP / (self.TP + self.FN)
-        
+        self.significance = self.calculate_significance()
+        self.significance_max = self.calculate_significance(True)
+                    
     def __str__(self) :
         return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
-    
-class ProbFOIL1(LearningProblem) :
-    
-    def __init__(self, *args,  **kwdargs) :
-        super(ProbFOIL1,self).__init__(*args, **kwdargs)
-        self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
-    
-    def calculateScore(self, rule) :
-        return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M)
 
-class ProbFOIL2(LearningProblem) :
-    
-    def __init__(self, *args, **kwdargs) :
-        super(ProbFOIL2,self).__init__(*args, **kwdargs)
-        self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
-    
-    def calculateScore(self, rule) :
-        if not rule.previous :
-            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M)
-        else :
-            # TODO store this information somewhere
-            previous_prediction = rule.previous.getScorePredict()
-            # if rule.previous.probability != 1 :
-            #     p = rule.previous.probability
-            #     previous_prediction = [ a + (b-a)*p   for a,b in zip(rule.previous.previous.score_predict, previous_prediction) ]
-            
-            result = PF2Score(rule.score_correct, rule.getScorePredict(), previous_prediction, self.M_ESTIMATE_M)
-            return result
-
-class PF2Score(object):
-
-    def _calc_y(self, p,l,u) :
-        if l == u :
-            # inactive
-            return None
-        else :
-            v = (p-l) / (u-l)
-            if v < 0 :
-                return 0    # overestimate
-            elif v > 1 :
-                return 1    # underestimate
-            else :
-                return v    # correctable
+class PF2Score(PFScore):
     
     def __init__(self, correct, predict, predict_prev, m) :
         self.M_ESTIMATE_M = m
@@ -482,26 +521,10 @@ class PF2Score(object):
         self.maxTP = TP_x
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
-        
-        
-    def accuracy(self) :
-        M = self.P + self.N
-        return (self.TP + self.TN ) / M
-            
-    def m_estimate(self) :
-        return self._m_estimate_m(self.TP, self.FP)
-        
-    def m_estimate_max(self) :
-        return self._m_estimate_m(self.maxTP, 0)
-            
-    def _m_estimate_m(self, TP, FP) :
-        return (TP + self.mPNP) / (TP + FP + self.M_ESTIMATE_M) 
-
-    def __str__(self) :
-        return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
-
-    def recall(self) :
-        return self.TP / (self.TP + self.FN)
+        self.pTP = TP_previous
+        self.pFP = FP_previous
+        self.significance = self.calculate_significance()
+        self.significance_max = self.calculate_significance(True)
 
 def test( correctF, predict_prevF, predictF ) :
     
