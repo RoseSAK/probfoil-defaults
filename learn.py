@@ -84,7 +84,7 @@ class LearningProblem(object) :
                 pass
         
             # Check significance level 
-            if new_H.significance < self.SIGNIFICANCE :
+            if new_H.score.N > 0 and new_H.significance < self.SIGNIFICANCE :
                 # Clause not significant => STOP
                 break
             
