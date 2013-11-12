@@ -810,11 +810,20 @@ class ARFFDataFile(DataFile) :
     def _read(self) :
         import numpy as np
         value_matrix = []
+        
+        dashSplitted = self._filename.strip().split('-')
+        target = dashSplitted[len(dashSplitted)-1].split('_')[0]
+        
         with open(self._filename) as file_in :
             line_num = 0
+            counter = 0
             for line_in in file_in :
                 line_in = line_in.strip()
-                if line_in and not line_in.startswith('@') and not line_in.startswith('#') :
+                if line_in.startswith('@attribute') and self.target_index == None :
+                    if target + ' ' in line_in:
+                        self.target_index = counter
+                    counter += 1
+                elif line_in and not line_in.startswith('@') and not line_in.startswith('#') :
                     values = list(map(float,line_in.split(',')))
                     num_atts = len(values)
                     value_matrix.append(np.array( values ))
