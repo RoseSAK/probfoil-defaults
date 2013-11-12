@@ -756,15 +756,15 @@ class DataFile(object) :
         return self.modes
         
     @classmethod 
-    def load(cls, filename) :
+    def load(cls, filename, **args) :
         if filename.endswith('.arff') :
-            return ARFFDataFile(filename)
+            return ARFFDataFile(filename, **args)
         else :
-            return PrologDataFile(filename)
+            return PrologDataFile(filename, **args)
 
 class PrologDataFile(DataFile) :
 
-    def __init__(self, filename) :
+    def __init__(self, filename, **extra) :
         super(PrologDataFile, self).__init__(filename)
         
     def base(self, predicate, arity) :
@@ -792,9 +792,11 @@ class PrologDataFile(DataFile) :
 
 class ARFFDataFile(DataFile) :
     
-    def __init__(self, filename) :
+    def __init__(self, filename, target_index=None, **extra) :
+        self.target_index = target_index
         super(ARFFDataFile, self).__init__(filename)
         self.dimension = self.value_matrix.shape[1]
+        
         
     def toProlog(self) :
         return '\n'.join(self._pl_data)
@@ -818,9 +820,12 @@ class ARFFDataFile(DataFile) :
                     value_matrix.append(np.array( values ))
                     self._pl_data += [ '%.6f::att%s(%s).' % (float(val), att, line_num) for att, val in enumerate(values) ]
                     line_num += 1
-            
-        self.target = 'att%s/1' % (num_atts - 1)
-        self.modes = [ 'att%s/+' % att for att in range(0, num_atts-1) ]
+        
+        if self.target_index == None :
+            self.target_index = num_atts - 1
+        
+        self.target = 'att%s/1' % self.target_index
+        self.modes = [ 'att%s/+' % att for att in range(0, num_atts) if att != self.target_index ]
         
         self.value_matrix = np.transpose(np.row_stack(value_matrix))
         
