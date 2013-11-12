@@ -84,7 +84,8 @@ class LearningProblem(object) :
                 pass
         
             # Check significance level 
-            if new_H.score.N > 0 and new_H.significance < self.SIGNIFICANCE :
+            # Skip this test if rule is 'default' prediction and it is the only rule.
+            if not (H.previous == None and new_H.parent == None) and new_H.significance < self.SIGNIFICANCE :
                 # Clause not significant => STOP
                 break
             
