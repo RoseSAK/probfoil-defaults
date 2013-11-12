@@ -118,7 +118,7 @@ class LearningProblem(object) :
         beam.push( init_rule, refinements )
         
         # Keep track of best score so far.
-        best_rule = None
+        best_rule = init_rule
         try :
             # While there are untested refinements in the beam.
             while beam.has_active() :
@@ -183,10 +183,7 @@ class LearningProblem(object) :
             print ("INTERRUPT")
         
         # Return head of beam.
-        if best_rule :
-            return best_rule
-        else :
-            return current_rule
+        return best_rule
 
     def update_refinements(self, rule, refine, best_score) :
 
