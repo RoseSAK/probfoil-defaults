@@ -121,7 +121,7 @@ rTrue      = re.compile("""A 0""")
 rFalse     = re.compile("""O [0-9]+ 0""")
 
 class C2DAsAC:
-    def __init__(self, c2dOutputFile, math):
+    def __init__(self, c2dOutputFile, math=MathMath()):
         printv("Building C2DAsAc({})".format(c2dOutputFile))
 
         self.c2dOutputFile = c2dOutputFile
@@ -302,40 +302,57 @@ def evaluate(ddnnf, weights, dims=None) :
             pEvidence, trueProbs = counter.probs(lambda variable: weights[variable])
         return trueProbs
 
-def main(ddnnf, weights_file) :
-    from collections import defaultdict
-    not_found = lambda : (1.0,1.0) 
-    
-    with open(ddnnf) as f :
-        with open(ddnnf + '.reverse', 'w') as f1 :
-            for line in reversed(f.readlines()) :
-                print( line.strip(), file=f1 )
-    
-    weights = defaultdict(not_found)
-    dims = None
-    # 1) read weights
-    with open(weights_file) as f :
-        for line in f :
-            line = line.strip().split()
-            identifier = int(line[0])
-            if dims == None : dims = len(line) - 1
-            
-            if len(line) > 2 :
-                line_weights = np.array([ float(x) for x in line[1:] ])
-            else :
-                line_weights = float(line[1])
+def EvaluateNNF(c2dOutputFile="c2d.cnf.nnf", probFile="atom_numbers_probabilities", outputEvidence="pevidence", outputMarginals="out_libra"):
+    printv("Building EvaluateNNF({}, {}, {}, {})".format(c2dOutputFile,probFile, outputEvidence,outputMarginals))
 
-            weights[identifier] = (line_weights, 1-line_weights)
-            
-    for i in range(0,10) :
-        print 
+    # Read the atom probabilities file
+    printv("Reading weights")
+    weights = []
+    names = []
     
-    if dims == 1 :
-        dims = None
+    with open(probFile) as pf :
+        for line in pf:
+            parts = line.split(" ")
+            weight = float(parts[2])
+            if weight < 0:
+                weights.append((1.0, 1.0))
+            else:
+                weights.append((weight, 1.0-weight))
+            names.append(parts[1])
+
+    # Process AC
+    counter = C2DAsAC(c2dOutputFile)
+    pEvidence, trueProbs = counter.probs(lambda variable: weights[variable-1])
+
+    # Write evidence to output
+    printv("Writing evidence to {}".format(outputEvidence))
+    with open(outputEvidence, "w") as outPEvidence :
+        outPEvidence.write(str(pEvidence))
+
+    # Write marginals to output
+    printv("Writing marginals to {}".format(outputMarginals))
+    with open(outputMarginals, "w") as out :
+        for prob in trueProbs:
+            out.write("{} {}\n".format(prob, 1-prob))
     
-    # 2) evaluate
-    probs = evaluate(ddnnf, weights, dims)    
-    print (probs[-1])
+def parse_args(args) :
+    import argparse    
+    parser = argparse.ArgumentParser(description='', epilog='', formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('nnf_file', nargs='?', default="c2d.cnf.nnf")
+    parser.add_argument('atom_prob_file', nargs='?', default="atom_numbers_probabilities")
+    parser.add_argument('out_ev', nargs='?', default="pevidence")
+    parser.add_argument('out_marg', nargs='?', default="out_libra")
+    parser.add_argument('--verbose', '-v', action='store_true', help="verbose mode")
+    return parser.parse_args(args)
+
+def main(argv):
+    args =  parse_args(sys.argv[1:])
     
-if __name__ == '__main__' :
-    main(*sys.argv[1:])
+    global verbose
+    verbose = args.verbose
+        
+    evaluatennf = EvaluateNNF(args.nnf_file, args.atom_prob_file, args.out_ev, args.out_marg)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
+
