@@ -322,7 +322,7 @@ class PFScore(object) :
         return self._m_estimate_m(self.TP, self.FP)
         
     def m_estimate_max(self) :
-        return self._m_estimate_m(self.maxTP, 0)
+        return self._m_estimate_m(self.maxTP, 0) # self.pFP)    # This 0 could be set to self.pFP
             
     def _m_estimate_m(self, TP, FP) :
         return (TP + self.mPNP) / (TP + FP + self.M_ESTIMATE_M) 
@@ -522,12 +522,13 @@ class PF2Score(PFScore):
         self.TP, self.TN, self.FP, self.FN = max_score_details
         self.P = P
         self.N = M-P
+
+        self.pTP = TP_previous
+        self.pFP = FP_previous
         
         self.maxTP = TP_x
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
-        self.pTP = TP_previous
-        self.pFP = FP_previous
         self.significance = self.calculate_significance()
         self.significance_max = self.calculate_significance(True)
 
