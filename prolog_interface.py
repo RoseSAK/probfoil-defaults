@@ -519,8 +519,8 @@ class Grounding(object) :
         # Eliminate unneeded node nodes (false for OR, true for AND)
         content = filter( lambda x : x != f, content )
 
-        # Put into fixed order
-        content = tuple(sorted(content))
+        # Put into fixed order and eliminate duplicate nodes
+        content = tuple(sorted(set(content)))
         
         # Empty OR node fails, AND node is true
         if not content : return f
