@@ -44,6 +44,7 @@ def parse_args(args) :
     p.add_argument('--maxrules', type=int, default=-1, help="Maximal number of rules to learn.")
     p.add_argument('--maxlength', type=int, default=0, help="Maximal length of rules to learn.")
     p.add_argument('--dont_pack_queries', dest='pack_queries', action="store_false", help="Run ProbLog for individual refinements.")
+    p.add_argument('--use_limited_accuracy', dest='use_limited_accuracy', action="store_true", help="Calculate accuracy only on known examples from the dataset.")
     p.add_argument('-o', '--output', type=str, default='probfoil.out', help="Output file.")
     p.add_argument('-r', '--use_recall', action='store_true', default=False, help="Use recall instead of accuracy.")
     p.add_argument('-c', '--classatt', type=int, default=None, help="Index of class label (for propositional data).")

@@ -36,7 +36,7 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
 class LearningProblem(object) :
     """Base class for FOIL learning algorithm."""
     
-    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, verbose=False, minrules=0, maxrules=-1, maxlength=0, pack_queries=True, use_recall=False, **other_args ) :
+    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, verbose=False, use_limited_accuracy=False, no_closed_world=False, minrules=0, maxrules=-1, maxlength=0, pack_queries=True, use_recall=False, **other_args ) :
         self.language = language
         self.knowledge = knowledge
         
@@ -50,6 +50,8 @@ class LearningProblem(object) :
         self.MAXLENGTH = maxlength
         self.PACK_QUERIES = pack_queries
         self.USE_RECALL = use_recall
+        self.USE_LIMITED_ACCURACY = use_limited_accuracy
+        self.NO_CLOSED_WORLD = no_closed_world
         
     def calculateScore(self, rule) :
         raise NotImplementedError('calculateScore')
@@ -170,7 +172,6 @@ class LearningProblem(object) :
                                 # Default case, only allow worse extensions (symmetry breaking)
                                 next_refs = new_refs[i+1:]
                                 
-                            print (self.MAXLENGTH, len(new_rule))
                             if self.MAXLENGTH and len(new_rule) > self.MAXLENGTH : 
                                 continue
                             # Attempt to add rule to beam
@@ -204,6 +205,8 @@ class LearningProblem(object) :
             refine += new_refine
                 
         if self.VERBOSE > 2 : print('Evaluating %s refinements...' % len(refine) )
+        
+        if self.VERBOSE > 5 : print (rule, refine)
             
         with Log('new_refine', new=new_refine, all=refine) : pass
         

@@ -264,6 +264,20 @@ class Rule(object) :
     def _get_global_score(self) :
         if self.learning_problem.USE_RECALL : 
             return self._get_score().recall() 
+        elif self.learning_problem.USE_LIMITED_ACCURACY :
+            TP = 0.0
+            FP = 0.0
+            N = 0.0
+            M = 0.0
+            
+            for ex, c, p in zip(self.examples, self.score_correct, self.getScorePredict()) :
+                if c > 0 :
+                    TP += min(p,c)
+                    FP += max(0.0,p-c)
+                    N += (1-c) 
+                    M += 1.0
+                    #print (p,c, min(p,c), max(0.0,p-c), ex)
+            return (TP + N - FP) / M
         else : 
             return self._get_score().accuracy()
         
@@ -447,10 +461,23 @@ class RootRule(Rule) :
         #   => requires access to 'facts'
         #   => scores are 1 - p where p is probability of the fact
         
-        
         self.knowledge.enqueue( self )  
         self.knowledge.process_queue()
         self.__score_correct = self.getScorePredict()
+        
+        if self.learning_problem.NO_CLOSED_WORLD :
+            new_examples = []
+            new_score_correct = []
+            for i, s in enumerate(self.__score_correct) :
+                if s > 0 :
+                    new_examples.append(self.__examples[i])
+                    new_score_correct.append(s)
+            self.__examples = new_examples
+            self.__score_correct = new_score_correct
+        
+        if self.learning_problem.VERBOSE > 3 :
+            print ('Number of examples:', len(self.examples))    
+        
         self.initScorePredict()
         self.eval_nodes = None
         self.self_nodes = None
@@ -590,6 +617,7 @@ class Language(object) :
             for args in self._build_refine(existing_variables, True, arg_info, use_vars) :
                 new_lit = Literal(pred_name, args)
                 yield new_lit
+            
             for args in self._build_refine(existing_variables, False, arg_info, use_vars) :
                 new_lit = Literal(pred_name, args, True)                
                 yield new_lit
