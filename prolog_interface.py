@@ -20,7 +20,7 @@ import time
 import math
 import sys
 import re
-import subprocess
+import subprocess, threading
 
 def bin_path(relative) :
     return os.path.join( os.path.split( os.path.abspath(__file__) )[0], relative )
@@ -233,7 +233,16 @@ class PrologInterface(object) :
     
                 # Compile the CNF
                 evaluator = self._compile_cnf(cnf, facts)
-    
+                if evaluator == None :
+                    for rule, ex_ids in self.toScore :
+                        for ex_id in ex_ids :
+                            rule.setScorePredict(ex_id, rule.previous.getScorePredict(ex_id))
+                    # Clear queues
+                    self.toEvaluate = set([])        
+                    self.toGround = []
+                    self.toScore = []
+                    return
+                
                 for node_id in self.toEvaluate :            
                     with Timer(category='evaluate_evaluating') :
                         p = evaluator.evaluate(node_id)
@@ -371,8 +380,19 @@ class PrologInterface(object) :
                  
             with Timer('Compiling %s' % cnf[0], verbose=self.env['verbose']>1) :
                 executable = bin_path('problog/dsharp')
-                subprocess.check_output([executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file])
-                
+                cmd = [executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file]
+                with open(os.devnull) as null :
+                    process = subprocess.Popen(cmd, stdout=null)
+        #            subprocess.check_output(cmd)
+                    if self.env['memlimit'] :
+                        limit = MemoryLimit(process, self.env['memlimit'] )
+                        threading.Thread(target = limit.run).start()
+                    retcode = process.wait()
+                    if retcode :
+                        if self.env['verbose'] > 3 : 
+                            print ('WARNING: compilation interrupted, memory exceeded', self.env['memlimit'], retcode)
+                        return None
+        
           with Timer(category='evaluate_evaluating') :
             return self._construct_evaluator(nnf_file, facts)
     
@@ -843,3 +863,50 @@ class ARFFDataFile(DataFile) :
             name = 'att%s' % i
             pl.grounding.addFact( name, row )
         pl.isPropositional = True
+      
+        
+class MemoryLimit(object) :
+    
+    def __init__(self, process, maxmem, relative=False) :
+        self.process = process
+        self.pid = process.pid
+        self.relative = relative
+        self.maxmem = maxmem
+        self.enforced = False
+    
+    def run(self) :
+        exit = False
+        while self.process != None and self.process.poll() == None :
+            if not self.verify() :
+                self.enforced = True
+                try :
+                    self.process.kill()
+                except OSError :
+                    pass
+                
+                exit = True
+            if exit : break
+            time.sleep(0.5)
+            
+    def verify(self) :
+        import psutil 
+        
+        if self.process != None :
+            # print psutil.Process(self.parent.process.pid).get_memory_percent() 
+          try : 
+            if self.relative :
+                return psutil.Process(self.pid).get_memory_percent() <= self.maxmem*100
+            else :
+                return psutil.Process(self.pid).get_memory_info().rss <= self.maxmem
+          except psutil.NoSuchProcess :
+            return True
+          except AccessDenied :
+              return True
+        else :
+            return True
+        
+    def get_message(self) :
+        return 'Subprocess has exceeded maximal allowed memory usage.'
+        
+    def get_error(self) :
+        return MemoryError( self.get_message() )

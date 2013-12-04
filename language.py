@@ -102,17 +102,19 @@ class Rule(object) :
         self.knowledge.enqueue(result)
         
         if not self.learning_problem.PACK_QUERIES :
-            
-            if not (self.getScorePredict() >= result.getScorePredict() - 1e-10  ).all() :
-                print ('PARENT', self, self.score)
-                print ('NEW', result, x)
-
-                i = 0
-                for x, y in zip(result.getScorePredict(),self.getScorePredict()) :
-                    if y >= x + 1e-10  :
-                        print (i, y, x, self.examples[i])
-                    i += 1
-                raise Exception('PREDICTION CANNOT INCREASE!!!!')
+            if self.learning_problem.VERBOSE > 6 :
+                print ('Evaluating rule', result, '...')
+            ss = self.score 
+            # if not (self.getScorePredict() >= result.getScorePredict() - 1e-10  ).all() :
+            #     print ('PARENT', self, self.score)
+            #     print ('NEW', result, x)
+            # 
+            #     i = 0
+            #     for x, y in zip(result.getScorePredict(),self.getScorePredict()) :
+            #         if y >= x + 1e-10  :
+            #             print (i, y, x, self.examples[i])
+            #         i += 1
+            #     raise Exception('PREDICTION CANNOT INCREASE!!!!')
                 
                 
         return result
@@ -576,6 +578,7 @@ class Language(object) :
         self.__modes = {}
         self.__targets = []
         self.__varcount = 0
+        self.learning_problem = None
         
     def initialize(self, knowledge) :
         predicates = list(self.__modes) + self.__targets
@@ -628,8 +631,10 @@ class Language(object) :
         
     def refinements(self, variables, use_vars) :
         existing_variables = defaultdict(list)
+        existing_variables_set = set([])
         for varname, vartype in variables :
             existing_variables[vartype].append( varname ) 
+            existing_variables_set.add(varname)
         
         if use_vars != None :
             use_vars = set(use_vars) # set( [ varname for varname, vartype in use_vars ] )
@@ -639,11 +644,14 @@ class Language(object) :
             arg_info = list(zip(self.getArgumentTypes(key = pred_id), self.getArgumentModes(key = pred_id)))
             for args in self._build_refine(existing_variables, True, arg_info, use_vars) :
                 new_lit = Literal(pred_name, args)
-                yield new_lit
+                if new_lit.variables & existing_variables_set :
+                    yield new_lit
             
-            for args in self._build_refine(existing_variables, False, arg_info, use_vars) :
-                new_lit = Literal(pred_name, args, True)                
-                yield new_lit
+            if not self.learning_problem.NO_NEGATION :
+                for args in self._build_refine(existing_variables, False, arg_info, use_vars) :
+                    new_lit = Literal(pred_name, args, True)                
+                    if new_lit.variables & existing_variables_set :
+                        yield new_lit
     
     def _build_refine_one(self, existing_variables, positive, arg_type, arg_mode) :
         if arg_mode in ['+','-'] :

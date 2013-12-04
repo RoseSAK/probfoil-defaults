@@ -46,9 +46,11 @@ def parse_args(args) :
     p.add_argument('--dont_pack_queries', dest='pack_queries', action="store_false", help="Run ProbLog for individual refinements.")
     p.add_argument('--use_limited_accuracy', dest='use_limited_accuracy', action="store_true", help="Calculate accuracy only on known examples from the dataset.")
     p.add_argument('--balance_negative', action="store_true", help="Add negative examples to balance number of positive.")
+    p.add_argument('--no_negation', action="store_true", help="Do not use negative literals.")
     p.add_argument('-o', '--output', type=str, default='probfoil.out', help="Output file.")
     p.add_argument('-r', '--use_recall', action='store_true', default=False, help="Use recall instead of accuracy.")
     p.add_argument('-c', '--classatt', type=int, default=None, help="Index of class label (for propositional data).")
+    p.add_argument('--memlimit', type=float, default=0, help="Set maximum memory limit (in Gb)")
     
     return p.parse_args(args)
 
@@ -57,9 +59,11 @@ def main(arguments) :
     args = parse_args(arguments)
         
     parameters = vars(args)
+    
+    memlimit = int(args.memlimit * (1 << 30))
 
     with open(args.log, 'w') as Log.LOG_FILE :
-     with WorkEnv(verbose=args.verbose) as env :    # Set up a temporary working directory
+     with WorkEnv(verbose=args.verbose,memlimit=memlimit) as env :    # Set up a temporary working directory
 
       # if args.input.endswith('.arff') :
       #     pl_file = env.tmp_path(os.path.splitext(os.path.split( args.input )[1])[0] + '.pl')
