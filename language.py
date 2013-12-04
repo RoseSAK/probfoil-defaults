@@ -465,6 +465,29 @@ class RootRule(Rule) :
         self.knowledge.process_queue()
         self.__score_correct = self.getScorePredict()
         
+        if self.learning_problem.BALANCE_NEGATIVE :
+            
+            import random
+            new_examples = []
+            new_score_correct = []
+            neg_examples = []
+            neg = 0.0
+            for i, s in enumerate(self.__score_correct) :
+                if s > 0 :
+                    new_examples.append(self.__examples[i])
+                    new_score_correct.append(s)
+                    neg += (1-s)
+                else :
+                    neg_examples.append(self.__examples[i])
+            random.shuffle(neg_examples)
+            num_negs = int(len(new_examples) - neg)
+            neg_examples = neg_examples[0:num_negs]
+            
+            self.__examples = new_examples + neg_examples
+            self.__score_correct = new_score_correct + [0] * num_negs
+        
+        
+        
         if self.learning_problem.NO_CLOSED_WORLD :
             new_examples = []
             new_score_correct = []
