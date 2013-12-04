@@ -104,7 +104,8 @@ class Rule(object) :
         if not self.learning_problem.PACK_QUERIES :
             if self.learning_problem.VERBOSE > 6 :
                 print ('Evaluating rule', result, '...')
-            ss = self.score 
+            ss = self.score
+            # print (ss)
             # if not (self.getScorePredict() >= result.getScorePredict() - 1e-10  ).all() :
             #     print ('PARENT', self, self.score)
             #     print ('NEW', result, x)
@@ -482,7 +483,8 @@ class RootRule(Rule) :
                 else :
                     neg_examples.append(self.__examples[i])
             random.shuffle(neg_examples)
-            num_negs = int(len(new_examples) - neg)
+            num_negs = int(len(new_examples) - 2*neg)
+            assert(num_negs >= 0)
             neg_examples = neg_examples[0:num_negs]
             
             self.__examples = new_examples + neg_examples

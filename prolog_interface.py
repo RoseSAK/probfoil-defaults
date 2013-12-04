@@ -389,6 +389,7 @@ class PrologInterface(object) :
                         threading.Thread(target = limit.run).start()
                     retcode = process.wait()
                     if retcode :
+                        with Log('abort') : pass
                         if self.env['verbose'] > 3 : 
                             print ('WARNING: compilation interrupted, memory exceeded', self.env['memlimit'], retcode)
                         return None
