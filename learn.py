@@ -36,7 +36,7 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
 class LearningProblem(object) :
     """Base class for FOIL learning algorithm."""
     
-    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, balance_negative=False, verbose=False, use_limited_accuracy=False, no_closed_world=False, minrules=0, maxrules=-1, maxlength=0, pack_queries=True, use_recall=False, no_negation=False, **other_args ) :
+    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, balance_negative=False, verbose=False, use_limited_accuracy=False, no_closed_world=False, minrules=0, maxrules=-1, maxlength=0, pack_queries=True, use_recall=False, no_negation=False, absolute_score=False, **other_args ) :
         self.language = language
         language.learning_problem = self
         self.knowledge = knowledge
@@ -55,6 +55,7 @@ class LearningProblem(object) :
         self.NO_CLOSED_WORLD = no_closed_world
         self.BALANCE_NEGATIVE = balance_negative
         self.NO_NEGATION = no_negation
+        self.ABSOLUTE_SCORE = absolute_score
         
     def calculateScore(self, rule) :
         raise NotImplementedError('calculateScore')
@@ -257,9 +258,9 @@ class ProbFOIL1(LearningProblem) :
     
     def calculateScore(self, rule) :
         if not rule.previous :
-            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0)
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0, not self.ABSOLUTE_SCORE)
         else :
-            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, rule.previous.score.TP, rule.previous.score.FP)
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, rule.previous.score.TP, rule.previous.score.FP, not self.ABSOLUTE_SCORE)
 
 class ProbFOIL2(LearningProblem) :
     
@@ -269,16 +270,16 @@ class ProbFOIL2(LearningProblem) :
     
     def calculateScore(self, rule) :
         if not rule.previous :
-            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0)
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0, not self.ABSOLUTE_SCORE)
         else :
             previous_prediction = rule.previous.getScorePredict()            
-            result = PF2Score(rule.score_correct, rule.getScorePredict(), previous_prediction, self.M_ESTIMATE_M)
+            result = PF2Score(rule.score_correct, rule.getScorePredict(), previous_prediction, self.M_ESTIMATE_M, not self.ABSOLUTE_SCORE)
             return result
 
 class PFScore(object) :
     
-    def __init__(self) :
-        pass
+    def __init__(self, relative=True) :
+        self.relative = relative
         
     # Calculate actual significance
     def calculate_significance(self, calc_max=False) :
@@ -331,6 +332,13 @@ class PFScore(object) :
         return self._m_estimate_m(self.maxTP, 0) # self.pFP)    # This 0 could be set to self.pFP
             
     def _m_estimate_m(self, TP, FP) :
+        if self.relative :
+            P = self.P - self.pTP
+            N = self.N - self.pFP
+            self.mPNP = self.M_ESTIMATE_M  * ( P / (P+N) )
+            TP -= self.pTP
+            FP -= self.pFP
+        
         return (TP + self.mPNP) / (TP + FP + self.M_ESTIMATE_M) 
 
     def __str__(self) :
@@ -343,7 +351,8 @@ class PFScore(object) :
 
 class PF1Score(PFScore) :
 
-    def __init__(self, correct, predict, m, pTP, pFP) :
+    def __init__(self, correct, predict, m, pTP, pFP, relative=True) :
+        super(PF1Score,self).__init__(relative)
         self.M_ESTIMATE_M = m
         self.max_x = 1
         self.TP = 0.0
@@ -382,7 +391,8 @@ class PF1Score(PFScore) :
 
 class PF2Score(PFScore):
     
-    def __init__(self, correct, predict, predict_prev, m) :
+    def __init__(self, correct, predict, predict_prev, m, relative=True) :
+        super(PF2Score,self).__init__(relative)
         self.M_ESTIMATE_M = m
         self.MIN_RULE_PROB = 0.01
         
@@ -427,6 +437,9 @@ class PF2Score(PFScore):
         P = sum(correct)
         M = len(correct)
         N = M - P
+        self.P = P
+        self.N = M-P
+        
         self.mPNP = self.M_ESTIMATE_M  * ( P / M )
         
         #print ('mPNP', self.mPNP)
@@ -459,6 +472,10 @@ class PF2Score(PFScore):
                 dS_total += dS
                 y = (p-l) / (u-l)
                 values.append( (y,p,l,u) )
+        
+        self.pTP = TP_previous
+        self.pFP = FP_previous
+        
                 
         tau_l, tau_u, tau_p = 0.0, 0.0, 0.0     # Sum l_i
         sigma_l, sigma_u, sigma_p = 0.0, 0.0, 0.0 # Sum l_i: x>y 
@@ -526,17 +543,33 @@ class PF2Score(PFScore):
         self.max_s = max_score
         self.max_x = max_x
         self.TP, self.TN, self.FP, self.FN = max_score_details
-        self.P = P
-        self.N = M-P
 
-        self.pTP = TP_previous
-        self.pFP = FP_previous
         
         self.maxTP = TP_x
         self.localScore = self.m_estimate()
         self.localScoreMax = self.m_estimate_max()
         self.significance = self.calculate_significance()
         self.significance_max = self.calculate_significance(True)
+        
+# class PF2ScoreRelative(PF2Score):
+#     
+#     def __init__(self, correct, predict, predict_prev, m) :
+#         super(PF2ScoreRelative, self).__init__(correct, predict, predict_prev, m)
+#         
+#         self.P -= self.pTP
+#         self.N -= self.pFP
+#         self.TP -= self.pTP
+#         self.FP -= self.pFP
+#         self.M = self.P + self.N        
+#         self.mPNP = self.M_ESTIMATE_M  * ( self.P / self.M )
+#         self.TN = self.N - self.FP
+#         self.FN = self.P - self.TP
+#                 
+#         self.maxTP -= self.pTP
+#         self.localScore = self.m_estimate()
+#         self.localScoreMax = self.m_estimate_max()
+#         self.significance = self.calculate_significance()
+#         self.significance_max = self.calculate_significance(True)
 
 def test( correctF, predict_prevF, predictF ) :
     
