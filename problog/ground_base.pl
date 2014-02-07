@@ -1,6 +1,7 @@
 % AUTHOR: Guy Van den Broeck <guy.vandenbroeck@cs.kuleuven.be>
 % AUTHOR: Joris Renkens <joris.renkens@cs.kuleuven.be>
 
+:- use_module(library(lists)).
 
 :- op(1000,xfx,['::']). % to support probabilistic facts
 :- op(1149,xfx,['<-']). % to support annotated disjunctions
@@ -158,11 +159,13 @@ possibly_true(Goal) :-
     valid_probfact(Goal,P),
     write_fact(P,Goal).
 possibly_true(Goal) :-
-	(
-    clause((AD <- Body),true,R),
-    nth_clause(_,I,R),
+	(	
+	findall((AD,Body), clause((AD <- Body), true), ALL),
+	nth1(I,ALL,(AD,Body)),
+    % clause((AD <- Body),true,R),
+    % nth_clause(_,I,R),
     ad_converter(Goal,AD,Body,I,Sum,ExtendedBody),
-    (Sum>1.0 ->
+    (Sum>1.00000000001 ->
         format(user_error,'ERROR: Sum of annotated disjunction is larger than 1.0.~n~w <- ~w.~n',[AD, Body]),
         fail
         ;
