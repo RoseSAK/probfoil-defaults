@@ -53,6 +53,8 @@ def parse_args(args) :
     p.add_argument('-r', '--use_recall', action='store_true', default=False, help="Use recall instead of accuracy.")
     p.add_argument('-c', '--classatt', type=int, default=None, help="Index of class label (for propositional data).")
     p.add_argument('--memlimit', type=float, default=0, help="Set maximum memory limit (in Gb)")
+    p.add_argument('--separate_examples', action="store_true", default=False, help="Compile examples separately.")
+    
     
     return p.parse_args(args)
 
@@ -65,7 +67,7 @@ def main(arguments) :
     memlimit = int(args.memlimit * (1 << 30))
 
     with open(args.log, 'w') as Log.LOG_FILE :
-     with WorkEnv(verbose=args.verbose,memlimit=memlimit) as env :    # Set up a temporary working directory
+     with WorkEnv(verbose=args.verbose,memlimit=memlimit, SPLIT_EXAMPLES=args.separate_examples) as env :    # Set up a temporary working directory
 
       # if args.input.endswith('.arff') :
       #     pl_file = env.tmp_path(os.path.splitext(os.path.split( args.input )[1])[0] + '.pl')

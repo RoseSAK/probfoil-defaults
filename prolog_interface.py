@@ -224,29 +224,56 @@ class PrologInterface(object) :
                         # Probability available: store it, this rule/example combination has been completely evaluated
                         rule.setScorePredict(ex_id, p)
         
+        
+        
         with Timer(category="evaluate") :       
+            
             # Evaluate nodes in toEvaluate queue
             if self.toEvaluate : 
-                # Convert grounding to CNF
-                with Timer(category='evaluate_converting') :
-                    cnf, facts = self.grounding.toCNF( self.toEvaluate )
+                skip_score = set([])
+                if self.env['SPLIT_EXAMPLES'] :
+                    for node_id in self.toEvaluate :
+                        # Convert grounding to CNF
+                        with Timer(category='evaluate_converting') :
+                            cnf, facts = self.grounding.toCNF( [node_id] )
     
-                # Compile the CNF
-                evaluator = self._compile_cnf(cnf, facts)
-                if evaluator == None :
-                    for rule, ex_ids in self.toScore :
-                        for ex_id in ex_ids :
-                            rule.setScorePredict(ex_id, rule.previous.getScorePredict(ex_id))
-                    # Clear queues
-                    self.toEvaluate = set([])        
-                    self.toGround = []
-                    self.toScore = []
-                    return
+                        # Compile the CNF
+                        evaluator = self._compile_cnf(cnf, facts)
+                        # if evaluator == None :
+                        #     for rule, ex_ids in self.toScore :
+                        #         
+                        #         for ex_id in ex_ids :
+                        #             rule.setScorePredict(ex_id, rule.previous.getScorePredict(ex_id))
+                        #     # Clear queues
+                        #     # self.toEvaluate = set([])        
+                        #     # self.toGround = []
+                        #     # self.toScore = []
                 
-                for node_id in self.toEvaluate :            
-                    with Timer(category='evaluate_evaluating') :
-                        p = evaluator.evaluate(node_id)
-                        self.grounding.setProbability(node_id, p)
+                        # for node_id in self.toEvaluate :            
+                        with Timer(category='evaluate_evaluating') :
+                            p = evaluator.evaluate(node_id)
+                            self.grounding.setProbability(node_id, p)
+                else :
+                    # Convert grounding to CNF
+                    with Timer(category='evaluate_converting') :
+                        cnf, facts = self.grounding.toCNF( self.toEvaluate )
+    
+                    # Compile the CNF
+                    evaluator = self._compile_cnf(cnf, facts)
+                    if evaluator == None :
+                        for rule, ex_ids in self.toScore :
+                            for ex_id in ex_ids :
+                                rule.setScorePredict(ex_id, rule.previous.getScorePredict(ex_id))
+                        # Clear queues
+                        self.toEvaluate = set([])        
+                        self.toGround = []
+                        self.toScore = []
+                        return
+                
+                    for node_id in self.toEvaluate :            
+                        with Timer(category='evaluate_evaluating') :
+                            p = evaluator.evaluate(node_id)
+                            self.grounding.setProbability(node_id, p)
                 
             # Score
             for rule, ex_ids in self.toScore :
