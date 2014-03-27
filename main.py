@@ -46,6 +46,7 @@ def parse_args(args) :
     p.add_argument('--dont_pack_queries', dest='pack_queries', action="store_false", help="Run ProbLog for individual refinements.")
     p.add_argument('--use_limited_accuracy', dest='use_limited_accuracy', action="store_true", help="Calculate accuracy only on known examples from the dataset.")
     p.add_argument('--balance_negative', action="store_true", help="Add negative examples to balance number of positive.")
+    p.add_argument('--balance_negative_biased', action="store_true", help="Add negative examples to balance number of positive (biased to use constant from positive examples.)")
     p.add_argument('--no_negation', action="store_true", help="Do not use negative literals.")
     p.add_argument('--no_closed_world', action="store_true", help="Do not add additional negative examples.")
     p.add_argument('--absolute_score', action="store_true", help="Use absolute scoring function instead of relative.")
@@ -54,7 +55,7 @@ def parse_args(args) :
     p.add_argument('-c', '--classatt', type=int, default=None, help="Index of class label (for propositional data).")
     p.add_argument('--memlimit', type=float, default=0, help="Set maximum memory limit (in Gb)")
     p.add_argument('--separate_examples', action="store_true", default=False, help="Compile examples separately.")
-    p.add_argument('--class_balance', type=float, default=1, help="Balance negative/positive examples (requires --balance_negative).")
+    p.add_argument('--class_balance', type=float, default=1, help="Balance negative/positive examples (requires --balance_negative[_biased]).")
     
     return p.parse_args(args)
 

@@ -473,24 +473,49 @@ class RootRule(Rule) :
         # self.knowledge.process_queue()
         # self.__score_correct = self.getScorePredict()
         
-        if self.learning_problem.BALANCE_NEGATIVE :
+        if self.learning_problem.BALANCE_NEGATIVE or self.learning_problem.BALANCE_NEGATIVE_BIASED :
+            biased = self.learning_problem.BALANCE_NEGATIVE_BIASED 
+            #   first select combinations of values as they appear in the positive examples
             
             import random
             new_examples = []
             new_score_correct = []
             neg_examples = []
+            
+            if biased :
+                values_in_positive = [ set([]) for x in self.examples[0] ]
+            
             neg = 0.0
             for i, s in enumerate(self.__score_correct) :
                 if s > 0 :
                     new_examples.append(self.__examples[i])
                     new_score_correct.append(s)
                     neg += (1-s)
+                    
+                    if biased :
+                        for j,x in enumerate(self.__examples[i]) :
+                            values_in_positive[j].add(x)
+                        
                 else :
                     neg_examples.append(self.__examples[i])
+
             random.shuffle(neg_examples)
-            num_negs = int(len(new_examples) - (self.learning_problem.CLASS_BALANCE+1)*neg)
+            if biased :
+                positives = set(new_examples)
+                negatives = list(set( product( *values_in_positive ) ) - positives)
+                random.shuffle(negatives)
+                if self.learning_problem.VERBOSE > 3 :
+                    print ("Using biased sampling: %s biased examples available." % len(negatives))
+            
+                
+                neg_examples = negatives + neg_examples 
+                
+#                negatives = argumentValue
+                    
+
+            num_negs = int((len(new_examples) - neg) * self.learning_problem.CLASS_BALANCE)
             assert(num_negs >= 0)
-            neg_examples = neg_examples[0:num_negs]
+            neg_examples = neg_examples[:num_negs]
             
             if self.learning_problem.VERBOSE > 3 :
                 print ("Found %s positive examples with a total weight of %s." % (len(new_examples), (len(new_examples)-neg)))
