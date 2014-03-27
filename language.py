@@ -464,9 +464,14 @@ class RootRule(Rule) :
         #   => requires access to 'facts'
         #   => scores are 1 - p where p is probability of the fact
         
-        self.knowledge.enqueue( self )  
-        self.knowledge.process_queue()
-        self.__score_correct = self.getScorePredict()
+        if self.learning_problem.VERBOSE > 3 :
+            print ("Found %s potential examples." % len(self.examples))
+        
+        self.__score_correct = self.knowledge.evaluate_facts(self.target, self.examples)
+        
+        # self.knowledge.enqueue( self )  
+        # self.knowledge.process_queue()
+        # self.__score_correct = self.getScorePredict()
         
         if self.learning_problem.BALANCE_NEGATIVE :
             
@@ -483,13 +488,15 @@ class RootRule(Rule) :
                 else :
                     neg_examples.append(self.__examples[i])
             random.shuffle(neg_examples)
-            num_negs = int(len(new_examples) - 2*neg)
+            num_negs = int(len(new_examples) - (self.learning_problem.CLASS_BALANCE+1)*neg)
             assert(num_negs >= 0)
             neg_examples = neg_examples[0:num_negs]
             
+            if self.learning_problem.VERBOSE > 3 :
+                print ("Found %s positive examples with a total weight of %s." % (len(new_examples), (len(new_examples)-neg)))
+            
             self.__examples = new_examples + neg_examples
-            self.__score_correct = new_score_correct + [0] * num_negs
-        
+            self.__score_correct = new_score_correct + [0] * num_negs        
         
         
         if self.learning_problem.NO_CLOSED_WORLD :
@@ -503,7 +510,7 @@ class RootRule(Rule) :
             self.__score_correct = new_score_correct
         
         if self.learning_problem.VERBOSE > 3 :
-            print ('Number of examples:', len(self.examples))    
+            print ('Number of examples: %s' % (len(self.examples),))    
         
         self.initScorePredict()
         self.eval_nodes = None

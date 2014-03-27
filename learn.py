@@ -36,7 +36,7 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
 class LearningProblem(object) :
     """Base class for FOIL learning algorithm."""
     
-    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, balance_negative=False, verbose=False, use_limited_accuracy=False, no_closed_world=False, minrules=0, maxrules=-1, maxlength=0, pack_queries=True, use_recall=False, no_negation=False, absolute_score=False, **other_args ) :
+    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, balance_negative=False, verbose=False, use_limited_accuracy=False, no_closed_world=False, minrules=0, maxrules=-1, maxlength=0, pack_queries=True, use_recall=False, no_negation=False, absolute_score=False, class_balance=1, **other_args ) :
         self.language = language
         language.learning_problem = self
         self.knowledge = knowledge
@@ -56,6 +56,7 @@ class LearningProblem(object) :
         self.BALANCE_NEGATIVE = balance_negative
         self.NO_NEGATION = no_negation
         self.ABSOLUTE_SCORE = absolute_score
+        self.CLASS_BALANCE = class_balance
         
     def calculateScore(self, rule) :
         raise NotImplementedError('calculateScore')

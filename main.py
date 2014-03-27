@@ -54,7 +54,7 @@ def parse_args(args) :
     p.add_argument('-c', '--classatt', type=int, default=None, help="Index of class label (for propositional data).")
     p.add_argument('--memlimit', type=float, default=0, help="Set maximum memory limit (in Gb)")
     p.add_argument('--separate_examples', action="store_true", default=False, help="Compile examples separately.")
-    
+    p.add_argument('--class_balance', type=float, default=1, help="Balance negative/positive examples (requires --balance_negative).")
     
     return p.parse_args(args)
 
@@ -120,7 +120,7 @@ def main(arguments) :
                 r0 = RootRule(target, lp)
                 r0.initialize()
             
-        if args.verbose > 3 :
+        if args.verbose > 4 :
             print ('Targets:', ', '.join(map(lambda x : '%.5f' % x, r0.score_correct) ) )
         
         if args.verbose: print('Start learning...')

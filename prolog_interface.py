@@ -437,6 +437,23 @@ class PrologInterface(object) :
         self.datafile = datafile
         self.datafile.initialize_grounding( self )
         
+    def evaluate_facts(self, target, examples) :
+        
+        result = [0.0] * len(examples)
+        
+        program = ['query(%s).' % target ]
+        
+    
+        grounding = self._ground(program)
+        
+        for i, ex in enumerate(examples) :
+            node = grounding.get(str(target.withArgs(ex)), None)
+            if node :
+                result[i] = self.grounding.getProbability(node)
+        return result
+        
+        
+        
 class DefaultEvaluator(object) :
     
     def __init__(self, knowledge, facts, pl) :
