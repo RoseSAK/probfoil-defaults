@@ -56,6 +56,7 @@ def parse_args(args) :
     p.add_argument('--memlimit', type=float, default=0, help="Set maximum memory limit (in Gb)")
     p.add_argument('--separate_examples', action="store_true", default=False, help="Compile examples separately.")
     p.add_argument('--class_balance', type=float, default=1, help="Balance negative/positive examples (requires --balance_negative[_biased]).")
+    p.add_argument('--ppmode', choices=['none', 'rr'], default='none')
     
     return p.parse_args(args)
 
@@ -131,6 +132,8 @@ def main(arguments) :
         #     with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         #     with Log('error') : pass
         #     raise e
+        
+        result = postprocess(result, ppmode=args.ppmode)
             
         with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         
@@ -158,7 +161,47 @@ def main(arguments) :
        
        with open(args.output, 'w') as f_out :
            write_evaluator_model(f_out, result, args.input)
-       
+
+def is_rr(rule) :
+  lits = rule.literals
+  
+  hvars = rule.target.variables
+  bvars = set([])
+  for l in lits :
+    bvars |= l.variables
+  return (hvars - bvars) == set([])
+
+def postprocess(result, ppmode) :
+  if ppmode == 'none' :
+    return result
+  elif ppmode == 'rr' :
+    from language import RuleHead
+    rules = []
+    rule = result
+    pruned = False
+    while rule.previous :
+      if is_rr(rule) :
+        rules = [rule] + rules
+      else :
+        pruned = True
+      rule = rule.previous
+    if pruned :
+      # Rebuild rule
+      r = RootRule(result.target, result.learning_problem)
+      r.initialize()
+      for rule in  rules :
+        r = RuleHead(r)
+        for lit in rule.literals :
+          r += lit
+    #      print(r.score)
+        s = r.score
+      result = r
+    return result
+  else :
+    print( "Unknown post-processing mode, ignoring...", file=sys.stderr)
+    return result
+    
+
 def write_evaluator_model(outfile, result, infilename) :
     
     target = result.target
