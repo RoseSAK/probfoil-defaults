@@ -450,6 +450,8 @@ class PrologInterface(object) :
             node = grounding.get(str(target.withArgs(ex)), None)
             if node :
                 result[i] = self.grounding.getProbability(node)
+            elif node == 0 :
+                result[i] = 1
         return result
         
         
