@@ -132,8 +132,27 @@ def main(arguments) :
         #     with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         #     with Log('error') : pass
         #     raise e
+
+        with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         
-        result = postprocess(result, ppmode=args.ppmode)
+        # print('##################################################################')
+        # print('#########################     RESULT     #########################')
+        # print('##################################################################')
+        # if result.getTheory() :
+        #     print('\n'.join(result.getTheory()))
+        # else :
+        #     print('%s :- fail.' % result.target )
+        # print('#########################     SCORES     #########################')
+        # print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
+        #        
+        # if args.use_recall :
+        #     print('RECALL                       :', result.globalScore)
+        # else :
+        #     print('ACCURACY                     :', result.globalScore)
+       
+
+        
+        result = postprocess(result, ppmode=args.ppmode, verbose=args.verbose)
             
         with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         
@@ -171,7 +190,7 @@ def is_rr(rule) :
     bvars |= l.variables
   return (hvars - bvars) == set([])
 
-def postprocess(result, ppmode) :
+def postprocess(result, ppmode, verbose=0) :
   if ppmode == 'none' :
     return result
   elif ppmode == 'rr' :
@@ -183,18 +202,21 @@ def postprocess(result, ppmode) :
       if is_rr(rule) :
         rules = [rule] + rules
       else :
+        if verbose > 3 : print ("Pruned rule:", rule)
         pruned = True
       rule = rule.previous
     if pruned :
       # Rebuild rule
+      result.learning_problem.knowledge.reset()
       r = RootRule(result.target, result.learning_problem)
-      r.initialize()
+      r.initialize_from(result.root)
       for rule in  rules :
         r = RuleHead(r)
         for lit in rule.literals :
           r += lit
     #      print(r.score)
-        s = r.score
+          #print ('NOW SCORING:', r)
+          s = r.score
       result = r
     return result
   else :

@@ -444,6 +444,13 @@ class RootRule(Rule) :
     def _get_score_correct(self) :
         return self.__score_correct
         
+    def initialize_from(self, rootrule) :
+      self.__examples = rootrule.examples
+      self.__score_correct = rootrule.score_correct
+      self.initScorePredict()
+      self.eval_nodes = None
+      self.self_nodes = None
+        
     def initialize(self, examples = None) :
         # 1) Determine types of arguments of self.target
         #   => requires access to 'language'
@@ -521,9 +528,8 @@ class RootRule(Rule) :
                 print ("Found %s positive examples with a total weight of %s." % (len(new_examples), (len(new_examples)-neg)))
             
             self.__examples = new_examples + neg_examples
-            self.__score_correct = new_score_correct + [0] * num_negs        
-        
-        
+            self.__score_correct = new_score_correct + [0] * num_negs 
+            
         if self.learning_problem.NO_CLOSED_WORLD :
             new_examples = []
             new_score_correct = []

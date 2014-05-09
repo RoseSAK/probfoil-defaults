@@ -45,6 +45,9 @@ class PrologInterface(object) :
         
         self.grounding = Grounding()
         self.datafile = None
+        
+    def reset(self) :
+      self.grounding = Grounding()
                     
     def enqueue(self, rule) :
         # Put the rule in queue for evaluation.
