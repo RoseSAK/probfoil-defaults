@@ -1,22 +1,23 @@
 base(athleteplaysforteam(person,team)).
-base(athleteplaysinleague(person,league)).
 base(athleteplayssport(person,sport)).
 base(teamplaysinleague(team,league)).
-base(athletealsoknownas(team,team)).
-base(teamplayssport(team,sport)).
-base(athleteplayssportsteamposition(person,position)).
+base(athleteplaysinleague(person,league)).
+base(athletealsoknownas(person,name)).
 base(coachesinleague(person,league)).
 base(coachesteam(person,team)).
 base(teamhomestadium(team,stadium)).
-base(athletecoach(person,person)).
+base(teamplayssport(team,sport)).
+base(athleteplayssportsteamposition(person,position)).
 base(athletehomestadium(person,stadium)).
+base(athletecoach(person,person)).
 base(athlete(person)).
-base(coach(person)).
 base(attraction(stadium)).
+base(coach(person)).
 base(female(person)).
 base(male(person)).
 base(hobby(sport)).
-base(organization(team)).
+base(organization(league)).
+base(person(person)).
 base(personafrica(person)).
 base(personasia(person)).
 base(personaustralia(person)).
@@ -24,13 +25,11 @@ base(personcanada(person)).
 base(personeurope(person)).
 base(personmexico(person)).
 base(personus(person)).
-
-learn(athlete(person)).
-learn(coach(person)).
-
-learn(personcanada(person)).
-
-% modes(athleteplayssport(+,c)).
+base(sport(sport)).
+base(sportsleague(league)).
+base(sportsteam(team)).
+base(sportsteamposition(position)).
+base(stadiumoreventvenue(stadium)).
 
 0.7500000152672301::athleteplaysforteam(chauncey_billups,nuggets).
 0.7500000185863227::athleteplayssport(jim_mcmahon,football).
@@ -8440,8 +8439,8 @@ male(dave_wannstedt).
 male(david_beckham).
 male(yogi_berra).
 organization(hall_of_fame).
-% person(armando_marsans).
-% person(pudge_rodriguez).
+person(armando_marsans).
+person(pudge_rodriguez).
 personafrica(billy_martin).
 personasia(bronson_arroyo).
 personasia(carlos_arroyo).
@@ -8585,1580 +8584,1580 @@ personus(justin_speier).
 personus(lance_berkman).
 personus(matt_treanor).
 personus(roy_oswalt).
-% sport(american_football).
-% sport(athletics).
-% sport(baseball).
-% sport(basketball).
-% sport(boxing).
-% sport(championship_golf).
-% sport(college_baseball).
-% sport(college_football).
-% sport(cricket).
-% sport(cycling).
-% sport(darts).
-% sport(figure_skating).
-% sport(football).
-% sport(games).
-% sport(golf).
-% sport(hockey).
-% sport(horse_racing).
-% sport(ice_hockey).
-% sport(motorsport).
-% sport(nascar).
-% sport(nba_basketball).
-% sport(racing).
-% sport(rowing).
-% sport(sailing).
-% sport(skateboarding).
-% sport(snooker).
-% sport(soccer).
-% sport(softball).
-% sport(swimming).
-% sport(table_tennis).
-% sport(taekwondo).
-% sport(tennis).
-% sport(track_and_field).
-% sport(triathlon).
-% sport(volleyball).
-% sport(wrestling).
-% sportsleague(acc).
-% sportsleague(cfl).
-% sportsleague(college_basketball).
-% sportsleague(college_football).
-% sportsleague(former_nfl).
-% sportsleague(miac).
-% sportsleague(mlb).
-% sportsleague(mls).
-% sportsleague(nascar).
-% sportsleague(nba).
-% sportsleague(ncaa).
-% sportsleague(ncaa_football).
-% sportsleague(nfl).
-% sportsleague(nhl).
-% sportsleague(pac_10).
-% sportsleague(wac).
-% sportsleague(western_conference).
-% sportsleague(wnba).
-% sportsteam(abilene_christian_university_wildcats).
-% sportsteam(ac_milan).
-% sportsteam(acc_gear).
-% sportsteam(adelphi_university_panthers).
-% sportsteam(aggies).
-% sportsteam(air_force).
-% sportsteam(air_force_academy_falcons).
-% sportsteam(air_force_falcons).
-% sportsteam(alabama_a_and_m_bulldogs).
-% sportsteam(alabama_a_m_bulldogs).
-% sportsteam(alabama_birmingham_blazers).
-% sportsteam(alabama_st__hornets).
-% sportsteam(alabama_state_hornets).
-% sportsteam(alabama_state_university).
-% sportsteam(alaska_fairbanks_nanooks).
-% sportsteam(alaska_seawolves).
-% sportsteam(albany_great_danes).
-% sportsteam(albany_river_rats).
-% sportsteam(albany_state_golden_rams).
-% sportsteam(alcorn_state_braves).
-% sportsteam(american_eagles).
-% sportsteam(american_league).
-% sportsteam(american_university_eagles).
-% sportsteam(anaheim_angels).
-% sportsteam(anaheim_ducks).
-% sportsteam(anderson_ravens).
-% sportsteam(angeles_kings).
-% sportsteam(angelo_state_rams).
-% sportsteam(appalachian_state).
-% sportsteam(argonauts).
-% sportsteam(arizona_cardinals).
-% sportsteam(arizona_diamond_backs).
-% sportsteam(arizona_rattlers).
-% sportsteam(arizona_st__sun_devils).
-% sportsteam(arizona_state).
-% sportsteam(arizona_state_sun_devils).
-% sportsteam(arizona_state_university).
-% sportsteam(arizona_wildcats).
-% sportsteam(arkansas_fort_smith_lions).
-% sportsteam(arkansas_little_rock_trojans).
-% sportsteam(arkansas_pine_bluff_golden_lions).
-% sportsteam(arkansas_razorbacks).
-% sportsteam(arkansas_st__red_wolves).
-% sportsteam(arkansas_state_indians).
-% sportsteam(arkansas_state_red_wolves).
-% sportsteam(arkansas_tech_wonder_boys).
-% sportsteam(armstrong_atlantic_pirates).
-% sportsteam(army).
-% sportsteam(army_black_knights).
-% sportsteam(ashland_eagles).
-% sportsteam(astros).
-% sportsteam(atlanta_braves).
-% sportsteam(atlanta_dream).
-% sportsteam(atlanta_thrashers).
-% sportsteam(atlantic_10_conference).
-% sportsteam(atlantic_10_gear).
-% sportsteam(auburn_tigers).
-% sportsteam(auburn_university_at_montgomery).
-% sportsteam(augustana_vikings).
-% sportsteam(austin_peay_governors).
-% sportsteam(austin_peay_state_governors).
-% sportsteam(ave_maria_gyrenes).
-% sportsteam(baker_wildcats).
-% sportsteam(ball_st__cardinals).
-% sportsteam(ball_state).
-% sportsteam(ball_state_cardinals).
-% sportsteam(ball_state_university).
-% sportsteam(baltimore_bullets).
-% sportsteam(baltimore_colts).
-% sportsteam(baltimore_orioles).
-% sportsteam(barry_university_buccaneers).
-% sportsteam(baruch_college_bearcats).
-% sportsteam(baylor_bears).
-% sportsteam(baylor_university).
-% sportsteam(bellarmine_knights).
-% sportsteam(bellevue_college_bulldogs).
-% sportsteam(belmont_bruins).
-% sportsteam(beloit_snappers).
-% sportsteam(bemidji_state_beavers).
-% sportsteam(bethune_cookman_wildcats).
-% sportsteam(big_12_gear).
-% sportsteam(big_east_gear).
-% sportsteam(big_sky_conference).
-% sportsteam(big_sky_conference_gear).
-% sportsteam(big_ten).
-% sportsteam(big_ten_gear).
-% sportsteam(bill_elliott).
-% sportsteam(binghamton_bearcats).
-% sportsteam(birmingham_southern_college_panthers).
-% sportsteam(black_hawks).
-% sportsteam(blackhawks).
-% sportsteam(bloomsburg_huskies).
-% sportsteam(blue_jackets).
-% sportsteam(blue_jays).
-% sportsteam(bobby_hamilton).
-% sportsteam(bobby_labonte).
-% sportsteam(bobcats).
-% sportsteam(boilermakers).
-% sportsteam(boise_st__broncos).
-% sportsteam(boise_state).
-% sportsteam(boise_state_broncos).
-% sportsteam(bolton_wanderers).
-% sportsteam(boston_americans).
-% sportsteam(boston_braves).
-% sportsteam(boston_bruins).
-% sportsteam(boston_college).
-% sportsteam(boston_college_eagles).
-% sportsteam(boston_terriers).
-% sportsteam(boston_university_terriers).
-% sportsteam(bowdoin_polar_bears).
-% sportsteam(bowling_green).
-% sportsteam(bowling_green_falcons).
-% sportsteam(bowling_green_st__falcons).
-% sportsteam(bowling_green_st_falcons).
-% sportsteam(bowling_green_state_university).
-% sportsteam(brad_keselowkski).
-% sportsteam(bradley_braves).
-% sportsteam(bradley_university_braves).
-% sportsteam(brazil).
-% sportsteam(brian_vickers).
-% sportsteam(bridgewater_state_bears).
-% sportsteam(brigham_young_cougars).
-% sportsteam(brigham_young_university_cougars).
-% sportsteam(british_columbia_lions).
-% sportsteam(brockport_golden_eagles).
-% sportsteam(broncos).
-% sportsteam(brooklyn_college_bulldogs).
-% sportsteam(brooklyn_cyclones).
-% sportsteam(brooklyn_dodgers).
-% sportsteam(brown_bears).
-% sportsteam(brown_university).
-% sportsteam(bryant_bulldogs).
-% sportsteam(buckeyes).
-% sportsteam(bucknell_bison).
-% sportsteam(bucknell_university).
-% sportsteam(bucks).
-% sportsteam(buffalo_bills).
-% sportsteam(buffalo_braves).
-% sportsteam(buffalo_bulls).
-% sportsteam(buffalo_state_bengals).
-% sportsteam(bulls).
-% sportsteam(busch).
-% sportsteam(butler_bulldogs).
-% sportsteam(byu_hawaii_seasiders).
-% sportsteam(byu_idaho_vikings).
-% sportsteam(cal).
-% sportsteam(cal_golden_bears).
-% sportsteam(cal_poly_mustangs).
-% sportsteam(cal_poly_slo_mustangs).
-% sportsteam(cal_state_bakersfield_roadrunners).
-% sportsteam(cal_state_channel_island_dolphins).
-% sportsteam(cal_state_chico_wildcats).
-% sportsteam(cal_state_east_bay_pioneers).
-% sportsteam(cal_state_fullerton_titans).
-% sportsteam(cal_state_los_angeles_golden_eagles).
-% sportsteam(cal_state_monterey_bay_otters).
-% sportsteam(cal_state_northridge_matadors).
-% sportsteam(cal_state_san_marcos_cougars).
-% sportsteam(cal_state_stanislaus_warriors).
-% sportsteam(caldwell_cougars).
-% sportsteam(calgary_flames).
-% sportsteam(calgary_stampeders).
-% sportsteam(california_angels).
-% sportsteam(california_golden_bears).
-% sportsteam(california_riverside_highlanders).
-% sportsteam(california_university_of_pennsylvania_vulcans).
-% sportsteam(cameron_aggies).
-% sportsteam(campbell_fighting_camels).
-% sportsteam(campbell_university_fighting_camels).
-% sportsteam(canadiens).
-% sportsteam(canisius_college_golden_griffins).
-% sportsteam(canisius_golden_griffins).
-% sportsteam(capitals).
-% sportsteam(carolina_hurricanes).
-% sportsteam(case_western_reserve_spartans).
-% sportsteam(casey_mears).
-% sportsteam(cavs).
-% sportsteam(celtics).
-% sportsteam(cent__connecticut_st__blue_devils).
-% sportsteam(cent__michigan_chippewas).
-% sportsteam(cent_michigan_chippewas).
-% sportsteam(centenary_college_gents).
-% sportsteam(centenary_gentlemen).
-% sportsteam(central_arkansas_bears).
-% sportsteam(central_connecticut_state_blue_devils).
-% sportsteam(central_florida).
-% sportsteam(central_florida_knights).
-% sportsteam(central_michigan_chippewas).
-% sportsteam(central_missouri_mules).
-% sportsteam(central_missouri_state_jennies).
-% sportsteam(central_oklahoma_bronchos).
-% sportsteam(central_oklahoma_broncos).
-% sportsteam(central_state).
-% sportsteam(central_washington_wildcats).
-% sportsteam(chapman_panthers).
-% sportsteam(charleston_cougars).
-% sportsteam(charleston_southern_buccaneers).
-% sportsteam(charlotte_49ers).
-% sportsteam(chattanooga_mocs).
-% sportsteam(chicago_black_hawks).
-% sportsteam(chicago_blackhawks).
-% sportsteam(chicago_cubs_baseball_team).
-% sportsteam(chicago_fire).
-% sportsteam(chicago_maroons).
-% sportsteam(chicago_state_cougars).
-% sportsteam(chivas_usa).
-% sportsteam(christian_brothers_buccaneers).
-% sportsteam(christopher_newport_captains).
-% sportsteam(cincinatti_bengals).
-% sportsteam(cincinnati).
-% sportsteam(cincinnati_royals).
-% sportsteam(citadel_bulldogs).
-% sportsteam(city_college_of_new_york_bea).
-% sportsteam(city_college_of_san_francisco_rams).
-% sportsteam(city_tech_yellow_jackets).
-% sportsteam(clarion_golden_eagles).
-% sportsteam(clark_atlanta_panthers).
-% sportsteam(clarke_college_crusaders).
-% sportsteam(clarkson_golden_knights).
-% sportsteam(clemson).
-% sportsteam(cleveland_browns).
-% sportsteam(cleveland_indians).
-% sportsteam(cleveland_st__vikings).
-% sportsteam(cleveland_state_vikings).
-% sportsteam(clint_bowyer).
-% sportsteam(cmu_mavericks).
-% sportsteam(coast_guard_academy_bears).
-% sportsteam(coastal_carolina_chanticleers).
-% sportsteam(cobbers).
-% sportsteam(colgate_raiders).
-% sportsteam(colgate_red_raiders).
-% sportsteam(colgate_university).
-% sportsteam(college).
-% sportsteam(college_of_new_jersey_lions).
-% sportsteam(colorado_avalanche).
-% sportsteam(colorado_buffaloes).
-% sportsteam(colorado_college_tigers).
-% sportsteam(colorado_golden_buffaloes).
-% sportsteam(colorado_rapids).
-% sportsteam(colorado_school_of_mines_orediggers).
-% sportsteam(colorado_st__rams).
-% sportsteam(colorado_state_pueblo_thunde).
-% sportsteam(colorado_state_pueblo_thunder_wolves).
-% sportsteam(colorado_state_rams).
-% sportsteam(columbia_lions).
-% sportsteam(columbia_university_lions).
-% sportsteam(columbus_crew).
-% sportsteam(columbus_state_cougars).
-% sportsteam(concordia_college_cobbers).
-% sportsteam(concordia_irvine_eagles).
-% sportsteam(concordia_st_paul_golden_bears).
-% sportsteam(concordia_texas_tornadoes).
-% sportsteam(concordia_university_wisconsin_falcons).
-% sportsteam(conference_usa).
-% sportsteam(conference_usa_gear).
-% sportsteam(connecticut_huskies).
-% sportsteam(coppin_state_eagles).
-% sportsteam(cornell_big_red).
-% sportsteam(cornhuskers).
-% sportsteam(coyotes).
-% sportsteam(creighton_blue_jays).
-% sportsteam(creighton_bluejays).
-% sportsteam(crew).
-% sportsteam(crimson).
-% sportsteam(csu_buccaneers).
-% sportsteam(cubbies).
-% sportsteam(cumberland_bulldogs).
-% sportsteam(d_c__united).
-% sportsteam(dakota_state_trojans).
-% sportsteam(dale_earnhardt).
-% sportsteam(dallas_baptist_patriots).
-% sportsteam(dallas_cowboys).
-% sportsteam(dallas_mavericks).
-% sportsteam(dallas_stars).
-% sportsteam(dartmouth_big_green).
-% sportsteam(dave_blaney).
-% sportsteam(davenport_panthers).
-% sportsteam(david_gilliland).
-% sportsteam(david_ragan).
-% sportsteam(david_reutimann).
-% sportsteam(david_stremme).
-% sportsteam(davidson_wildcats).
-% sportsteam(dayton_flyers).
-% sportsteam(daytona_500).
-% sportsteam(dc_united).
-% sportsteam(delaware_blue_hens).
-% sportsteam(delaware_fightin__blue_hens).
-% sportsteam(delaware_fightin_blue_hens).
-% sportsteam(delaware_state_hornets).
-% sportsteam(delta_state_fighting_okra).
-% sportsteam(demon_deacons).
-% sportsteam(denny_hamlin).
-% sportsteam(denver_pioneers).
-% sportsteam(depaul_university).
-% sportsteam(depauw_tigers).
-% sportsteam(derby_county).
-% sportsteam(detroit_lions).
-% sportsteam(detroit_mercy_titans).
-% sportsteam(detroit_shock).
-% sportsteam(detroit_tigers).
-% sportsteam(detroit_titans).
-% sportsteam(devil_rays).
-% sportsteam(district_of_columbia_firebirds).
-% sportsteam(division).
-% sportsteam(dixie_state_rebels).
-% sportsteam(dixie_state_red_storm).
-% sportsteam(dodgers).
-% sportsteam(dolphins).
-% sportsteam(dominican_stars).
-% sportsteam(dowling_college_golden_lions).
-% sportsteam(drake).
-% sportsteam(drake_bulldogs).
-% sportsteam(drake_university).
-% sportsteam(drexel_dragons).
-% sportsteam(drexel_university).
-% sportsteam(duke_blue_devils).
-% sportsteam(duke_university).
-% sportsteam(duquesne).
-% sportsteam(duquesne_dukes).
-% sportsteam(duquesne_university).
-% sportsteam(dwight_englewood_bulldogs).
-% sportsteam(e__tenn__st__buccaneers).
-% sportsteam(e_michigan_eagles).
-% sportsteam(earnhardt_jr).
-% sportsteam(east_carolina).
-% sportsteam(east_carolina_pirates).
-% sportsteam(east_carolina_university).
-% sportsteam(east_tennessee_state_buccaneers).
-% sportsteam(eastern_illinois_panthers).
-% sportsteam(eastern_kentucky_colonels).
-% sportsteam(eastern_michigan_university).
-% sportsteam(eastern_university_eagles).
-% sportsteam(eastern_washington_eagles).
-% sportsteam(eastern_wyoming_college_lancers).
-% sportsteam(ecsu_vikings).
-% sportsteam(ecu_pirates).
-% sportsteam(edmonton_eskimos).
-% sportsteam(edmonton_oilers).
-% sportsteam(edward_waters_tigers).
-% sportsteam(elliot_sadler).
-% sportsteam(elliott_sadler).
-% sportsteam(elmhurst_college_blue_jays).
-% sportsteam(elmira_college_soaring_eagles).
-% sportsteam(elon_fighting_christians).
-% sportsteam(elon_phoenix).
-% sportsteam(embry_riddle_eagles).
-% sportsteam(emory_eagles).
-% sportsteam(emporia_state_hornets).
-% sportsteam(england_patriots).
-% sportsteam(evangel_university).
-% sportsteam(evansville_aces).
-% sportsteam(evansville_purple_aces).
-% sportsteam(fairfield_stags).
-% sportsteam(fairleigh_dickinson_knights).
-% sportsteam(falcons).
-% sportsteam(faulkner_eagles).
-% sportsteam(faulkner_state_sun_chiefs).
-% sportsteam(fayetteville_state_broncos).
-% sportsteam(fc_barcelona).
-% sportsteam(fc_dallas).
-% sportsteam(ferris_state_bulldogs).
-% sportsteam(fiesta_bowl_gear).
-% sportsteam(fighting_illini).
-% sportsteam(fiu_golden_panthers).
-% sportsteam(fla__international_golden_panthers).
-% sportsteam(flames).
-% sportsteam(florida_a___m_rattlers).
-% sportsteam(florida_a_and_m_rattlers).
-% sportsteam(florida_a_m_rattlers).
-% sportsteam(florida_atlantic_owls).
-% sportsteam(florida_everblades).
-% sportsteam(florida_gators_football).
-% sportsteam(florida_gulf_coast_eagles).
-% sportsteam(florida_international_golden_panthers).
-% sportsteam(florida_intl_golden_panthers).
-% sportsteam(florida_marlins).
-% sportsteam(florida_southern_college_moc).
-% sportsteam(florida_st__seminoles).
-% sportsteam(florida_st_seminoles).
-% sportsteam(florida_state).
-% sportsteam(florida_state_university).
-% sportsteam(flyers).
-% sportsteam(fordham_rams).
-% sportsteam(fordham_university).
-% sportsteam(former_notre_dame).
-% sportsteam(fort_valley_state_wildcats).
-% sportsteam(france).
-% sportsteam(franklin).
-% sportsteam(fredonia_state_blue_devils).
-% sportsteam(fresno_city_college_rams).
-% sportsteam(fresno_st__bulldogs).
-% sportsteam(fresno_state).
-% sportsteam(fresno_state_bulldogs).
-% sportsteam(furman_paladins).
-% sportsteam(furman_university).
-% sportsteam(future_farmers_of_america).
-% sportsteam(ga_tech_yellow_jackets).
-% sportsteam(gamecocks).
-% sportsteam(gardner_webb_bulldogs).
-% sportsteam(gardner_webb_runnin_bulldogs).
-% sportsteam(george_mason_patriots).
-% sportsteam(george_mason_university).
-% sportsteam(george_washington_colonials).
-% sportsteam(george_washington_university).
-% sportsteam(georgetown_college_tigers).
-% sportsteam(georgetown_hoyas).
-% sportsteam(georgetown_university).
-% sportsteam(georgia_bulldogs).
-% sportsteam(georgia_southern_eagles).
-% sportsteam(georgia_southwestern_hurricanes).
-% sportsteam(georgia_state_panthers).
-% sportsteam(georgia_tech_yellow_jackets).
-% sportsteam(germany).
-% sportsteam(golden_gophers).
-% sportsteam(gonzaga).
-% sportsteam(gonzaga_bulldogs).
-% sportsteam(gonzaga_university_school_of_law).
-% sportsteam(governors_state_university).
-% sportsteam(grace_lancers).
-% sportsteam(graceland_yellowjackets).
-% sportsteam(grambling).
-% sportsteam(grambling_st__tigers).
-% sportsteam(grambling_state_tigers).
-% sportsteam(grambling_tigers).
-% sportsteam(grand_canyon_antelopes).
-% sportsteam(grand_valley_state_l).
-% sportsteam(green_bay_packers).
-% sportsteam(green_bay_phoenix).
-% sportsteam(greensboro).
-% sportsteam(greg_biffle).
-% sportsteam(greg_biffle_16).
-% sportsteam(gw_colonials).
-% sportsteam(hamline_pipers).
-% sportsteam(hampden_sydney_college_tigers).
-% sportsteam(hampton_pirates).
-% sportsteam(hampton_university).
-% sportsteam(hanover_college).
-% sportsteam(hardin_simmons_university).
-% sportsteam(hardin_simmons_university_cowboys).
-% sportsteam(harper_college_hawks).
-% sportsteam(hartford_hawks).
-% sportsteam(hartford_whalers).
-% sportsteam(harvard).
-% sportsteam(harvard_crimson).
-% sportsteam(harvard_university).
-% sportsteam(hawaii_rainbow_warriors).
-% sportsteam(hawaii_warriors).
-% sportsteam(hawkeyes).
-% sportsteam(henderson_state_university_reddies).
-% sportsteam(hershey_bears).
-% sportsteam(high_point_panthers).
-% sportsteam(hofstra_pride).
-% sportsteam(hofstra_university).
-% sportsteam(hofstra_university_pride).
-% sportsteam(holy_cross).
-% sportsteam(holy_cross_crusaders).
-% sportsteam(hoosiers).
-% sportsteam(hornets).
-% sportsteam(houston_astros).
-% sportsteam(houston_colts).
-% sportsteam(houston_cougars).
-% sportsteam(houston_dynamo).
-% sportsteam(houston_rockets).
-% sportsteam(howard_bison).
-% sportsteam(hunter_college_hawks).
-% sportsteam(huntington_foresters).
-% sportsteam(huskies).
-% sportsteam(huston_tillotson_university_rams).
-% sportsteam(idaho_state_bengals).
-% sportsteam(idaho_vandals).
-% sportsteam(illini).
-% sportsteam(illinois_chicago_flames).
-% sportsteam(illinois_state_redbirds).
-% sportsteam(illinois_wesleyan).
-% sportsteam(indiana_fever).
-% sportsteam(indiana_hoosiers).
-% sportsteam(indiana_pacers).
-% sportsteam(indiana_purdue_fort_wayne_mastodons).
-% sportsteam(indiana_state_sycamores).
-% sportsteam(indiana_university_of_pennsylvania_crimson_hawks).
-% sportsteam(indiana_university_school_of_medicine).
-% sportsteam(indiana_wesleyan_wildcats).
-% sportsteam(indianapolis_greyhounds).
-% sportsteam(indians).
-% sportsteam(iona_college_gaels).
-% sportsteam(iona_gaels).
-% sportsteam(iowa_hawkeyes).
-% sportsteam(iowa_st__cyclones).
-% sportsteam(iowa_st_cyclones).
-% sportsteam(iowa_state_cyclones).
-% sportsteam(iowa_state_cyclones_basketball).
-% sportsteam(iowa_state_university).
-% sportsteam(ipfw_mastodons).
-% sportsteam(ithaca_college_bombers).
-% sportsteam(iupui).
-% sportsteam(iupui_jaguars).
-% sportsteam(ivy_tech_community_college).
-% sportsteam(j_j__yeley_18).
-% sportsteam(jackson_state_tigers).
-% sportsteam(jacksonville_dolphins).
-% sportsteam(jacksonville_jaguars).
-% sportsteam(jacksonville_st__gamecocks).
-% sportsteam(jacksonville_state_gamecocks).
-% sportsteam(jags).
-% sportsteam(james_madison_dukes).
-% sportsteam(james_madison_university).
-% sportsteam(jamie_mcmurray).
-% sportsteam(jarrett).
-% sportsteam(jayhawks).
-% sportsteam(jazz).
-% sportsteam(jeff_burton).
-% sportsteam(jeff_green).
-% sportsteam(jeremy_mayfield).
-% sportsteam(jerry_nadeau).
-% sportsteam(jersey_devils).
-% sportsteam(john_carroll_blue_streaks).
-% sportsteam(john_jay_bloodhounds).
-% sportsteam(johns_hopkins_blue_jays).
-% sportsteam(johnson_and_wales_wildcats).
-% sportsteam(johnson_c_smith_golden_bulls).
-% sportsteam(ju_dolphins).
-% sportsteam(juventus).
-% sportsteam(kane_county_cougars).
-% sportsteam(kansas_city_royals).
-% sportsteam(kansas_city_wizards).
-% sportsteam(kansas_royals).
-% sportsteam(kansas_st__wildcats).
-% sportsteam(kansas_st_wildcats).
-% sportsteam(kasey_kahne).
-% sportsteam(kean_cougars).
-% sportsteam(kennesaw_st__owls).
-% sportsteam(kennesaw_state_owls).
-% sportsteam(kent_st__golden_flashes).
-% sportsteam(kent_state_golden_flashes).
-% sportsteam(kent_state_university).
-% sportsteam(kentucky_state_thorobreds).
-% sportsteam(kenyon_lords).
-% sportsteam(kevin_harvick).
-% sportsteam(kishwaukee_college_kougars).
-% sportsteam(knighthawks).
-% sportsteam(knights).
-% sportsteam(knox_college).
-% sportsteam(kutztown_golden_bears).
-% sportsteam(kyle_busch).
-% sportsteam(l_a__dodgers).
-% sportsteam(la_angels_of_anaheim).
-% sportsteam(la_salle_explorers).
-% sportsteam(lafayette_college_leopards).
-% sportsteam(lafayette_leopards).
-% sportsteam(lake_forest_college).
-% sportsteam(lake_superior_state_lakers).
-% sportsteam(lamar_cardinals).
-% sportsteam(lambuth_eagles).
-% sportsteam(laurentian_university_voyageurs).
-% sportsteam(le_moyne_college_dolphins).
-% sportsteam(leafs).
-% sportsteam(lehigh_mountain_hawks).
-% sportsteam(lenoir_rhyne_bears).
-% sportsteam(lewis_college).
-% sportsteam(lewis_flyers).
-% sportsteam(liberty_flames).
-% sportsteam(lincoln_blue_tigers).
-% sportsteam(lincoln_lions).
-% sportsteam(linfield_college_wildcats).
-% sportsteam(lipscomb_bisons).
-% sportsteam(liverpool).
-% sportsteam(london_knights).
-% sportsteam(long_beach_state_49ers).
-% sportsteam(long_island_blackbirds).
-% sportsteam(long_island_u__blackbirds).
-% sportsteam(longhorns).
-% sportsteam(longwood_lancers).
-% sportsteam(los_angeles_dodgers).
-% sportsteam(los_angeles_galaxy).
-% sportsteam(los_angeles_lakers).
-% sportsteam(los_angeles_rams).
-% sportsteam(los_angels_clippers).
-% sportsteam(louisiana_college_wildcats).
-% sportsteam(louisiana_lafayette_ragin__cajuns).
-% sportsteam(louisiana_lafayette_ragin_cajuns).
-% sportsteam(louisiana_monroe_warhawks).
-% sportsteam(louisiana_ragin_cajuns).
-% sportsteam(louisiana_state_shreveport_pilots).
-% sportsteam(louisiana_state_tigers).
-% sportsteam(louisiana_state_university_health_sciences_center).
-% sportsteam(louisiana_tech_bulldogs).
-% sportsteam(louisiana_tech_university).
-% sportsteam(louisville_cardinals).
-% sportsteam(lowell_devils).
-% sportsteam(loyola_chicago_ramblers).
-% sportsteam(loyola_greyhounds).
-% sportsteam(loyola_illinois_ramblers).
-% sportsteam(loyola_marymount_lions).
-% sportsteam(loyola_marymount_university).
-% sportsteam(loyola_ramblers).
-% sportsteam(mac_gear).
-% sportsteam(magic).
-% sportsteam(maine_black_bears).
-% sportsteam(manchester_city).
-% sportsteam(manchester_monarchs).
-% sportsteam(manhattan_jaspers).
-% sportsteam(marist_red_foxes).
-% sportsteam(marlins).
-% sportsteam(maroons).
-% sportsteam(marquette_golden_eagles).
-% sportsteam(marquette_university).
-% sportsteam(marshall_thundering_herd).
-% sportsteam(marshall_university).
-% sportsteam(mary_hardin_baylor_crusaders).
-% sportsteam(maryland_baltimore_county_retrievers).
-% sportsteam(maryland_eastern_shore_hawks).
-% sportsteam(maryland_terrapins).
-% sportsteam(massuchussets_lowell_river_hawks).
-% sportsteam(matt_kenseth).
-% sportsteam(mcneese_state_cowboys).
-% sportsteam(md__eastern_shore_hawks).
-% sportsteam(memphis_tigers_football).
-% sportsteam(merced_blue_devils).
-% sportsteam(mercer_bears).
-% sportsteam(mercy_college_of_new_york_ma).
-% sportsteam(merrimack_college_warriors).
-% sportsteam(metro_state_roadrunners).
-% sportsteam(metrostars).
-% sportsteam(miami_heat).
-% sportsteam(miami_hurricanes).
-% sportsteam(miami_marlins).
-% sportsteam(miami_of_ohio_redhawks).
-% sportsteam(miami_ohio_redhawks).
-% sportsteam(miami_redhawks).
-% sportsteam(miami_university).
-% sportsteam(miami_university_redhawks).
-% sportsteam(michigan_st__spartans).
-% sportsteam(michigan_st_spartans).
-% sportsteam(michigan_state_spartans).
-% sportsteam(michigan_state_university).
-% sportsteam(michigan_tech_huskies).
-% sportsteam(mid__tenn__st__blue_raiders).
-% sportsteam(mid_eastern_athletic_conference).
-% sportsteam(middle_tenn__st__blue_raiders).
-% sportsteam(middle_tennessee_blue_raiders).
-% sportsteam(middle_tennessee_state_blue_raiders).
-% sportsteam(middle_tennessee_state_university).
-% sportsteam(midwestern_state_mustangs).
-% sportsteam(mighty_ducks_of_anaheim).
-% sportsteam(millikin_big_blue).
-% sportsteam(milwaukee_braves).
-% sportsteam(milwaukee_brewers).
-% sportsteam(milwaukee_panthers).
-% sportsteam(minneapolis_lakers).
-% sportsteam(minnesota_duluth_bulldogs).
-% sportsteam(minnesota_golden_gop).
-% sportsteam(minnesota_north_stars).
-% sportsteam(minnesota_state_mavericks).
-% sportsteam(minnesota_state_moorhead_dra).
-% sportsteam(minnesota_timberwolves).
-% sportsteam(minnesota_twins).
-% sportsteam(minnesota_wild).
-% sportsteam(mississippi_gulf_coast_community_college).
-% sportsteam(mississippi_rebels).
-% sportsteam(mississippi_st__bulldogs).
-% sportsteam(mississippi_valley_state_delta_devils).
-% sportsteam(missouri_kansas_city_kangaroos).
-% sportsteam(missouri_southern_state_lions).
-% sportsteam(missouri_state_bears).
-% sportsteam(missouri_state_university).
-% sportsteam(missouri_state_university_bears).
-% sportsteam(missouri_state_west_plains_grizzlies).
-% sportsteam(mit_engineers).
-% sportsteam(mitchell_college).
-% sportsteam(mlb_all_star).
-% sportsteam(mobile_rams).
-% sportsteam(monmouth_college_fighting_scots).
-% sportsteam(monmouth_hawks).
-% sportsteam(montana_grizzlies).
-% sportsteam(montana_state_billings_yellowjackets).
-% sportsteam(montana_state_bobcats).
-% sportsteam(montana_state_northern_lights).
-% sportsteam(montana_state_university).
-% sportsteam(montana_tech_orediggers).
-% sportsteam(montana_western_bulldogs).
-% sportsteam(montclair_state_red_hawks).
-% sportsteam(montevallo_falcons).
-% sportsteam(montreal_alouettes).
-% sportsteam(montreal_canadians).
-% sportsteam(montreal_canadiens).
-% sportsteam(montreal_expos).
-% sportsteam(moravian_greyhounds).
-% sportsteam(morehead_state_eagles).
-% sportsteam(morehouse).
-% sportsteam(morgan_st_bears).
-% sportsteam(morgan_state_bears).
-% sportsteam(morris_brown_wolverines).
-% sportsteam(mount_st__mary_s_mountaineers).
-% sportsteam(mount_st_marys_mountaineers).
-% sportsteam(mount_union_purple_raiders).
-% sportsteam(mountain_west_conference).
-% sportsteam(mountaineers).
-% sportsteam(muhlenberg_college_mules).
-% sportsteam(murray_st__racers).
-% sportsteam(murray_st_racers).
-% sportsteam(murray_state).
-% sportsteam(murray_state_racers).
-% sportsteam(mustangs).
-% sportsteam(mvc_gear).
-% sportsteam(mwc_gear).
-% sportsteam(n2009_all_star).
-% sportsteam(n2009_pro_bowl).
-% sportsteam(n2010_pro_bowl).
-% sportsteam(n2011_pro_bowl).
-% sportsteam(n2012_all_star).
-% sportsteam(n2012_super_bowl).
-% sportsteam(n__dakota_fighting_sioux).
-% sportsteam(n_c__central_eagles).
-% sportsteam(n_c__state_wolfpack).
-% sportsteam(n_dakota_fighting_sioux).
-% sportsteam(nascar_racing).
-% sportsteam(nashville_predators).
-% sportsteam(navy_midshipmen).
-% sportsteam(navy_pier).
-% sportsteam(nc_state).
-% sportsteam(ncaa).
-% sportsteam(ne_patriots).
-% sportsteam(nebraska_cornhuskers).
-% sportsteam(nebraska_kearney_lopers).
-% sportsteam(nebraska_omaha_mavericks).
-% sportsteam(nec_gear).
-% sportsteam(nevada_wolf_pack).
-% sportsteam(new_england_patriots).
-% sportsteam(new_england_revolution).
-% sportsteam(new_hampshire_wildcats).
-% sportsteam(new_mexico_lobos).
-% sportsteam(new_mexico_st__aggies).
-% sportsteam(new_mexico_state).
-% sportsteam(new_mexico_state_aggies).
-% sportsteam(new_orleans_privateers).
-% sportsteam(new_paltz_hawks).
-% sportsteam(new_york_americans).
-% sportsteam(new_york_bobcats).
-% sportsteam(new_york_liberty).
-% sportsteam(new_york_mets).
-% sportsteam(new_york_red_bulls).
-% sportsteam(new_york_titans).
-% sportsteam(new_york_yankees).
-% sportsteam(newman_jets).
-% sportsteam(niagara_purple_eagles).
-% sportsteam(nicholls_state_colonels).
-% sportsteam(niners).
-% sportsteam(nittany_lions).
-% sportsteam(niu).
-% sportsteam(norfolk_st__spartans).
-% sportsteam(norfolk_st_spartans).
-% sportsteam(norfolk_state_spartans).
-% sportsteam(norfolk_tides).
-% sportsteam(north_alabama_lions).
-% sportsteam(north_carolina_a_and_t_aggies).
-% sportsteam(north_carolina_a_t_aggies).
-% sportsteam(north_carolina_aandt_aggies).
-% sportsteam(north_carolina_asheville_bulldogs).
-% sportsteam(north_carolina_greensboro_spartans).
-% sportsteam(north_carolina_state).
-% sportsteam(north_carolina_tar_heels).
-% sportsteam(north_carolina_tarheels).
-% sportsteam(north_carolina_wilmington_seahawks).
-% sportsteam(north_central_cardinals).
-% sportsteam(north_dakota_fighting_sioux).
-% sportsteam(north_dakota_st__bison).
-% sportsteam(north_dakota_state_bison).
-% sportsteam(north_florida_ospreys).
-% sportsteam(north_park_vikings).
-% sportsteam(north_texas).
-% sportsteam(north_texas_mean_green).
-% sportsteam(northeast_wisconsin_technical_college).
-% sportsteam(northeast_wisconsin_technical_headwear).
-% sportsteam(northeast_wisconsin_technical_tops).
-% sportsteam(northeastern_huskies).
-% sportsteam(northeastern_illinois_golden_eagles).
-% sportsteam(northeastern_state_riverhawks).
-% sportsteam(northeastern_university).
-% sportsteam(northern_arizona_lumberjacks).
-% sportsteam(northern_colorado_bears).
-% sportsteam(northern_illinois_huskies).
-% sportsteam(northern_illinois_university).
-% sportsteam(northern_iowa_panthers).
-% sportsteam(northern_kentucky_university_norse).
-% sportsteam(northern_michigan_wildcats).
-% sportsteam(northern_state_university_wolves).
-% sportsteam(northwest_missouri_state_bea).
-% sportsteam(northwestern).
-% sportsteam(northwestern_oklahoma_state_rangers).
-% sportsteam(northwestern_state_demons).
-% sportsteam(northwestern_university).
-% sportsteam(northwestern_wildcats).
-% sportsteam(notre_dame_fighting_irish).
-% sportsteam(nova_southeastern).
-% sportsteam(nova_southeastern_sharks).
-% sportsteam(nuggets).
-% sportsteam(ny_jets).
-% sportsteam(nyu_violets).
-% sportsteam(oakland_athletics).
-% sportsteam(oakland_golden_grizzlies).
-% sportsteam(ohio_bobcats).
-% sportsteam(ohio_dominican_panthers).
-% sportsteam(ohio_northern_polar_bears).
-% sportsteam(ohio_st__buckeyes).
-% sportsteam(ohio_st_buckeyes).
-% sportsteam(ohio_wesleyan_battling_bishops).
-% sportsteam(oklahoma_baptist_bison).
-% sportsteam(oklahoma_city_university_stars).
-% sportsteam(oklahoma_sooners).
-% sportsteam(oklahoma_st__cowboys).
-% sportsteam(oklahoma_state_cowboys).
-% sportsteam(old_dominion_monarchs).
-% sportsteam(old_dominion_university).
-% sportsteam(ole_miss).
-% sportsteam(ole_miss_rebels).
-% sportsteam(olivet_college_comets).
-% sportsteam(olympic_college_rangers).
-% sportsteam(oral_roberts_golden_eagles).
-% sportsteam(oregon_ducks).
-% sportsteam(oregon_st__beavers).
-% sportsteam(oregon_state).
-% sportsteam(oregon_state_beavers).
-% sportsteam(oregon_state_university).
-% sportsteam(oswego_state_lakers).
-% sportsteam(ottawa_senators).
-% sportsteam(pac_10_gear).
-% sportsteam(pac_12_gear).
-% sportsteam(pace_university_setters).
-% sportsteam(pacific_boxers).
-% sportsteam(pacific_lutheran_university).
-% sportsteam(pacific_tigers).
-% sportsteam(padres).
-% sportsteam(pasadena_city_college_lancers).
-% sportsteam(pats).
-% sportsteam(paul_menard).
-% sportsteam(pawtucket_red_sox).
-% sportsteam(pellissippi_state_purple_panthers).
-% sportsteam(penguins).
-% sportsteam(peninsula_college_pirates).
-% sportsteam(penn_st__nittany_lions).
-% sportsteam(penn_state_nittany_lions_basketball).
-% sportsteam(pennsylvania_quakers).
-% sportsteam(pennsylvania_state_university_berks).
-% sportsteam(pepperdine_university).
-% sportsteam(pepperdine_waves).
-% sportsteam(pfeiffer_falcons).
-% sportsteam(philadelphia_76ers).
-% sportsteam(philadelphia_athletics).
-% sportsteam(philadelphia_phillies).
-% sportsteam(philadelphia_warriors).
-% sportsteam(phoenix_coyotes).
-% sportsteam(phoenix_mercury).
-% sportsteam(phoenix_suns).
-% sportsteam(pierce_college_raiders).
-% sportsteam(pinstripe_bowl_gear).
-% sportsteam(pirates).
-% sportsteam(pistons).
-% sportsteam(pittsburg_pirates).
-% sportsteam(pittsburg_state_gorillas).
-% sportsteam(pittsburgh_panthers_basketball).
-% sportsteam(pittsburgh_pirates).
-% sportsteam(pittsburgh_state_gorillas).
-% sportsteam(pittsburgh_steelers).
-% sportsteam(plattsburgh_state_cardinals).
-% sportsteam(portland_pilots).
-% sportsteam(portland_state_vikings).
-% sportsteam(prairie_view_a_and_m_panthers).
-% sportsteam(prairie_view_a_m_panthers).
-% sportsteam(prairie_view_aandm_panthers).
-% sportsteam(presbyterian_blue_hose).
-% sportsteam(presbyterian_college_blue_hose).
-% sportsteam(princeton).
-% sportsteam(princeton_tigers).
-% sportsteam(princeton_university).
-% sportsteam(providence_college).
-% sportsteam(providence_friars).
-% sportsteam(puget_sound_loggers).
-% sportsteam(purdue_university).
-% sportsteam(quebec_nordiques).
-% sportsteam(queens_college_knights).
-% sportsteam(quinnipiac_bobcats).
-% sportsteam(radford_highlanders).
-% sportsteam(rams).
-% sportsteam(rapids).
-% sportsteam(razorbacks).
-% sportsteam(real_madrid).
-% sportsteam(real_salt_lake).
-% sportsteam(red_hawks).
-% sportsteam(red_raiders).
-% sportsteam(red_wings).
-% sportsteam(reds).
-% sportsteam(redsox).
-% sportsteam(reedley_college_tigers).
-% sportsteam(regis_rangers).
-% sportsteam(rhode_island_anchormen).
-% sportsteam(rhode_island_rams).
-% sportsteam(rice_owls).
-% sportsteam(rice_university).
-% sportsteam(richmond_spiders).
-% sportsteam(rider_broncs).
-% sportsteam(robby_gordon).
-% sportsteam(robert_morris_colonials).
-% sportsteam(robert_morris_eagles).
-% sportsteam(rochester_americans).
-% sportsteam(rochester_college_warriors).
-% sportsteam(rochester_institute_of_technology_tigers).
-% sportsteam(rochester_warriors).
-% sportsteam(rochester_yellowjackets).
-% sportsteam(rose_bowl_gear).
-% sportsteam(round_rock_express).
-% sportsteam(rowan_owls).
-% sportsteam(rusty_wallace_2).
-% sportsteam(rutgers_scarlet_kni).
-% sportsteam(rutgers_scarlet_knights).
-% sportsteam(rutgers_state_university_of_new_jersey).
-% sportsteam(ryan_newman).
-% sportsteam(s__mississippi_golden_eagles).
-% sportsteam(sabres).
-% sportsteam(sacramento_river_cats).
-% sportsteam(sacramento_st__hornets).
-% sportsteam(sacramento_state_hornets).
-% sportsteam(sacred_heart_pioneers).
-% sportsteam(saint_francis_red_flash).
-% sportsteam(saint_joseph_s_college_pumas).
-% sportsteam(saint_joseph_s_hawks).
-% sportsteam(saint_josephs_college_pumas).
-% sportsteam(saint_josephs_hawks).
-% sportsteam(saint_louis).
-% sportsteam(saint_louis_billikens).
-% sportsteam(saint_louis_rams).
-% sportsteam(saint_louis_university).
-% sportsteam(saint_mary_s_gaels).
-% sportsteam(saint_marys_gaels).
-% sportsteam(saint_peter_s_peacocks).
-% sportsteam(saint_peters_peacocks).
-% sportsteam(sam_houston_state_bearkats).
-% sportsteam(samford_bulldogs).
-% sportsteam(samford_university).
-% sportsteam(samuel_merrit_university).
-% sportsteam(san_antonio).
-% sportsteam(san_antonio_silver_stars).
-% sportsteam(san_diego_padres).
-% sportsteam(san_diego_st__aztecs).
-% sportsteam(san_diego_st_aztecs).
-% sportsteam(san_diego_state_aztecs).
-% sportsteam(san_diego_state_university).
-% sportsteam(san_diego_toreros).
-% sportsteam(san_francisco_49ers).
-% sportsteam(san_francisco_dons).
-% sportsteam(san_francisco_giants).
-% sportsteam(san_francisco_state_gators).
-% sportsteam(san_jose_earthquakes).
-% sportsteam(san_jose_st__spartans).
-% sportsteam(san_jose_state).
-% sportsteam(san_jose_state_spartans).
-% sportsteam(san_jose_state_university).
-% sportsteam(santa_clara_broncos).
-% sportsteam(santa_clara_university).
-% sportsteam(saskatchewan_roughriders).
-% sportsteam(savannah_state_tigers).
-% sportsteam(scarlet_knights).
-% sportsteam(schaumburg_flyers).
-% sportsteam(scranton_royals).
-% sportsteam(se_louisiana_lions).
-% sportsteam(se_missouri_state).
-% sportsteam(se_missouri_state_redhawks).
-% sportsteam(seahawks).
-% sportsteam(seattle_mariners).
-% sportsteam(seattle_metropolitans).
-% sportsteam(seattle_pilots).
-% sportsteam(seattle_redhawks).
-% sportsteam(seattle_sonics).
-% sportsteam(seattle_sounders_fc).
-% sportsteam(sec_gear).
-% sportsteam(seminoles).
-% sportsteam(seton_hall_pirates).
-% sportsteam(seton_hall_university).
-% sportsteam(seton_hill_griffins).
-% sportsteam(sewanee_tigers).
-% sportsteam(sfa_lumberjacks).
-% sportsteam(shenandoah_hornets).
-% sportsteam(shippensburg_raiders).
-% sportsteam(siena_saints).
-% sportsteam(simon_gagne).
-% sportsteam(siu_edwardsville_cougars).
-% sportsteam(sixers).
-% sportsteam(sj_sharks).
-% sportsteam(slippery_rock_pride).
-% sportsteam(smu).
-% sportsteam(smu_mustangs).
-% sportsteam(sonics).
-% sportsteam(sonoma_state_seawolves).
-% sportsteam(sooners).
-% sportsteam(south_alabama_jaguars).
-% sportsteam(south_carolina_state_bulldogs).
-% sportsteam(south_carolina_upstate_spartans).
-% sportsteam(south_dakota_coyotes).
-% sportsteam(south_dakota_st__jackrabbits).
-% sportsteam(south_dakota_state).
-% sportsteam(south_florida_bulls).
-% sportsteam(south_university).
-% sportsteam(southeast_missouri_state_indians).
-% sportsteam(southeast_missouri_state_redhawks).
-% sportsteam(southeastern_conference).
-% sportsteam(southeastern_fire).
-% sportsteam(southeastern_louisiana_lions).
-% sportsteam(southern_arkansas_muleriders).
-% sportsteam(southern_california_trojans).
-% sportsteam(southern_connecticut_state_owls).
-% sportsteam(southern_illinois).
-% sportsteam(southern_illinois_salukis).
-% sportsteam(southern_indiana_screaming_eagles).
-% sportsteam(southern_jaguars).
-% sportsteam(southern_methodist_mustangs).
-% sportsteam(southern_methodist_university).
-% sportsteam(southern_miss__golden_eagles).
-% sportsteam(southern_miss_golden_eagles).
-% sportsteam(southern_mississippi_eagles).
-% sportsteam(southern_mississippi_usm_golden_eagles).
-% sportsteam(southern_new_hampshire_penmen).
-% sportsteam(southern_university_at_new_orleans_knights).
-% sportsteam(southern_utah_thunderbirds).
-% sportsteam(southern_virginia_knights).
-% sportsteam(southwestern_oklahoma_state_bulldogs).
-% sportsteam(spelman_college_jaguars).
-% sportsteam(springfield_college_pride).
-% sportsteam(spurs).
-% sportsteam(st___cloud_state).
-% sportsteam(st___louis_browns).
-% sportsteam(st___louis_cardinals).
-% sportsteam(st___louis_hawks).
-% sportsteam(st___olaf).
-% sportsteam(st__bonaventure_bonnies).
-% sportsteam(st__cloud_state_huskies).
-% sportsteam(st__francis_college_terriers).
-% sportsteam(st__john_s_red_storm).
-% sportsteam(st__johns_red_storm).
-% sportsteam(st__joseph_s_hawks).
-% sportsteam(st__louis_billikens).
-% sportsteam(st__lucie_mets).
-% sportsteam(st__norbert_green_knights).
-% sportsteam(st__peter_s_peacocks).
-% sportsteam(st_bonaventure_bonnies).
-% sportsteam(st_cloud_state_huskies).
-% sportsteam(st_francis_college_terriers).
-% sportsteam(st_johns_red_storm).
-% sportsteam(st_louis_rams).
-% sportsteam(st_norbert_green_knights).
-% sportsteam(stanford).
-% sportsteam(stanford_cardinal).
-% sportsteam(stanford_cardinals).
-% sportsteam(stanford_university).
-% sportsteam(state_cardinals).
-% sportsteam(state_cyclones).
-% sportsteam(state_sun_devils).
-% sportsteam(state_tigers).
-% sportsteam(stetson_hatters).
-% sportsteam(stillman_tigers).
-% sportsteam(stlouisrams).
-% sportsteam(stony_brook_seawolves).
-% sportsteam(subway_series).
-% sportsteam(sun_belt_gear).
-% sportsteam(sun_devils).
-% sportsteam(suny_cortland_red_dragons).
-% sportsteam(supersonics).
-% sportsteam(susquehanna_crusaders).
-% sportsteam(syracuse_orange).
-% sportsteam(syracuse_orangemen).
-% sportsteam(talladega_college_tornadoes).
-% sportsteam(tampa_bay_buccaneers).
-% sportsteam(tampa_bay_devil_rays).
-% sportsteam(tampa_bay_lightning).
-% sportsteam(tampa_bay_rays).
-% sportsteam(tampa_spartans).
-% sportsteam(tar_heels).
-% sportsteam(tarleton_state_texans).
-% sportsteam(tartans).
-% sportsteam(tech_hokies).
-% sportsteam(temple).
-% sportsteam(temple_owls).
-% sportsteam(tennessee_chattanooga_mocs).
-% sportsteam(tennessee_martin_skyhawks).
-% sportsteam(tennessee_oilers).
-% sportsteam(tennessee_state_tigers).
-% sportsteam(tennessee_tech_golden_eagles).
-% sportsteam(tennessee_wesleyan_bulldogs).
-% sportsteam(tennmartin_skyhawks).
-% sportsteam(terriers).
-% sportsteam(texans).
-% sportsteam(texas_a_and_m_aggies).
-% sportsteam(texas_a_and_m_commerce_lions).
-% sportsteam(texas_a_and_m_corpus_christi_islanders).
-% sportsteam(texas_a_and_m_kingsville_javelinas).
-% sportsteam(texas_a_m_corpus_christi_islanders).
-% sportsteam(texas_a_m_university).
-% sportsteam(texas_aandm_aggies).
-% sportsteam(texas_aandm_kingsville_javelinas).
-% sportsteam(texas_am_aggies).
-% sportsteam(texas_arlington_mavericks).
-% sportsteam(texas_brownsville_scorpions).
-% sportsteam(texas_christian_horned_frogs).
-% sportsteam(texas_christian_university).
-% sportsteam(texas_college_steers).
-% sportsteam(texas_el_paso_miners).
-% sportsteam(texas_pan_american_broncs).
-% sportsteam(texas_rangers).
-% sportsteam(texas_san_antonio_roadrunners).
-% sportsteam(texas_southern_tigers).
-% sportsteam(texas_state_bobcats).
-% sportsteam(texas_tech).
-% sportsteam(texas_tech_university).
-% sportsteam(texas_tyler_patriots).
-% sportsteam(texas_western).
-% sportsteam(the_citadel_bulldogs).
-% sportsteam(the_master_s_college_mustangs).
-% sportsteam(thomas_night_hawks).
-% sportsteam(thrashers).
-% sportsteam(toledo_rockets).
-% sportsteam(toronto_argonauts).
-% sportsteam(toronto_fc).
-% sportsteam(toronto_raptors).
-% sportsteam(towson_tigers).
-% sportsteam(trail_blazers).
-% sportsteam(trailblazers).
-% sportsteam(transylvania).
-% sportsteam(transylvania_pioneers).
-% sportsteam(trenton_thunder).
-% sportsteam(trevor_bayne).
-% sportsteam(troy_state_trojans).
-% sportsteam(troy_trojans).
-% sportsteam(troy_university_trojans).
-% sportsteam(tufts_jumbos).
-% sportsteam(tulane_green_wave).
-% sportsteam(tulane_university).
-% sportsteam(tulsa_golden_hurricane).
-% sportsteam(tuskegee_golden_tigers).
-% sportsteam(twins).
-% sportsteam(u_s__naval_academy).
-% sportsteam(uab_blazers).
-% sportsteam(uc_davis_aggies).
-% sportsteam(uc_irvine).
-% sportsteam(uc_irvine_anteaters).
-% sportsteam(uc_riverside_highlanders).
-% sportsteam(uc_san_diego_tritons).
-% sportsteam(uc_santa_barbara).
-% sportsteam(uc_santa_barbara_gauchos).
-% sportsteam(uc_santa_cruz_slugs).
-% sportsteam(ucf_knights).
-% sportsteam(ucla).
-% sportsteam(ucla_bruins).
-% sportsteam(uconn).
-% sportsteam(uconn_huskies).
-% sportsteam(uic_flames).
-% sportsteam(ul_lafayette).
-% sportsteam(ulm_warhawks).
-% sportsteam(umass_dartmouth_corsairs).
-% sportsteam(umass_lowell_river_hawks).
-% sportsteam(umass_minutemen).
-% sportsteam(umbc_retrievers).
-% sportsteam(umkc_kangaroos).
-% sportsteam(unc_asheville_bulldogs).
-% sportsteam(unc_charlotte_49ers).
-% sportsteam(unc_wilmington_seahawks).
-% sportsteam(uncg_spartans).
-% sportsteam(unf_ospreys).
-% sportsteam(union_college).
-% sportsteam(university_of_akron).
-% sportsteam(university_of_alabama_at_birmingham).
-% sportsteam(university_of_alabama_tuscaloosa).
-% sportsteam(university_of_arizona).
-% sportsteam(university_of_arkansas_at_pine_bluff).
-% sportsteam(university_of_buffalo).
-% sportsteam(university_of_central_florida).
-% sportsteam(university_of_cincinnati).
-% sportsteam(university_of_connecticut_at_avery_point).
-% sportsteam(university_of_houston).
-% sportsteam(university_of_illinois_at_urbana_champaign).
-% sportsteam(university_of_kansas).
-% sportsteam(university_of_kentucky).
-% sportsteam(university_of_louisiana).
-% sportsteam(university_of_louisville).
-% sportsteam(university_of_maryland_college_park).
-% sportsteam(university_of_mississippi).
-% sportsteam(university_of_nebraska_at_omaha_mavericks).
-% sportsteam(university_of_nevada).
-% sportsteam(university_of_new_mexico_gallup_campus).
-% sportsteam(university_of_north_carolina_at_chapel_hill).
-% sportsteam(university_of_north_texas).
-% sportsteam(university_of_redlands_bulldogs).
-% sportsteam(university_of_south_carolina_at_columbia).
-% sportsteam(university_of_texas_at_el_paso).
-% sportsteam(university_of_the_south_tigers).
-% sportsteam(university_of_tulsa).
-% sportsteam(university_of_virginia).
-% sportsteam(unlv_rebels).
-% sportsteam(unlv_runnin__rebels).
-% sportsteam(unlv_runnin_rebels).
-% sportsteam(us_marine_corps).
-% sportsteam(usc_trojans).
-% sportsteam(usc_upstate_spartans).
-% sportsteam(ut_arlington_mavericks).
-% sportsteam(utah_jazz).
-% sportsteam(utah_state).
-% sportsteam(utah_state_university).
-% sportsteam(utah_utes).
-% sportsteam(utah_valley_state_wolverines).
-% sportsteam(utah_valley_university_wolverines).
-% sportsteam(utah_valley_wolverines).
-% sportsteam(utd_comets).
-% sportsteam(utep).
-% sportsteam(utes).
-% sportsteam(uw_eau_claire).
-% sportsteam(va_commonwealth_rams).
-% sportsteam(valdosta_state_blazers).
-% sportsteam(valparaiso_crusaders).
-% sportsteam(vanderbilt).
-% sportsteam(vanderbilt_university).
-% sportsteam(vanguard_lions).
-% sportsteam(vcu_rams).
-% sportsteam(vermont_catamounts).
-% sportsteam(villanova_university).
-% sportsteam(villanova_wildcats).
-% sportsteam(villanova_wildcats_basketball).
-% sportsteam(vince_young).
-% sportsteam(virginia_cavaliers).
-% sportsteam(virginia_commonwealth_rams).
-% sportsteam(virginia_military_institute).
-% sportsteam(virginia_military_institute_keydets).
-% sportsteam(virginia_military_keydets).
-% sportsteam(virginia_state_trojans).
-% sportsteam(vols).
-% sportsteam(wac_gear).
-% sportsteam(wagner_college_seahawks).
-% sportsteam(wagner_seahawks).
-% sportsteam(wake_forest_deacons).
-% sportsteam(wake_forest_demon_d).
-% sportsteam(wake_forest_demon_deacons).
-% sportsteam(wake_forest_university).
-% sportsteam(ward_burton).
-% sportsteam(washburn_ichabods).
-% sportsteam(washington_and_lee_generals).
-% sportsteam(washington_bullets).
-% sportsteam(washington_capitals).
-% sportsteam(washington_huskies).
-% sportsteam(washington_nationals).
-% sportsteam(washington_redskins).
-% sportsteam(washington_senators).
-% sportsteam(washington_st__cougars).
-% sportsteam(washington_st__louis).
-% sportsteam(washington_st_louis).
-% sportsteam(washington_state).
-% sportsteam(washington_state_cougars).
-% sportsteam(washington_state_university).
-% sportsteam(washington_wizards).
-% sportsteam(wayland_baptist_pioneers).
-% sportsteam(wayne_state_warriors).
-% sportsteam(weber_state_wildcats).
-% sportsteam(webster_gorlocks).
-% sportsteam(wesleyan_cardinals).
-% sportsteam(wesleyan_college_pioneers).
-% sportsteam(west_chester_golden_rams).
-% sportsteam(west_florida_argonauts).
-% sportsteam(west_georgia_technical_college).
-% sportsteam(west_georgia_wolves).
-% sportsteam(west_la_college_wildcats).
-% sportsteam(west_texas_aandm_buffalo).
-% sportsteam(west_virginia_mountaineers).
-% sportsteam(west_virginia_mountianeers).
-% sportsteam(west_virginia_state_yellow_jackets).
-% sportsteam(western_carolina_catamounts).
-% sportsteam(western_connecticut_colonials).
-% sportsteam(western_illinois_leathernecks).
-% sportsteam(western_illinois_university).
-% sportsteam(western_kentucky_university).
-% sportsteam(western_michigan_broncos).
-% sportsteam(western_michigan_university).
-% sportsteam(western_oregon_wolves).
-% sportsteam(western_washington_vikings).
-% sportsteam(westminster_griffins).
-% sportsteam(westmont_college_warriors).
-% sportsteam(white_sox).
-% sportsteam(wichita_st_shockers).
-% sportsteam(wichita_state_shockers).
-% sportsteam(widener_pride).
-% sportsteam(wigan_athletic).
-% sportsteam(wildcats).
-% sportsteam(wilkes_colonels).
-% sportsteam(william___mary_tribe).
-% sportsteam(william_and_mary_tribe).
-% sportsteam(william_carey_crusaders).
-% sportsteam(william_paterson_pioneers).
-% sportsteam(william_penn_statesmen).
-% sportsteam(wilmington_blue_rocks).
-% sportsteam(wings).
-% sportsteam(winnipeg_blue_bombers).
-% sportsteam(winnipeg_jets).
-% sportsteam(winston_salem_state_rams).
-% sportsteam(winthrop_eagles).
-% sportsteam(wisconsin_badgers).
-% sportsteam(wisconsin_eau_claire_blugold).
-% sportsteam(wisconsin_green_bay_phoenix).
-% sportsteam(wisconsin_la_crosse_eagles).
-% sportsteam(wisconsin_lutheran_college_w).
-% sportsteam(wisconsin_milwaukee_panthers).
-% sportsteam(wisconsin_oshkosh_titans).
-% sportsteam(wisconsin_parkside_rangers).
-% sportsteam(wisconsin_platteville_pioneers).
-% sportsteam(wisconsin_river_falls_falcons).
-% sportsteam(wisconsin_stevens_point_pointers).
-% sportsteam(wisconsin_stout_blue_devils).
-% sportsteam(wisconsin_whitewater_warhawks).
-% sportsteam(wittenberg_tigers).
-% sportsteam(wofford_terriers).
-% sportsteam(wolfpack).
-% sportsteam(wooster_fighting_scots).
-% sportsteam(world_champion_boston_red_sox).
-% sportsteam(wright_state_raiders).
-% sportsteam(wright_state_university).
-% sportsteam(wv_wesleyan_bobcats).
-% sportsteam(xavier_musketeers).
-% sportsteam(xavier_university).
-% sportsteam(yale_bulldogs).
-% sportsteam(yale_university).
-% sportsteam(yankees).
-% sportsteam(yanks).
-% sportsteam(york_islanders).
-% sportsteam(york_mets).
-% sportsteam(york_rangers).
-% sportsteam(youngstown_state_penguins).
-% sportsteam(youth_jerseys).
-% sportsteamposition(catcher).
-% sportsteamposition(center).
-% sportsteamposition(designated_hitter).
-% sportsteamposition(first_baseman).
-% sportsteamposition(forward).
-% sportsteamposition(guard).
-% sportsteamposition(infield).
-% sportsteamposition(left_center).
-% sportsteamposition(left_field).
-% sportsteamposition(left_fielder).
-% sportsteamposition(midfield).
-% sportsteamposition(outfielder).
-% sportsteamposition(pitcher).
-% sportsteamposition(player).
-% sportsteamposition(right_center).
-% sportsteamposition(right_field).
-% sportsteamposition(right_fielder).
-% sportsteamposition(running_back).
-% sportsteamposition(second_baseman).
-% sportsteamposition(shortstop).
-% sportsteamposition(third_base).
-% sportsteamposition(wide_receiver).
-% stadiumoreventvenue(agganis_arena).
-% stadiumoreventvenue(air_canada_centre).
-% stadiumoreventvenue(alexian_field).
-% stadiumoreventvenue(americanairlines_arena).
-% stadiumoreventvenue(ameriquest_field).
-% stadiumoreventvenue(anfield).
-% stadiumoreventvenue(angel_stadium_of_anaheim).
-% stadiumoreventvenue(angels_stadium).
-% stadiumoreventvenue(arizona_stadium).
-% stadiumoreventvenue(bank_atlantic_center).
-% stadiumoreventvenue(bankatlantic_center).
-% stadiumoreventvenue(beaver_stadium).
-% stadiumoreventvenue(ben_hill_griffin_stadium).
-% stadiumoreventvenue(bill_snyder_family_stadium).
-% stadiumoreventvenue(blue_cross_arena).
-% stadiumoreventvenue(bmo_field).
-% stadiumoreventvenue(bobby_dodd_stadium).
-% stadiumoreventvenue(bradley_center).
-% stadiumoreventvenue(bryant_denny_field).
-% stadiumoreventvenue(bsu_stadium).
-% stadiumoreventvenue(buck_shaw_stadium).
-% stadiumoreventvenue(busch_stadium).
-% stadiumoreventvenue(byrd_stadium).
-% stadiumoreventvenue(cajun_field).
-% stadiumoreventvenue(camp_nou).
-% stadiumoreventvenue(camp_randall).
-% stadiumoreventvenue(canad_inns_stadium).
-% stadiumoreventvenue(cardinals_stadium).
-% stadiumoreventvenue(carrier_dome).
-% stadiumoreventvenue(carter_finley_stadium).
-% stadiumoreventvenue(cfsb_center).
-% stadiumoreventvenue(citizens_bank_park).
-% stadiumoreventvenue(clarence_martin_stadium).
-% stadiumoreventvenue(coliseum).
-% stadiumoreventvenue(comerica_park).
-% stadiumoreventvenue(commonwealth_stadium).
-% stadiumoreventvenue(communityamerica_ballpark).
-% stadiumoreventvenue(conseco_fieldhouse).
-% stadiumoreventvenue(darrell_k___royal_texas_memorial_stadium).
-% stadiumoreventvenue(dell_diamond).
-% stadiumoreventvenue(dick_s_sporting_goods_park).
-% stadiumoreventvenue(dix_stadium).
-% stadiumoreventvenue(dodger_stadium).
-% stadiumoreventvenue(dolphin_stadium).
-% stadiumoreventvenue(dolphins_stadium).
-% stadiumoreventvenue(dowdy_ficklen).
-% stadiumoreventvenue(ebbets_field).
-% stadiumoreventvenue(edward_jones_dome).
-% stadiumoreventvenue(elfstrom_stadium).
-% stadiumoreventvenue(energysolutions_arena).
-% stadiumoreventvenue(estadio_santiago_bernabeu).
-% stadiumoreventvenue(fedex_field).
-% stadiumoreventvenue(fedex_forum).
-% stadiumoreventvenue(fenway_park).
-% stadiumoreventvenue(ford_field).
-% stadiumoreventvenue(fouts_field).
-% stadiumoreventvenue(frawley_stadium).
-% stadiumoreventvenue(georgia_dome).
-% stadiumoreventvenue(germain_arena).
-% stadiumoreventvenue(giants_stadium).
-% stadiumoreventvenue(great_american_ballpark).
-% stadiumoreventvenue(groves_stadium).
-% stadiumoreventvenue(harbor_park).
-% stadiumoreventvenue(honda_center).
-% stadiumoreventvenue(hp_pavilion_at_san_jose).
-% stadiumoreventvenue(huskie_stadium).
-% stadiumoreventvenue(invesco_field).
-% stadiumoreventvenue(jack_trice_stadium).
-% stadiumoreventvenue(jacksonville_municipal_stadium).
-% stadiumoreventvenue(jacobs_field).
-% stadiumoreventvenue(jjb_stadium).
-% stadiumoreventvenue(jobing_com_arena).
-% stadiumoreventvenue(joe_aillet_stadium).
-% stadiumoreventvenue(joe_louis_arena).
-% stadiumoreventvenue(jordan_hare_stadium).
-% stadiumoreventvenue(kauffman_stadium).
-% stadiumoreventvenue(kenan_stadium).
-% stadiumoreventvenue(keyspan_park).
-% stadiumoreventvenue(lambeau_field).
-% stadiumoreventvenue(lane_stadium).
-% stadiumoreventvenue(legion_field).
-% stadiumoreventvenue(lincoln_financial_field).
-% stadiumoreventvenue(louisiana_superdome).
-% stadiumoreventvenue(lp_field).
-% stadiumoreventvenue(madison_square_garden).
-% stadiumoreventvenue(malone_stadium).
-% stadiumoreventvenue(marshall_stadium).
-% stadiumoreventvenue(mccoy_stadium).
-% stadiumoreventvenue(mcmahon_stadium).
-% stadiumoreventvenue(mellon_arena).
-% stadiumoreventvenue(memorial_stadium).
-% stadiumoreventvenue(metropolitan_stadium).
-% stadiumoreventvenue(miller_park).
-% stadiumoreventvenue(minute_maid_park).
-% stadiumoreventvenue(mosaic_stadium_at_taylor_field).
-% stadiumoreventvenue(nationwide_arena).
-% stadiumoreventvenue(navy_marine_corps_memorial_stadium).
-% stadiumoreventvenue(network_associates_coliseum).
-% stadiumoreventvenue(new_orleans_arena).
-% stadiumoreventvenue(new_yankee_stadium).
-% stadiumoreventvenue(nippert_stadium).
-% stadiumoreventvenue(notre_dame_stadium).
-% stadiumoreventvenue(old_trafford).
-% stadiumoreventvenue(oracle_arena).
-% stadiumoreventvenue(orange_bowl_stadium).
-% stadiumoreventvenue(palace_of_auburn_hills).
-% stadiumoreventvenue(papa_john_s_cardinal_stadium).
-% stadiumoreventvenue(paul_brown_stadium).
-% stadiumoreventvenue(pengrowth_saddledome).
-% stadiumoreventvenue(peoria_sports_complex).
-% stadiumoreventvenue(percival_molson_stadium).
-% stadiumoreventvenue(petco_park).
-% stadiumoreventvenue(philips_arena).
-% stadiumoreventvenue(phillips_arena).
-% stadiumoreventvenue(pizza_hut).
-% stadiumoreventvenue(pnc_park).
-% stadiumoreventvenue(pohlman_field).
-% stadiumoreventvenue(prudential_center_2).
-% stadiumoreventvenue(qualcomm_stadium).
-% stadiumoreventvenue(raley_field).
-% stadiumoreventvenue(ralph_wilson_stadium).
-% stadiumoreventvenue(raymond_james).
-% stadiumoreventvenue(razorback_stadium).
-% stadiumoreventvenue(rbc_center).
-% stadiumoreventvenue(rca_dome).
-% stadiumoreventvenue(reebok_stadium).
-% stadiumoreventvenue(rentschler_field).
-% stadiumoreventvenue(reser_stadium).
-% stadiumoreventvenue(rexall_place).
-% stadiumoreventvenue(rfk_memorial_stadium).
-% stadiumoreventvenue(rice_eccles_stadium).
-% stadiumoreventvenue(rio_tinto_stadium).
-% stadiumoreventvenue(robertson_stadium).
-% stadiumoreventvenue(romney_stadium).
-% stadiumoreventvenue(ross_ade_stadium).
-% stadiumoreventvenue(rubber_bowl).
-% stadiumoreventvenue(rupp_arena).
-% stadiumoreventvenue(rutgers_stadium).
-% stadiumoreventvenue(rynearson_stadium).
-% stadiumoreventvenue(safeco_field).
-% stadiumoreventvenue(sam_boyd_stadium).
-% stadiumoreventvenue(sbc_park).
-% stadiumoreventvenue(scotiabank_place).
-% stadiumoreventvenue(scott_stadium).
-% stadiumoreventvenue(scottrade_center).
-% stadiumoreventvenue(skelly_stadium).
-% stadiumoreventvenue(sommet_center).
-% stadiumoreventvenue(spartan_stadium).
-% stadiumoreventvenue(st___pete_times_forum).
-% stadiumoreventvenue(staples_center).
-% stadiumoreventvenue(sun_bowl).
-% stadiumoreventvenue(temple_stadium).
-% stadiumoreventvenue(texas_stadium).
-% stadiumoreventvenue(times_union_center).
-% stadiumoreventvenue(tradition_field).
-% stadiumoreventvenue(tropicana_field).
-% stadiumoreventvenue(tsongas_arena).
-% stadiumoreventvenue(ub_stadium).
-% stadiumoreventvenue(united_center).
-% stadiumoreventvenue(university_stadium).
-% stadiumoreventvenue(us_airways_center).
-% stadiumoreventvenue(vanderbilt_stadium).
-% stadiumoreventvenue(vaught_hemingway_stadium).
-% stadiumoreventvenue(verizon_wireless_arena).
-% stadiumoreventvenue(wachovia_center).
-% stadiumoreventvenue(waldo_stadium).
-% stadiumoreventvenue(wallace_wade_stadium).
-% stadiumoreventvenue(waterfront_park).
-% stadiumoreventvenue(wells_fargo_arena).
-% stadiumoreventvenue(williams_brice_stadium).
-% stadiumoreventvenue(xcel_energy_center).
+sport(american_football).
+sport(athletics).
+sport(baseball).
+sport(basketball).
+sport(boxing).
+sport(championship_golf).
+sport(college_baseball).
+sport(college_football).
+sport(cricket).
+sport(cycling).
+sport(darts).
+sport(figure_skating).
+sport(football).
+sport(games).
+sport(golf).
+sport(hockey).
+sport(horse_racing).
+sport(ice_hockey).
+sport(motorsport).
+sport(nascar).
+sport(nba_basketball).
+sport(racing).
+sport(rowing).
+sport(sailing).
+sport(skateboarding).
+sport(snooker).
+sport(soccer).
+sport(softball).
+sport(swimming).
+sport(table_tennis).
+sport(taekwondo).
+sport(tennis).
+sport(track_and_field).
+sport(triathlon).
+sport(volleyball).
+sport(wrestling).
+sportsleague(acc).
+sportsleague(cfl).
+sportsleague(college_basketball).
+sportsleague(college_football).
+sportsleague(former_nfl).
+sportsleague(miac).
+sportsleague(mlb).
+sportsleague(mls).
+sportsleague(nascar).
+sportsleague(nba).
+sportsleague(ncaa).
+sportsleague(ncaa_football).
+sportsleague(nfl).
+sportsleague(nhl).
+sportsleague(pac_10).
+sportsleague(wac).
+sportsleague(western_conference).
+sportsleague(wnba).
+sportsteam(abilene_christian_university_wildcats).
+sportsteam(ac_milan).
+sportsteam(acc_gear).
+sportsteam(adelphi_university_panthers).
+sportsteam(aggies).
+sportsteam(air_force).
+sportsteam(air_force_academy_falcons).
+sportsteam(air_force_falcons).
+sportsteam(alabama_a_and_m_bulldogs).
+sportsteam(alabama_a_m_bulldogs).
+sportsteam(alabama_birmingham_blazers).
+sportsteam(alabama_st__hornets).
+sportsteam(alabama_state_hornets).
+sportsteam(alabama_state_university).
+sportsteam(alaska_fairbanks_nanooks).
+sportsteam(alaska_seawolves).
+sportsteam(albany_great_danes).
+sportsteam(albany_river_rats).
+sportsteam(albany_state_golden_rams).
+sportsteam(alcorn_state_braves).
+sportsteam(american_eagles).
+sportsteam(american_league).
+sportsteam(american_university_eagles).
+sportsteam(anaheim_angels).
+sportsteam(anaheim_ducks).
+sportsteam(anderson_ravens).
+sportsteam(angeles_kings).
+sportsteam(angelo_state_rams).
+sportsteam(appalachian_state).
+sportsteam(argonauts).
+sportsteam(arizona_cardinals).
+sportsteam(arizona_diamond_backs).
+sportsteam(arizona_rattlers).
+sportsteam(arizona_st__sun_devils).
+sportsteam(arizona_state).
+sportsteam(arizona_state_sun_devils).
+sportsteam(arizona_state_university).
+sportsteam(arizona_wildcats).
+sportsteam(arkansas_fort_smith_lions).
+sportsteam(arkansas_little_rock_trojans).
+sportsteam(arkansas_pine_bluff_golden_lions).
+sportsteam(arkansas_razorbacks).
+sportsteam(arkansas_st__red_wolves).
+sportsteam(arkansas_state_indians).
+sportsteam(arkansas_state_red_wolves).
+sportsteam(arkansas_tech_wonder_boys).
+sportsteam(armstrong_atlantic_pirates).
+sportsteam(army).
+sportsteam(army_black_knights).
+sportsteam(ashland_eagles).
+sportsteam(astros).
+sportsteam(atlanta_braves).
+sportsteam(atlanta_dream).
+sportsteam(atlanta_thrashers).
+sportsteam(atlantic_10_conference).
+sportsteam(atlantic_10_gear).
+sportsteam(auburn_tigers).
+sportsteam(auburn_university_at_montgomery).
+sportsteam(augustana_vikings).
+sportsteam(austin_peay_governors).
+sportsteam(austin_peay_state_governors).
+sportsteam(ave_maria_gyrenes).
+sportsteam(baker_wildcats).
+sportsteam(ball_st__cardinals).
+sportsteam(ball_state).
+sportsteam(ball_state_cardinals).
+sportsteam(ball_state_university).
+sportsteam(baltimore_bullets).
+sportsteam(baltimore_colts).
+sportsteam(baltimore_orioles).
+sportsteam(barry_university_buccaneers).
+sportsteam(baruch_college_bearcats).
+sportsteam(baylor_bears).
+sportsteam(baylor_university).
+sportsteam(bellarmine_knights).
+sportsteam(bellevue_college_bulldogs).
+sportsteam(belmont_bruins).
+sportsteam(beloit_snappers).
+sportsteam(bemidji_state_beavers).
+sportsteam(bethune_cookman_wildcats).
+sportsteam(big_12_gear).
+sportsteam(big_east_gear).
+sportsteam(big_sky_conference).
+sportsteam(big_sky_conference_gear).
+sportsteam(big_ten).
+sportsteam(big_ten_gear).
+sportsteam(bill_elliott).
+sportsteam(binghamton_bearcats).
+sportsteam(birmingham_southern_college_panthers).
+sportsteam(black_hawks).
+sportsteam(blackhawks).
+sportsteam(bloomsburg_huskies).
+sportsteam(blue_jackets).
+sportsteam(blue_jays).
+sportsteam(bobby_hamilton).
+sportsteam(bobby_labonte).
+sportsteam(bobcats).
+sportsteam(boilermakers).
+sportsteam(boise_st__broncos).
+sportsteam(boise_state).
+sportsteam(boise_state_broncos).
+sportsteam(bolton_wanderers).
+sportsteam(boston_americans).
+sportsteam(boston_braves).
+sportsteam(boston_bruins).
+sportsteam(boston_college).
+sportsteam(boston_college_eagles).
+sportsteam(boston_terriers).
+sportsteam(boston_university_terriers).
+sportsteam(bowdoin_polar_bears).
+sportsteam(bowling_green).
+sportsteam(bowling_green_falcons).
+sportsteam(bowling_green_st__falcons).
+sportsteam(bowling_green_st_falcons).
+sportsteam(bowling_green_state_university).
+sportsteam(brad_keselowkski).
+sportsteam(bradley_braves).
+sportsteam(bradley_university_braves).
+sportsteam(brazil).
+sportsteam(brian_vickers).
+sportsteam(bridgewater_state_bears).
+sportsteam(brigham_young_cougars).
+sportsteam(brigham_young_university_cougars).
+sportsteam(british_columbia_lions).
+sportsteam(brockport_golden_eagles).
+sportsteam(broncos).
+sportsteam(brooklyn_college_bulldogs).
+sportsteam(brooklyn_cyclones).
+sportsteam(brooklyn_dodgers).
+sportsteam(brown_bears).
+sportsteam(brown_university).
+sportsteam(bryant_bulldogs).
+sportsteam(buckeyes).
+sportsteam(bucknell_bison).
+sportsteam(bucknell_university).
+sportsteam(bucks).
+sportsteam(buffalo_bills).
+sportsteam(buffalo_braves).
+sportsteam(buffalo_bulls).
+sportsteam(buffalo_state_bengals).
+sportsteam(bulls).
+sportsteam(busch).
+sportsteam(butler_bulldogs).
+sportsteam(byu_hawaii_seasiders).
+sportsteam(byu_idaho_vikings).
+sportsteam(cal).
+sportsteam(cal_golden_bears).
+sportsteam(cal_poly_mustangs).
+sportsteam(cal_poly_slo_mustangs).
+sportsteam(cal_state_bakersfield_roadrunners).
+sportsteam(cal_state_channel_island_dolphins).
+sportsteam(cal_state_chico_wildcats).
+sportsteam(cal_state_east_bay_pioneers).
+sportsteam(cal_state_fullerton_titans).
+sportsteam(cal_state_los_angeles_golden_eagles).
+sportsteam(cal_state_monterey_bay_otters).
+sportsteam(cal_state_northridge_matadors).
+sportsteam(cal_state_san_marcos_cougars).
+sportsteam(cal_state_stanislaus_warriors).
+sportsteam(caldwell_cougars).
+sportsteam(calgary_flames).
+sportsteam(calgary_stampeders).
+sportsteam(california_angels).
+sportsteam(california_golden_bears).
+sportsteam(california_riverside_highlanders).
+sportsteam(california_university_of_pennsylvania_vulcans).
+sportsteam(cameron_aggies).
+sportsteam(campbell_fighting_camels).
+sportsteam(campbell_university_fighting_camels).
+sportsteam(canadiens).
+sportsteam(canisius_college_golden_griffins).
+sportsteam(canisius_golden_griffins).
+sportsteam(capitals).
+sportsteam(carolina_hurricanes).
+sportsteam(case_western_reserve_spartans).
+sportsteam(casey_mears).
+sportsteam(cavs).
+sportsteam(celtics).
+sportsteam(cent__connecticut_st__blue_devils).
+sportsteam(cent__michigan_chippewas).
+sportsteam(cent_michigan_chippewas).
+sportsteam(centenary_college_gents).
+sportsteam(centenary_gentlemen).
+sportsteam(central_arkansas_bears).
+sportsteam(central_connecticut_state_blue_devils).
+sportsteam(central_florida).
+sportsteam(central_florida_knights).
+sportsteam(central_michigan_chippewas).
+sportsteam(central_missouri_mules).
+sportsteam(central_missouri_state_jennies).
+sportsteam(central_oklahoma_bronchos).
+sportsteam(central_oklahoma_broncos).
+sportsteam(central_state).
+sportsteam(central_washington_wildcats).
+sportsteam(chapman_panthers).
+sportsteam(charleston_cougars).
+sportsteam(charleston_southern_buccaneers).
+sportsteam(charlotte_49ers).
+sportsteam(chattanooga_mocs).
+sportsteam(chicago_black_hawks).
+sportsteam(chicago_blackhawks).
+sportsteam(chicago_cubs_baseball_team).
+sportsteam(chicago_fire).
+sportsteam(chicago_maroons).
+sportsteam(chicago_state_cougars).
+sportsteam(chivas_usa).
+sportsteam(christian_brothers_buccaneers).
+sportsteam(christopher_newport_captains).
+sportsteam(cincinatti_bengals).
+sportsteam(cincinnati).
+sportsteam(cincinnati_royals).
+sportsteam(citadel_bulldogs).
+sportsteam(city_college_of_new_york_bea).
+sportsteam(city_college_of_san_francisco_rams).
+sportsteam(city_tech_yellow_jackets).
+sportsteam(clarion_golden_eagles).
+sportsteam(clark_atlanta_panthers).
+sportsteam(clarke_college_crusaders).
+sportsteam(clarkson_golden_knights).
+sportsteam(clemson).
+sportsteam(cleveland_browns).
+sportsteam(cleveland_indians).
+sportsteam(cleveland_st__vikings).
+sportsteam(cleveland_state_vikings).
+sportsteam(clint_bowyer).
+sportsteam(cmu_mavericks).
+sportsteam(coast_guard_academy_bears).
+sportsteam(coastal_carolina_chanticleers).
+sportsteam(cobbers).
+sportsteam(colgate_raiders).
+sportsteam(colgate_red_raiders).
+sportsteam(colgate_university).
+sportsteam(college).
+sportsteam(college_of_new_jersey_lions).
+sportsteam(colorado_avalanche).
+sportsteam(colorado_buffaloes).
+sportsteam(colorado_college_tigers).
+sportsteam(colorado_golden_buffaloes).
+sportsteam(colorado_rapids).
+sportsteam(colorado_school_of_mines_orediggers).
+sportsteam(colorado_st__rams).
+sportsteam(colorado_state_pueblo_thunde).
+sportsteam(colorado_state_pueblo_thunder_wolves).
+sportsteam(colorado_state_rams).
+sportsteam(columbia_lions).
+sportsteam(columbia_university_lions).
+sportsteam(columbus_crew).
+sportsteam(columbus_state_cougars).
+sportsteam(concordia_college_cobbers).
+sportsteam(concordia_irvine_eagles).
+sportsteam(concordia_st_paul_golden_bears).
+sportsteam(concordia_texas_tornadoes).
+sportsteam(concordia_university_wisconsin_falcons).
+sportsteam(conference_usa).
+sportsteam(conference_usa_gear).
+sportsteam(connecticut_huskies).
+sportsteam(coppin_state_eagles).
+sportsteam(cornell_big_red).
+sportsteam(cornhuskers).
+sportsteam(coyotes).
+sportsteam(creighton_blue_jays).
+sportsteam(creighton_bluejays).
+sportsteam(crew).
+sportsteam(crimson).
+sportsteam(csu_buccaneers).
+sportsteam(cubbies).
+sportsteam(cumberland_bulldogs).
+sportsteam(d_c__united).
+sportsteam(dakota_state_trojans).
+sportsteam(dale_earnhardt).
+sportsteam(dallas_baptist_patriots).
+sportsteam(dallas_cowboys).
+sportsteam(dallas_mavericks).
+sportsteam(dallas_stars).
+sportsteam(dartmouth_big_green).
+sportsteam(dave_blaney).
+sportsteam(davenport_panthers).
+sportsteam(david_gilliland).
+sportsteam(david_ragan).
+sportsteam(david_reutimann).
+sportsteam(david_stremme).
+sportsteam(davidson_wildcats).
+sportsteam(dayton_flyers).
+sportsteam(daytona_500).
+sportsteam(dc_united).
+sportsteam(delaware_blue_hens).
+sportsteam(delaware_fightin__blue_hens).
+sportsteam(delaware_fightin_blue_hens).
+sportsteam(delaware_state_hornets).
+sportsteam(delta_state_fighting_okra).
+sportsteam(demon_deacons).
+sportsteam(denny_hamlin).
+sportsteam(denver_pioneers).
+sportsteam(depaul_university).
+sportsteam(depauw_tigers).
+sportsteam(derby_county).
+sportsteam(detroit_lions).
+sportsteam(detroit_mercy_titans).
+sportsteam(detroit_shock).
+sportsteam(detroit_tigers).
+sportsteam(detroit_titans).
+sportsteam(devil_rays).
+sportsteam(district_of_columbia_firebirds).
+sportsteam(division).
+sportsteam(dixie_state_rebels).
+sportsteam(dixie_state_red_storm).
+sportsteam(dodgers).
+sportsteam(dolphins).
+sportsteam(dominican_stars).
+sportsteam(dowling_college_golden_lions).
+sportsteam(drake).
+sportsteam(drake_bulldogs).
+sportsteam(drake_university).
+sportsteam(drexel_dragons).
+sportsteam(drexel_university).
+sportsteam(duke_blue_devils).
+sportsteam(duke_university).
+sportsteam(duquesne).
+sportsteam(duquesne_dukes).
+sportsteam(duquesne_university).
+sportsteam(dwight_englewood_bulldogs).
+sportsteam(e__tenn__st__buccaneers).
+sportsteam(e_michigan_eagles).
+sportsteam(earnhardt_jr).
+sportsteam(east_carolina).
+sportsteam(east_carolina_pirates).
+sportsteam(east_carolina_university).
+sportsteam(east_tennessee_state_buccaneers).
+sportsteam(eastern_illinois_panthers).
+sportsteam(eastern_kentucky_colonels).
+sportsteam(eastern_michigan_university).
+sportsteam(eastern_university_eagles).
+sportsteam(eastern_washington_eagles).
+sportsteam(eastern_wyoming_college_lancers).
+sportsteam(ecsu_vikings).
+sportsteam(ecu_pirates).
+sportsteam(edmonton_eskimos).
+sportsteam(edmonton_oilers).
+sportsteam(edward_waters_tigers).
+sportsteam(elliot_sadler).
+sportsteam(elliott_sadler).
+sportsteam(elmhurst_college_blue_jays).
+sportsteam(elmira_college_soaring_eagles).
+sportsteam(elon_fighting_christians).
+sportsteam(elon_phoenix).
+sportsteam(embry_riddle_eagles).
+sportsteam(emory_eagles).
+sportsteam(emporia_state_hornets).
+sportsteam(england_patriots).
+sportsteam(evangel_university).
+sportsteam(evansville_aces).
+sportsteam(evansville_purple_aces).
+sportsteam(fairfield_stags).
+sportsteam(fairleigh_dickinson_knights).
+sportsteam(falcons).
+sportsteam(faulkner_eagles).
+sportsteam(faulkner_state_sun_chiefs).
+sportsteam(fayetteville_state_broncos).
+sportsteam(fc_barcelona).
+sportsteam(fc_dallas).
+sportsteam(ferris_state_bulldogs).
+sportsteam(fiesta_bowl_gear).
+sportsteam(fighting_illini).
+sportsteam(fiu_golden_panthers).
+sportsteam(fla__international_golden_panthers).
+sportsteam(flames).
+sportsteam(florida_a___m_rattlers).
+sportsteam(florida_a_and_m_rattlers).
+sportsteam(florida_a_m_rattlers).
+sportsteam(florida_atlantic_owls).
+sportsteam(florida_everblades).
+sportsteam(florida_gators_football).
+sportsteam(florida_gulf_coast_eagles).
+sportsteam(florida_international_golden_panthers).
+sportsteam(florida_intl_golden_panthers).
+sportsteam(florida_marlins).
+sportsteam(florida_southern_college_moc).
+sportsteam(florida_st__seminoles).
+sportsteam(florida_st_seminoles).
+sportsteam(florida_state).
+sportsteam(florida_state_university).
+sportsteam(flyers).
+sportsteam(fordham_rams).
+sportsteam(fordham_university).
+sportsteam(former_notre_dame).
+sportsteam(fort_valley_state_wildcats).
+sportsteam(france).
+sportsteam(franklin).
+sportsteam(fredonia_state_blue_devils).
+sportsteam(fresno_city_college_rams).
+sportsteam(fresno_st__bulldogs).
+sportsteam(fresno_state).
+sportsteam(fresno_state_bulldogs).
+sportsteam(furman_paladins).
+sportsteam(furman_university).
+sportsteam(future_farmers_of_america).
+sportsteam(ga_tech_yellow_jackets).
+sportsteam(gamecocks).
+sportsteam(gardner_webb_bulldogs).
+sportsteam(gardner_webb_runnin_bulldogs).
+sportsteam(george_mason_patriots).
+sportsteam(george_mason_university).
+sportsteam(george_washington_colonials).
+sportsteam(george_washington_university).
+sportsteam(georgetown_college_tigers).
+sportsteam(georgetown_hoyas).
+sportsteam(georgetown_university).
+sportsteam(georgia_bulldogs).
+sportsteam(georgia_southern_eagles).
+sportsteam(georgia_southwestern_hurricanes).
+sportsteam(georgia_state_panthers).
+sportsteam(georgia_tech_yellow_jackets).
+sportsteam(germany).
+sportsteam(golden_gophers).
+sportsteam(gonzaga).
+sportsteam(gonzaga_bulldogs).
+sportsteam(gonzaga_university_school_of_law).
+sportsteam(governors_state_university).
+sportsteam(grace_lancers).
+sportsteam(graceland_yellowjackets).
+sportsteam(grambling).
+sportsteam(grambling_st__tigers).
+sportsteam(grambling_state_tigers).
+sportsteam(grambling_tigers).
+sportsteam(grand_canyon_antelopes).
+sportsteam(grand_valley_state_l).
+sportsteam(green_bay_packers).
+sportsteam(green_bay_phoenix).
+sportsteam(greensboro).
+sportsteam(greg_biffle).
+sportsteam(greg_biffle_16).
+sportsteam(gw_colonials).
+sportsteam(hamline_pipers).
+sportsteam(hampden_sydney_college_tigers).
+sportsteam(hampton_pirates).
+sportsteam(hampton_university).
+sportsteam(hanover_college).
+sportsteam(hardin_simmons_university).
+sportsteam(hardin_simmons_university_cowboys).
+sportsteam(harper_college_hawks).
+sportsteam(hartford_hawks).
+sportsteam(hartford_whalers).
+sportsteam(harvard).
+sportsteam(harvard_crimson).
+sportsteam(harvard_university).
+sportsteam(hawaii_rainbow_warriors).
+sportsteam(hawaii_warriors).
+sportsteam(hawkeyes).
+sportsteam(henderson_state_university_reddies).
+sportsteam(hershey_bears).
+sportsteam(high_point_panthers).
+sportsteam(hofstra_pride).
+sportsteam(hofstra_university).
+sportsteam(hofstra_university_pride).
+sportsteam(holy_cross).
+sportsteam(holy_cross_crusaders).
+sportsteam(hoosiers).
+sportsteam(hornets).
+sportsteam(houston_astros).
+sportsteam(houston_colts).
+sportsteam(houston_cougars).
+sportsteam(houston_dynamo).
+sportsteam(houston_rockets).
+sportsteam(howard_bison).
+sportsteam(hunter_college_hawks).
+sportsteam(huntington_foresters).
+sportsteam(huskies).
+sportsteam(huston_tillotson_university_rams).
+sportsteam(idaho_state_bengals).
+sportsteam(idaho_vandals).
+sportsteam(illini).
+sportsteam(illinois_chicago_flames).
+sportsteam(illinois_state_redbirds).
+sportsteam(illinois_wesleyan).
+sportsteam(indiana_fever).
+sportsteam(indiana_hoosiers).
+sportsteam(indiana_pacers).
+sportsteam(indiana_purdue_fort_wayne_mastodons).
+sportsteam(indiana_state_sycamores).
+sportsteam(indiana_university_of_pennsylvania_crimson_hawks).
+sportsteam(indiana_university_school_of_medicine).
+sportsteam(indiana_wesleyan_wildcats).
+sportsteam(indianapolis_greyhounds).
+sportsteam(indians).
+sportsteam(iona_college_gaels).
+sportsteam(iona_gaels).
+sportsteam(iowa_hawkeyes).
+sportsteam(iowa_st__cyclones).
+sportsteam(iowa_st_cyclones).
+sportsteam(iowa_state_cyclones).
+sportsteam(iowa_state_cyclones_basketball).
+sportsteam(iowa_state_university).
+sportsteam(ipfw_mastodons).
+sportsteam(ithaca_college_bombers).
+sportsteam(iupui).
+sportsteam(iupui_jaguars).
+sportsteam(ivy_tech_community_college).
+sportsteam(j_j__yeley_18).
+sportsteam(jackson_state_tigers).
+sportsteam(jacksonville_dolphins).
+sportsteam(jacksonville_jaguars).
+sportsteam(jacksonville_st__gamecocks).
+sportsteam(jacksonville_state_gamecocks).
+sportsteam(jags).
+sportsteam(james_madison_dukes).
+sportsteam(james_madison_university).
+sportsteam(jamie_mcmurray).
+sportsteam(jarrett).
+sportsteam(jayhawks).
+sportsteam(jazz).
+sportsteam(jeff_burton).
+sportsteam(jeff_green).
+sportsteam(jeremy_mayfield).
+sportsteam(jerry_nadeau).
+sportsteam(jersey_devils).
+sportsteam(john_carroll_blue_streaks).
+sportsteam(john_jay_bloodhounds).
+sportsteam(johns_hopkins_blue_jays).
+sportsteam(johnson_and_wales_wildcats).
+sportsteam(johnson_c_smith_golden_bulls).
+sportsteam(ju_dolphins).
+sportsteam(juventus).
+sportsteam(kane_county_cougars).
+sportsteam(kansas_city_royals).
+sportsteam(kansas_city_wizards).
+sportsteam(kansas_royals).
+sportsteam(kansas_st__wildcats).
+sportsteam(kansas_st_wildcats).
+sportsteam(kasey_kahne).
+sportsteam(kean_cougars).
+sportsteam(kennesaw_st__owls).
+sportsteam(kennesaw_state_owls).
+sportsteam(kent_st__golden_flashes).
+sportsteam(kent_state_golden_flashes).
+sportsteam(kent_state_university).
+sportsteam(kentucky_state_thorobreds).
+sportsteam(kenyon_lords).
+sportsteam(kevin_harvick).
+sportsteam(kishwaukee_college_kougars).
+sportsteam(knighthawks).
+sportsteam(knights).
+sportsteam(knox_college).
+sportsteam(kutztown_golden_bears).
+sportsteam(kyle_busch).
+sportsteam(l_a__dodgers).
+sportsteam(la_angels_of_anaheim).
+sportsteam(la_salle_explorers).
+sportsteam(lafayette_college_leopards).
+sportsteam(lafayette_leopards).
+sportsteam(lake_forest_college).
+sportsteam(lake_superior_state_lakers).
+sportsteam(lamar_cardinals).
+sportsteam(lambuth_eagles).
+sportsteam(laurentian_university_voyageurs).
+sportsteam(le_moyne_college_dolphins).
+sportsteam(leafs).
+sportsteam(lehigh_mountain_hawks).
+sportsteam(lenoir_rhyne_bears).
+sportsteam(lewis_college).
+sportsteam(lewis_flyers).
+sportsteam(liberty_flames).
+sportsteam(lincoln_blue_tigers).
+sportsteam(lincoln_lions).
+sportsteam(linfield_college_wildcats).
+sportsteam(lipscomb_bisons).
+sportsteam(liverpool).
+sportsteam(london_knights).
+sportsteam(long_beach_state_49ers).
+sportsteam(long_island_blackbirds).
+sportsteam(long_island_u__blackbirds).
+sportsteam(longhorns).
+sportsteam(longwood_lancers).
+sportsteam(los_angeles_dodgers).
+sportsteam(los_angeles_galaxy).
+sportsteam(los_angeles_lakers).
+sportsteam(los_angeles_rams).
+sportsteam(los_angels_clippers).
+sportsteam(louisiana_college_wildcats).
+sportsteam(louisiana_lafayette_ragin__cajuns).
+sportsteam(louisiana_lafayette_ragin_cajuns).
+sportsteam(louisiana_monroe_warhawks).
+sportsteam(louisiana_ragin_cajuns).
+sportsteam(louisiana_state_shreveport_pilots).
+sportsteam(louisiana_state_tigers).
+sportsteam(louisiana_state_university_health_sciences_center).
+sportsteam(louisiana_tech_bulldogs).
+sportsteam(louisiana_tech_university).
+sportsteam(louisville_cardinals).
+sportsteam(lowell_devils).
+sportsteam(loyola_chicago_ramblers).
+sportsteam(loyola_greyhounds).
+sportsteam(loyola_illinois_ramblers).
+sportsteam(loyola_marymount_lions).
+sportsteam(loyola_marymount_university).
+sportsteam(loyola_ramblers).
+sportsteam(mac_gear).
+sportsteam(magic).
+sportsteam(maine_black_bears).
+sportsteam(manchester_city).
+sportsteam(manchester_monarchs).
+sportsteam(manhattan_jaspers).
+sportsteam(marist_red_foxes).
+sportsteam(marlins).
+sportsteam(maroons).
+sportsteam(marquette_golden_eagles).
+sportsteam(marquette_university).
+sportsteam(marshall_thundering_herd).
+sportsteam(marshall_university).
+sportsteam(mary_hardin_baylor_crusaders).
+sportsteam(maryland_baltimore_county_retrievers).
+sportsteam(maryland_eastern_shore_hawks).
+sportsteam(maryland_terrapins).
+sportsteam(massuchussets_lowell_river_hawks).
+sportsteam(matt_kenseth).
+sportsteam(mcneese_state_cowboys).
+sportsteam(md__eastern_shore_hawks).
+sportsteam(memphis_tigers_football).
+sportsteam(merced_blue_devils).
+sportsteam(mercer_bears).
+sportsteam(mercy_college_of_new_york_ma).
+sportsteam(merrimack_college_warriors).
+sportsteam(metro_state_roadrunners).
+sportsteam(metrostars).
+sportsteam(miami_heat).
+sportsteam(miami_hurricanes).
+sportsteam(miami_marlins).
+sportsteam(miami_of_ohio_redhawks).
+sportsteam(miami_ohio_redhawks).
+sportsteam(miami_redhawks).
+sportsteam(miami_university).
+sportsteam(miami_university_redhawks).
+sportsteam(michigan_st__spartans).
+sportsteam(michigan_st_spartans).
+sportsteam(michigan_state_spartans).
+sportsteam(michigan_state_university).
+sportsteam(michigan_tech_huskies).
+sportsteam(mid__tenn__st__blue_raiders).
+sportsteam(mid_eastern_athletic_conference).
+sportsteam(middle_tenn__st__blue_raiders).
+sportsteam(middle_tennessee_blue_raiders).
+sportsteam(middle_tennessee_state_blue_raiders).
+sportsteam(middle_tennessee_state_university).
+sportsteam(midwestern_state_mustangs).
+sportsteam(mighty_ducks_of_anaheim).
+sportsteam(millikin_big_blue).
+sportsteam(milwaukee_braves).
+sportsteam(milwaukee_brewers).
+sportsteam(milwaukee_panthers).
+sportsteam(minneapolis_lakers).
+sportsteam(minnesota_duluth_bulldogs).
+sportsteam(minnesota_golden_gop).
+sportsteam(minnesota_north_stars).
+sportsteam(minnesota_state_mavericks).
+sportsteam(minnesota_state_moorhead_dra).
+sportsteam(minnesota_timberwolves).
+sportsteam(minnesota_twins).
+sportsteam(minnesota_wild).
+sportsteam(mississippi_gulf_coast_community_college).
+sportsteam(mississippi_rebels).
+sportsteam(mississippi_st__bulldogs).
+sportsteam(mississippi_valley_state_delta_devils).
+sportsteam(missouri_kansas_city_kangaroos).
+sportsteam(missouri_southern_state_lions).
+sportsteam(missouri_state_bears).
+sportsteam(missouri_state_university).
+sportsteam(missouri_state_university_bears).
+sportsteam(missouri_state_west_plains_grizzlies).
+sportsteam(mit_engineers).
+sportsteam(mitchell_college).
+sportsteam(mlb_all_star).
+sportsteam(mobile_rams).
+sportsteam(monmouth_college_fighting_scots).
+sportsteam(monmouth_hawks).
+sportsteam(montana_grizzlies).
+sportsteam(montana_state_billings_yellowjackets).
+sportsteam(montana_state_bobcats).
+sportsteam(montana_state_northern_lights).
+sportsteam(montana_state_university).
+sportsteam(montana_tech_orediggers).
+sportsteam(montana_western_bulldogs).
+sportsteam(montclair_state_red_hawks).
+sportsteam(montevallo_falcons).
+sportsteam(montreal_alouettes).
+sportsteam(montreal_canadians).
+sportsteam(montreal_canadiens).
+sportsteam(montreal_expos).
+sportsteam(moravian_greyhounds).
+sportsteam(morehead_state_eagles).
+sportsteam(morehouse).
+sportsteam(morgan_st_bears).
+sportsteam(morgan_state_bears).
+sportsteam(morris_brown_wolverines).
+sportsteam(mount_st__mary_s_mountaineers).
+sportsteam(mount_st_marys_mountaineers).
+sportsteam(mount_union_purple_raiders).
+sportsteam(mountain_west_conference).
+sportsteam(mountaineers).
+sportsteam(muhlenberg_college_mules).
+sportsteam(murray_st__racers).
+sportsteam(murray_st_racers).
+sportsteam(murray_state).
+sportsteam(murray_state_racers).
+sportsteam(mustangs).
+sportsteam(mvc_gear).
+sportsteam(mwc_gear).
+sportsteam(n2009_all_star).
+sportsteam(n2009_pro_bowl).
+sportsteam(n2010_pro_bowl).
+sportsteam(n2011_pro_bowl).
+sportsteam(n2012_all_star).
+sportsteam(n2012_super_bowl).
+sportsteam(n__dakota_fighting_sioux).
+sportsteam(n_c__central_eagles).
+sportsteam(n_c__state_wolfpack).
+sportsteam(n_dakota_fighting_sioux).
+sportsteam(nascar_racing).
+sportsteam(nashville_predators).
+sportsteam(navy_midshipmen).
+sportsteam(navy_pier).
+sportsteam(nc_state).
+sportsteam(ncaa).
+sportsteam(ne_patriots).
+sportsteam(nebraska_cornhuskers).
+sportsteam(nebraska_kearney_lopers).
+sportsteam(nebraska_omaha_mavericks).
+sportsteam(nec_gear).
+sportsteam(nevada_wolf_pack).
+sportsteam(new_england_patriots).
+sportsteam(new_england_revolution).
+sportsteam(new_hampshire_wildcats).
+sportsteam(new_mexico_lobos).
+sportsteam(new_mexico_st__aggies).
+sportsteam(new_mexico_state).
+sportsteam(new_mexico_state_aggies).
+sportsteam(new_orleans_privateers).
+sportsteam(new_paltz_hawks).
+sportsteam(new_york_americans).
+sportsteam(new_york_bobcats).
+sportsteam(new_york_liberty).
+sportsteam(new_york_mets).
+sportsteam(new_york_red_bulls).
+sportsteam(new_york_titans).
+sportsteam(new_york_yankees).
+sportsteam(newman_jets).
+sportsteam(niagara_purple_eagles).
+sportsteam(nicholls_state_colonels).
+sportsteam(niners).
+sportsteam(nittany_lions).
+sportsteam(niu).
+sportsteam(norfolk_st__spartans).
+sportsteam(norfolk_st_spartans).
+sportsteam(norfolk_state_spartans).
+sportsteam(norfolk_tides).
+sportsteam(north_alabama_lions).
+sportsteam(north_carolina_a_and_t_aggies).
+sportsteam(north_carolina_a_t_aggies).
+sportsteam(north_carolina_aandt_aggies).
+sportsteam(north_carolina_asheville_bulldogs).
+sportsteam(north_carolina_greensboro_spartans).
+sportsteam(north_carolina_state).
+sportsteam(north_carolina_tar_heels).
+sportsteam(north_carolina_tarheels).
+sportsteam(north_carolina_wilmington_seahawks).
+sportsteam(north_central_cardinals).
+sportsteam(north_dakota_fighting_sioux).
+sportsteam(north_dakota_st__bison).
+sportsteam(north_dakota_state_bison).
+sportsteam(north_florida_ospreys).
+sportsteam(north_park_vikings).
+sportsteam(north_texas).
+sportsteam(north_texas_mean_green).
+sportsteam(northeast_wisconsin_technical_college).
+sportsteam(northeast_wisconsin_technical_headwear).
+sportsteam(northeast_wisconsin_technical_tops).
+sportsteam(northeastern_huskies).
+sportsteam(northeastern_illinois_golden_eagles).
+sportsteam(northeastern_state_riverhawks).
+sportsteam(northeastern_university).
+sportsteam(northern_arizona_lumberjacks).
+sportsteam(northern_colorado_bears).
+sportsteam(northern_illinois_huskies).
+sportsteam(northern_illinois_university).
+sportsteam(northern_iowa_panthers).
+sportsteam(northern_kentucky_university_norse).
+sportsteam(northern_michigan_wildcats).
+sportsteam(northern_state_university_wolves).
+sportsteam(northwest_missouri_state_bea).
+sportsteam(northwestern).
+sportsteam(northwestern_oklahoma_state_rangers).
+sportsteam(northwestern_state_demons).
+sportsteam(northwestern_university).
+sportsteam(northwestern_wildcats).
+sportsteam(notre_dame_fighting_irish).
+sportsteam(nova_southeastern).
+sportsteam(nova_southeastern_sharks).
+sportsteam(nuggets).
+sportsteam(ny_jets).
+sportsteam(nyu_violets).
+sportsteam(oakland_athletics).
+sportsteam(oakland_golden_grizzlies).
+sportsteam(ohio_bobcats).
+sportsteam(ohio_dominican_panthers).
+sportsteam(ohio_northern_polar_bears).
+sportsteam(ohio_st__buckeyes).
+sportsteam(ohio_st_buckeyes).
+sportsteam(ohio_wesleyan_battling_bishops).
+sportsteam(oklahoma_baptist_bison).
+sportsteam(oklahoma_city_university_stars).
+sportsteam(oklahoma_sooners).
+sportsteam(oklahoma_st__cowboys).
+sportsteam(oklahoma_state_cowboys).
+sportsteam(old_dominion_monarchs).
+sportsteam(old_dominion_university).
+sportsteam(ole_miss).
+sportsteam(ole_miss_rebels).
+sportsteam(olivet_college_comets).
+sportsteam(olympic_college_rangers).
+sportsteam(oral_roberts_golden_eagles).
+sportsteam(oregon_ducks).
+sportsteam(oregon_st__beavers).
+sportsteam(oregon_state).
+sportsteam(oregon_state_beavers).
+sportsteam(oregon_state_university).
+sportsteam(oswego_state_lakers).
+sportsteam(ottawa_senators).
+sportsteam(pac_10_gear).
+sportsteam(pac_12_gear).
+sportsteam(pace_university_setters).
+sportsteam(pacific_boxers).
+sportsteam(pacific_lutheran_university).
+sportsteam(pacific_tigers).
+sportsteam(padres).
+sportsteam(pasadena_city_college_lancers).
+sportsteam(pats).
+sportsteam(paul_menard).
+sportsteam(pawtucket_red_sox).
+sportsteam(pellissippi_state_purple_panthers).
+sportsteam(penguins).
+sportsteam(peninsula_college_pirates).
+sportsteam(penn_st__nittany_lions).
+sportsteam(penn_state_nittany_lions_basketball).
+sportsteam(pennsylvania_quakers).
+sportsteam(pennsylvania_state_university_berks).
+sportsteam(pepperdine_university).
+sportsteam(pepperdine_waves).
+sportsteam(pfeiffer_falcons).
+sportsteam(philadelphia_76ers).
+sportsteam(philadelphia_athletics).
+sportsteam(philadelphia_phillies).
+sportsteam(philadelphia_warriors).
+sportsteam(phoenix_coyotes).
+sportsteam(phoenix_mercury).
+sportsteam(phoenix_suns).
+sportsteam(pierce_college_raiders).
+sportsteam(pinstripe_bowl_gear).
+sportsteam(pirates).
+sportsteam(pistons).
+sportsteam(pittsburg_pirates).
+sportsteam(pittsburg_state_gorillas).
+sportsteam(pittsburgh_panthers_basketball).
+sportsteam(pittsburgh_pirates).
+sportsteam(pittsburgh_state_gorillas).
+sportsteam(pittsburgh_steelers).
+sportsteam(plattsburgh_state_cardinals).
+sportsteam(portland_pilots).
+sportsteam(portland_state_vikings).
+sportsteam(prairie_view_a_and_m_panthers).
+sportsteam(prairie_view_a_m_panthers).
+sportsteam(prairie_view_aandm_panthers).
+sportsteam(presbyterian_blue_hose).
+sportsteam(presbyterian_college_blue_hose).
+sportsteam(princeton).
+sportsteam(princeton_tigers).
+sportsteam(princeton_university).
+sportsteam(providence_college).
+sportsteam(providence_friars).
+sportsteam(puget_sound_loggers).
+sportsteam(purdue_university).
+sportsteam(quebec_nordiques).
+sportsteam(queens_college_knights).
+sportsteam(quinnipiac_bobcats).
+sportsteam(radford_highlanders).
+sportsteam(rams).
+sportsteam(rapids).
+sportsteam(razorbacks).
+sportsteam(real_madrid).
+sportsteam(real_salt_lake).
+sportsteam(red_hawks).
+sportsteam(red_raiders).
+sportsteam(red_wings).
+sportsteam(reds).
+sportsteam(redsox).
+sportsteam(reedley_college_tigers).
+sportsteam(regis_rangers).
+sportsteam(rhode_island_anchormen).
+sportsteam(rhode_island_rams).
+sportsteam(rice_owls).
+sportsteam(rice_university).
+sportsteam(richmond_spiders).
+sportsteam(rider_broncs).
+sportsteam(robby_gordon).
+sportsteam(robert_morris_colonials).
+sportsteam(robert_morris_eagles).
+sportsteam(rochester_americans).
+sportsteam(rochester_college_warriors).
+sportsteam(rochester_institute_of_technology_tigers).
+sportsteam(rochester_warriors).
+sportsteam(rochester_yellowjackets).
+sportsteam(rose_bowl_gear).
+sportsteam(round_rock_express).
+sportsteam(rowan_owls).
+sportsteam(rusty_wallace_2).
+sportsteam(rutgers_scarlet_kni).
+sportsteam(rutgers_scarlet_knights).
+sportsteam(rutgers_state_university_of_new_jersey).
+sportsteam(ryan_newman).
+sportsteam(s__mississippi_golden_eagles).
+sportsteam(sabres).
+sportsteam(sacramento_river_cats).
+sportsteam(sacramento_st__hornets).
+sportsteam(sacramento_state_hornets).
+sportsteam(sacred_heart_pioneers).
+sportsteam(saint_francis_red_flash).
+sportsteam(saint_joseph_s_college_pumas).
+sportsteam(saint_joseph_s_hawks).
+sportsteam(saint_josephs_college_pumas).
+sportsteam(saint_josephs_hawks).
+sportsteam(saint_louis).
+sportsteam(saint_louis_billikens).
+sportsteam(saint_louis_rams).
+sportsteam(saint_louis_university).
+sportsteam(saint_mary_s_gaels).
+sportsteam(saint_marys_gaels).
+sportsteam(saint_peter_s_peacocks).
+sportsteam(saint_peters_peacocks).
+sportsteam(sam_houston_state_bearkats).
+sportsteam(samford_bulldogs).
+sportsteam(samford_university).
+sportsteam(samuel_merrit_university).
+sportsteam(san_antonio).
+sportsteam(san_antonio_silver_stars).
+sportsteam(san_diego_padres).
+sportsteam(san_diego_st__aztecs).
+sportsteam(san_diego_st_aztecs).
+sportsteam(san_diego_state_aztecs).
+sportsteam(san_diego_state_university).
+sportsteam(san_diego_toreros).
+sportsteam(san_francisco_49ers).
+sportsteam(san_francisco_dons).
+sportsteam(san_francisco_giants).
+sportsteam(san_francisco_state_gators).
+sportsteam(san_jose_earthquakes).
+sportsteam(san_jose_st__spartans).
+sportsteam(san_jose_state).
+sportsteam(san_jose_state_spartans).
+sportsteam(san_jose_state_university).
+sportsteam(santa_clara_broncos).
+sportsteam(santa_clara_university).
+sportsteam(saskatchewan_roughriders).
+sportsteam(savannah_state_tigers).
+sportsteam(scarlet_knights).
+sportsteam(schaumburg_flyers).
+sportsteam(scranton_royals).
+sportsteam(se_louisiana_lions).
+sportsteam(se_missouri_state).
+sportsteam(se_missouri_state_redhawks).
+sportsteam(seahawks).
+sportsteam(seattle_mariners).
+sportsteam(seattle_metropolitans).
+sportsteam(seattle_pilots).
+sportsteam(seattle_redhawks).
+sportsteam(seattle_sonics).
+sportsteam(seattle_sounders_fc).
+sportsteam(sec_gear).
+sportsteam(seminoles).
+sportsteam(seton_hall_pirates).
+sportsteam(seton_hall_university).
+sportsteam(seton_hill_griffins).
+sportsteam(sewanee_tigers).
+sportsteam(sfa_lumberjacks).
+sportsteam(shenandoah_hornets).
+sportsteam(shippensburg_raiders).
+sportsteam(siena_saints).
+sportsteam(simon_gagne).
+sportsteam(siu_edwardsville_cougars).
+sportsteam(sixers).
+sportsteam(sj_sharks).
+sportsteam(slippery_rock_pride).
+sportsteam(smu).
+sportsteam(smu_mustangs).
+sportsteam(sonics).
+sportsteam(sonoma_state_seawolves).
+sportsteam(sooners).
+sportsteam(south_alabama_jaguars).
+sportsteam(south_carolina_state_bulldogs).
+sportsteam(south_carolina_upstate_spartans).
+sportsteam(south_dakota_coyotes).
+sportsteam(south_dakota_st__jackrabbits).
+sportsteam(south_dakota_state).
+sportsteam(south_florida_bulls).
+sportsteam(south_university).
+sportsteam(southeast_missouri_state_indians).
+sportsteam(southeast_missouri_state_redhawks).
+sportsteam(southeastern_conference).
+sportsteam(southeastern_fire).
+sportsteam(southeastern_louisiana_lions).
+sportsteam(southern_arkansas_muleriders).
+sportsteam(southern_california_trojans).
+sportsteam(southern_connecticut_state_owls).
+sportsteam(southern_illinois).
+sportsteam(southern_illinois_salukis).
+sportsteam(southern_indiana_screaming_eagles).
+sportsteam(southern_jaguars).
+sportsteam(southern_methodist_mustangs).
+sportsteam(southern_methodist_university).
+sportsteam(southern_miss__golden_eagles).
+sportsteam(southern_miss_golden_eagles).
+sportsteam(southern_mississippi_eagles).
+sportsteam(southern_mississippi_usm_golden_eagles).
+sportsteam(southern_new_hampshire_penmen).
+sportsteam(southern_university_at_new_orleans_knights).
+sportsteam(southern_utah_thunderbirds).
+sportsteam(southern_virginia_knights).
+sportsteam(southwestern_oklahoma_state_bulldogs).
+sportsteam(spelman_college_jaguars).
+sportsteam(springfield_college_pride).
+sportsteam(spurs).
+sportsteam(st___cloud_state).
+sportsteam(st___louis_browns).
+sportsteam(st___louis_cardinals).
+sportsteam(st___louis_hawks).
+sportsteam(st___olaf).
+sportsteam(st__bonaventure_bonnies).
+sportsteam(st__cloud_state_huskies).
+sportsteam(st__francis_college_terriers).
+sportsteam(st__john_s_red_storm).
+sportsteam(st__johns_red_storm).
+sportsteam(st__joseph_s_hawks).
+sportsteam(st__louis_billikens).
+sportsteam(st__lucie_mets).
+sportsteam(st__norbert_green_knights).
+sportsteam(st__peter_s_peacocks).
+sportsteam(st_bonaventure_bonnies).
+sportsteam(st_cloud_state_huskies).
+sportsteam(st_francis_college_terriers).
+sportsteam(st_johns_red_storm).
+sportsteam(st_louis_rams).
+sportsteam(st_norbert_green_knights).
+sportsteam(stanford).
+sportsteam(stanford_cardinal).
+sportsteam(stanford_cardinals).
+sportsteam(stanford_university).
+sportsteam(state_cardinals).
+sportsteam(state_cyclones).
+sportsteam(state_sun_devils).
+sportsteam(state_tigers).
+sportsteam(stetson_hatters).
+sportsteam(stillman_tigers).
+sportsteam(stlouisrams).
+sportsteam(stony_brook_seawolves).
+sportsteam(subway_series).
+sportsteam(sun_belt_gear).
+sportsteam(sun_devils).
+sportsteam(suny_cortland_red_dragons).
+sportsteam(supersonics).
+sportsteam(susquehanna_crusaders).
+sportsteam(syracuse_orange).
+sportsteam(syracuse_orangemen).
+sportsteam(talladega_college_tornadoes).
+sportsteam(tampa_bay_buccaneers).
+sportsteam(tampa_bay_devil_rays).
+sportsteam(tampa_bay_lightning).
+sportsteam(tampa_bay_rays).
+sportsteam(tampa_spartans).
+sportsteam(tar_heels).
+sportsteam(tarleton_state_texans).
+sportsteam(tartans).
+sportsteam(tech_hokies).
+sportsteam(temple).
+sportsteam(temple_owls).
+sportsteam(tennessee_chattanooga_mocs).
+sportsteam(tennessee_martin_skyhawks).
+sportsteam(tennessee_oilers).
+sportsteam(tennessee_state_tigers).
+sportsteam(tennessee_tech_golden_eagles).
+sportsteam(tennessee_wesleyan_bulldogs).
+sportsteam(tennmartin_skyhawks).
+sportsteam(terriers).
+sportsteam(texans).
+sportsteam(texas_a_and_m_aggies).
+sportsteam(texas_a_and_m_commerce_lions).
+sportsteam(texas_a_and_m_corpus_christi_islanders).
+sportsteam(texas_a_and_m_kingsville_javelinas).
+sportsteam(texas_a_m_corpus_christi_islanders).
+sportsteam(texas_a_m_university).
+sportsteam(texas_aandm_aggies).
+sportsteam(texas_aandm_kingsville_javelinas).
+sportsteam(texas_am_aggies).
+sportsteam(texas_arlington_mavericks).
+sportsteam(texas_brownsville_scorpions).
+sportsteam(texas_christian_horned_frogs).
+sportsteam(texas_christian_university).
+sportsteam(texas_college_steers).
+sportsteam(texas_el_paso_miners).
+sportsteam(texas_pan_american_broncs).
+sportsteam(texas_rangers).
+sportsteam(texas_san_antonio_roadrunners).
+sportsteam(texas_southern_tigers).
+sportsteam(texas_state_bobcats).
+sportsteam(texas_tech).
+sportsteam(texas_tech_university).
+sportsteam(texas_tyler_patriots).
+sportsteam(texas_western).
+sportsteam(the_citadel_bulldogs).
+sportsteam(the_master_s_college_mustangs).
+sportsteam(thomas_night_hawks).
+sportsteam(thrashers).
+sportsteam(toledo_rockets).
+sportsteam(toronto_argonauts).
+sportsteam(toronto_fc).
+sportsteam(toronto_raptors).
+sportsteam(towson_tigers).
+sportsteam(trail_blazers).
+sportsteam(trailblazers).
+sportsteam(transylvania).
+sportsteam(transylvania_pioneers).
+sportsteam(trenton_thunder).
+sportsteam(trevor_bayne).
+sportsteam(troy_state_trojans).
+sportsteam(troy_trojans).
+sportsteam(troy_university_trojans).
+sportsteam(tufts_jumbos).
+sportsteam(tulane_green_wave).
+sportsteam(tulane_university).
+sportsteam(tulsa_golden_hurricane).
+sportsteam(tuskegee_golden_tigers).
+sportsteam(twins).
+sportsteam(u_s__naval_academy).
+sportsteam(uab_blazers).
+sportsteam(uc_davis_aggies).
+sportsteam(uc_irvine).
+sportsteam(uc_irvine_anteaters).
+sportsteam(uc_riverside_highlanders).
+sportsteam(uc_san_diego_tritons).
+sportsteam(uc_santa_barbara).
+sportsteam(uc_santa_barbara_gauchos).
+sportsteam(uc_santa_cruz_slugs).
+sportsteam(ucf_knights).
+sportsteam(ucla).
+sportsteam(ucla_bruins).
+sportsteam(uconn).
+sportsteam(uconn_huskies).
+sportsteam(uic_flames).
+sportsteam(ul_lafayette).
+sportsteam(ulm_warhawks).
+sportsteam(umass_dartmouth_corsairs).
+sportsteam(umass_lowell_river_hawks).
+sportsteam(umass_minutemen).
+sportsteam(umbc_retrievers).
+sportsteam(umkc_kangaroos).
+sportsteam(unc_asheville_bulldogs).
+sportsteam(unc_charlotte_49ers).
+sportsteam(unc_wilmington_seahawks).
+sportsteam(uncg_spartans).
+sportsteam(unf_ospreys).
+sportsteam(union_college).
+sportsteam(university_of_akron).
+sportsteam(university_of_alabama_at_birmingham).
+sportsteam(university_of_alabama_tuscaloosa).
+sportsteam(university_of_arizona).
+sportsteam(university_of_arkansas_at_pine_bluff).
+sportsteam(university_of_buffalo).
+sportsteam(university_of_central_florida).
+sportsteam(university_of_cincinnati).
+sportsteam(university_of_connecticut_at_avery_point).
+sportsteam(university_of_houston).
+sportsteam(university_of_illinois_at_urbana_champaign).
+sportsteam(university_of_kansas).
+sportsteam(university_of_kentucky).
+sportsteam(university_of_louisiana).
+sportsteam(university_of_louisville).
+sportsteam(university_of_maryland_college_park).
+sportsteam(university_of_mississippi).
+sportsteam(university_of_nebraska_at_omaha_mavericks).
+sportsteam(university_of_nevada).
+sportsteam(university_of_new_mexico_gallup_campus).
+sportsteam(university_of_north_carolina_at_chapel_hill).
+sportsteam(university_of_north_texas).
+sportsteam(university_of_redlands_bulldogs).
+sportsteam(university_of_south_carolina_at_columbia).
+sportsteam(university_of_texas_at_el_paso).
+sportsteam(university_of_the_south_tigers).
+sportsteam(university_of_tulsa).
+sportsteam(university_of_virginia).
+sportsteam(unlv_rebels).
+sportsteam(unlv_runnin__rebels).
+sportsteam(unlv_runnin_rebels).
+sportsteam(us_marine_corps).
+sportsteam(usc_trojans).
+sportsteam(usc_upstate_spartans).
+sportsteam(ut_arlington_mavericks).
+sportsteam(utah_jazz).
+sportsteam(utah_state).
+sportsteam(utah_state_university).
+sportsteam(utah_utes).
+sportsteam(utah_valley_state_wolverines).
+sportsteam(utah_valley_university_wolverines).
+sportsteam(utah_valley_wolverines).
+sportsteam(utd_comets).
+sportsteam(utep).
+sportsteam(utes).
+sportsteam(uw_eau_claire).
+sportsteam(va_commonwealth_rams).
+sportsteam(valdosta_state_blazers).
+sportsteam(valparaiso_crusaders).
+sportsteam(vanderbilt).
+sportsteam(vanderbilt_university).
+sportsteam(vanguard_lions).
+sportsteam(vcu_rams).
+sportsteam(vermont_catamounts).
+sportsteam(villanova_university).
+sportsteam(villanova_wildcats).
+sportsteam(villanova_wildcats_basketball).
+sportsteam(vince_young).
+sportsteam(virginia_cavaliers).
+sportsteam(virginia_commonwealth_rams).
+sportsteam(virginia_military_institute).
+sportsteam(virginia_military_institute_keydets).
+sportsteam(virginia_military_keydets).
+sportsteam(virginia_state_trojans).
+sportsteam(vols).
+sportsteam(wac_gear).
+sportsteam(wagner_college_seahawks).
+sportsteam(wagner_seahawks).
+sportsteam(wake_forest_deacons).
+sportsteam(wake_forest_demon_d).
+sportsteam(wake_forest_demon_deacons).
+sportsteam(wake_forest_university).
+sportsteam(ward_burton).
+sportsteam(washburn_ichabods).
+sportsteam(washington_and_lee_generals).
+sportsteam(washington_bullets).
+sportsteam(washington_capitals).
+sportsteam(washington_huskies).
+sportsteam(washington_nationals).
+sportsteam(washington_redskins).
+sportsteam(washington_senators).
+sportsteam(washington_st__cougars).
+sportsteam(washington_st__louis).
+sportsteam(washington_st_louis).
+sportsteam(washington_state).
+sportsteam(washington_state_cougars).
+sportsteam(washington_state_university).
+sportsteam(washington_wizards).
+sportsteam(wayland_baptist_pioneers).
+sportsteam(wayne_state_warriors).
+sportsteam(weber_state_wildcats).
+sportsteam(webster_gorlocks).
+sportsteam(wesleyan_cardinals).
+sportsteam(wesleyan_college_pioneers).
+sportsteam(west_chester_golden_rams).
+sportsteam(west_florida_argonauts).
+sportsteam(west_georgia_technical_college).
+sportsteam(west_georgia_wolves).
+sportsteam(west_la_college_wildcats).
+sportsteam(west_texas_aandm_buffalo).
+sportsteam(west_virginia_mountaineers).
+sportsteam(west_virginia_mountianeers).
+sportsteam(west_virginia_state_yellow_jackets).
+sportsteam(western_carolina_catamounts).
+sportsteam(western_connecticut_colonials).
+sportsteam(western_illinois_leathernecks).
+sportsteam(western_illinois_university).
+sportsteam(western_kentucky_university).
+sportsteam(western_michigan_broncos).
+sportsteam(western_michigan_university).
+sportsteam(western_oregon_wolves).
+sportsteam(western_washington_vikings).
+sportsteam(westminster_griffins).
+sportsteam(westmont_college_warriors).
+sportsteam(white_sox).
+sportsteam(wichita_st_shockers).
+sportsteam(wichita_state_shockers).
+sportsteam(widener_pride).
+sportsteam(wigan_athletic).
+sportsteam(wildcats).
+sportsteam(wilkes_colonels).
+sportsteam(william___mary_tribe).
+sportsteam(william_and_mary_tribe).
+sportsteam(william_carey_crusaders).
+sportsteam(william_paterson_pioneers).
+sportsteam(william_penn_statesmen).
+sportsteam(wilmington_blue_rocks).
+sportsteam(wings).
+sportsteam(winnipeg_blue_bombers).
+sportsteam(winnipeg_jets).
+sportsteam(winston_salem_state_rams).
+sportsteam(winthrop_eagles).
+sportsteam(wisconsin_badgers).
+sportsteam(wisconsin_eau_claire_blugold).
+sportsteam(wisconsin_green_bay_phoenix).
+sportsteam(wisconsin_la_crosse_eagles).
+sportsteam(wisconsin_lutheran_college_w).
+sportsteam(wisconsin_milwaukee_panthers).
+sportsteam(wisconsin_oshkosh_titans).
+sportsteam(wisconsin_parkside_rangers).
+sportsteam(wisconsin_platteville_pioneers).
+sportsteam(wisconsin_river_falls_falcons).
+sportsteam(wisconsin_stevens_point_pointers).
+sportsteam(wisconsin_stout_blue_devils).
+sportsteam(wisconsin_whitewater_warhawks).
+sportsteam(wittenberg_tigers).
+sportsteam(wofford_terriers).
+sportsteam(wolfpack).
+sportsteam(wooster_fighting_scots).
+sportsteam(world_champion_boston_red_sox).
+sportsteam(wright_state_raiders).
+sportsteam(wright_state_university).
+sportsteam(wv_wesleyan_bobcats).
+sportsteam(xavier_musketeers).
+sportsteam(xavier_university).
+sportsteam(yale_bulldogs).
+sportsteam(yale_university).
+sportsteam(yankees).
+sportsteam(yanks).
+sportsteam(york_islanders).
+sportsteam(york_mets).
+sportsteam(york_rangers).
+sportsteam(youngstown_state_penguins).
+sportsteam(youth_jerseys).
+sportsteamposition(catcher).
+sportsteamposition(center).
+sportsteamposition(designated_hitter).
+sportsteamposition(first_baseman).
+sportsteamposition(forward).
+sportsteamposition(guard).
+sportsteamposition(infield).
+sportsteamposition(left_center).
+sportsteamposition(left_field).
+sportsteamposition(left_fielder).
+sportsteamposition(midfield).
+sportsteamposition(outfielder).
+sportsteamposition(pitcher).
+sportsteamposition(player).
+sportsteamposition(right_center).
+sportsteamposition(right_field).
+sportsteamposition(right_fielder).
+sportsteamposition(running_back).
+sportsteamposition(second_baseman).
+sportsteamposition(shortstop).
+sportsteamposition(third_base).
+sportsteamposition(wide_receiver).
+stadiumoreventvenue(agganis_arena).
+stadiumoreventvenue(air_canada_centre).
+stadiumoreventvenue(alexian_field).
+stadiumoreventvenue(americanairlines_arena).
+stadiumoreventvenue(ameriquest_field).
+stadiumoreventvenue(anfield).
+stadiumoreventvenue(angel_stadium_of_anaheim).
+stadiumoreventvenue(angels_stadium).
+stadiumoreventvenue(arizona_stadium).
+stadiumoreventvenue(bank_atlantic_center).
+stadiumoreventvenue(bankatlantic_center).
+stadiumoreventvenue(beaver_stadium).
+stadiumoreventvenue(ben_hill_griffin_stadium).
+stadiumoreventvenue(bill_snyder_family_stadium).
+stadiumoreventvenue(blue_cross_arena).
+stadiumoreventvenue(bmo_field).
+stadiumoreventvenue(bobby_dodd_stadium).
+stadiumoreventvenue(bradley_center).
+stadiumoreventvenue(bryant_denny_field).
+stadiumoreventvenue(bsu_stadium).
+stadiumoreventvenue(buck_shaw_stadium).
+stadiumoreventvenue(busch_stadium).
+stadiumoreventvenue(byrd_stadium).
+stadiumoreventvenue(cajun_field).
+stadiumoreventvenue(camp_nou).
+stadiumoreventvenue(camp_randall).
+stadiumoreventvenue(canad_inns_stadium).
+stadiumoreventvenue(cardinals_stadium).
+stadiumoreventvenue(carrier_dome).
+stadiumoreventvenue(carter_finley_stadium).
+stadiumoreventvenue(cfsb_center).
+stadiumoreventvenue(citizens_bank_park).
+stadiumoreventvenue(clarence_martin_stadium).
+stadiumoreventvenue(coliseum).
+stadiumoreventvenue(comerica_park).
+stadiumoreventvenue(commonwealth_stadium).
+stadiumoreventvenue(communityamerica_ballpark).
+stadiumoreventvenue(conseco_fieldhouse).
+stadiumoreventvenue(darrell_k___royal_texas_memorial_stadium).
+stadiumoreventvenue(dell_diamond).
+stadiumoreventvenue(dick_s_sporting_goods_park).
+stadiumoreventvenue(dix_stadium).
+stadiumoreventvenue(dodger_stadium).
+stadiumoreventvenue(dolphin_stadium).
+stadiumoreventvenue(dolphins_stadium).
+stadiumoreventvenue(dowdy_ficklen).
+stadiumoreventvenue(ebbets_field).
+stadiumoreventvenue(edward_jones_dome).
+stadiumoreventvenue(elfstrom_stadium).
+stadiumoreventvenue(energysolutions_arena).
+stadiumoreventvenue(estadio_santiago_bernabeu).
+stadiumoreventvenue(fedex_field).
+stadiumoreventvenue(fedex_forum).
+stadiumoreventvenue(fenway_park).
+stadiumoreventvenue(ford_field).
+stadiumoreventvenue(fouts_field).
+stadiumoreventvenue(frawley_stadium).
+stadiumoreventvenue(georgia_dome).
+stadiumoreventvenue(germain_arena).
+stadiumoreventvenue(giants_stadium).
+stadiumoreventvenue(great_american_ballpark).
+stadiumoreventvenue(groves_stadium).
+stadiumoreventvenue(harbor_park).
+stadiumoreventvenue(honda_center).
+stadiumoreventvenue(hp_pavilion_at_san_jose).
+stadiumoreventvenue(huskie_stadium).
+stadiumoreventvenue(invesco_field).
+stadiumoreventvenue(jack_trice_stadium).
+stadiumoreventvenue(jacksonville_municipal_stadium).
+stadiumoreventvenue(jacobs_field).
+stadiumoreventvenue(jjb_stadium).
+stadiumoreventvenue(jobing_com_arena).
+stadiumoreventvenue(joe_aillet_stadium).
+stadiumoreventvenue(joe_louis_arena).
+stadiumoreventvenue(jordan_hare_stadium).
+stadiumoreventvenue(kauffman_stadium).
+stadiumoreventvenue(kenan_stadium).
+stadiumoreventvenue(keyspan_park).
+stadiumoreventvenue(lambeau_field).
+stadiumoreventvenue(lane_stadium).
+stadiumoreventvenue(legion_field).
+stadiumoreventvenue(lincoln_financial_field).
+stadiumoreventvenue(louisiana_superdome).
+stadiumoreventvenue(lp_field).
+stadiumoreventvenue(madison_square_garden).
+stadiumoreventvenue(malone_stadium).
+stadiumoreventvenue(marshall_stadium).
+stadiumoreventvenue(mccoy_stadium).
+stadiumoreventvenue(mcmahon_stadium).
+stadiumoreventvenue(mellon_arena).
+stadiumoreventvenue(memorial_stadium).
+stadiumoreventvenue(metropolitan_stadium).
+stadiumoreventvenue(miller_park).
+stadiumoreventvenue(minute_maid_park).
+stadiumoreventvenue(mosaic_stadium_at_taylor_field).
+stadiumoreventvenue(nationwide_arena).
+stadiumoreventvenue(navy_marine_corps_memorial_stadium).
+stadiumoreventvenue(network_associates_coliseum).
+stadiumoreventvenue(new_orleans_arena).
+stadiumoreventvenue(new_yankee_stadium).
+stadiumoreventvenue(nippert_stadium).
+stadiumoreventvenue(notre_dame_stadium).
+stadiumoreventvenue(old_trafford).
+stadiumoreventvenue(oracle_arena).
+stadiumoreventvenue(orange_bowl_stadium).
+stadiumoreventvenue(palace_of_auburn_hills).
+stadiumoreventvenue(papa_john_s_cardinal_stadium).
+stadiumoreventvenue(paul_brown_stadium).
+stadiumoreventvenue(pengrowth_saddledome).
+stadiumoreventvenue(peoria_sports_complex).
+stadiumoreventvenue(percival_molson_stadium).
+stadiumoreventvenue(petco_park).
+stadiumoreventvenue(philips_arena).
+stadiumoreventvenue(phillips_arena).
+stadiumoreventvenue(pizza_hut).
+stadiumoreventvenue(pnc_park).
+stadiumoreventvenue(pohlman_field).
+stadiumoreventvenue(prudential_center_2).
+stadiumoreventvenue(qualcomm_stadium).
+stadiumoreventvenue(raley_field).
+stadiumoreventvenue(ralph_wilson_stadium).
+stadiumoreventvenue(raymond_james).
+stadiumoreventvenue(razorback_stadium).
+stadiumoreventvenue(rbc_center).
+stadiumoreventvenue(rca_dome).
+stadiumoreventvenue(reebok_stadium).
+stadiumoreventvenue(rentschler_field).
+stadiumoreventvenue(reser_stadium).
+stadiumoreventvenue(rexall_place).
+stadiumoreventvenue(rfk_memorial_stadium).
+stadiumoreventvenue(rice_eccles_stadium).
+stadiumoreventvenue(rio_tinto_stadium).
+stadiumoreventvenue(robertson_stadium).
+stadiumoreventvenue(romney_stadium).
+stadiumoreventvenue(ross_ade_stadium).
+stadiumoreventvenue(rubber_bowl).
+stadiumoreventvenue(rupp_arena).
+stadiumoreventvenue(rutgers_stadium).
+stadiumoreventvenue(rynearson_stadium).
+stadiumoreventvenue(safeco_field).
+stadiumoreventvenue(sam_boyd_stadium).
+stadiumoreventvenue(sbc_park).
+stadiumoreventvenue(scotiabank_place).
+stadiumoreventvenue(scott_stadium).
+stadiumoreventvenue(scottrade_center).
+stadiumoreventvenue(skelly_stadium).
+stadiumoreventvenue(sommet_center).
+stadiumoreventvenue(spartan_stadium).
+stadiumoreventvenue(st___pete_times_forum).
+stadiumoreventvenue(staples_center).
+stadiumoreventvenue(sun_bowl).
+stadiumoreventvenue(temple_stadium).
+stadiumoreventvenue(texas_stadium).
+stadiumoreventvenue(times_union_center).
+stadiumoreventvenue(tradition_field).
+stadiumoreventvenue(tropicana_field).
+stadiumoreventvenue(tsongas_arena).
+stadiumoreventvenue(ub_stadium).
+stadiumoreventvenue(united_center).
+stadiumoreventvenue(university_stadium).
+stadiumoreventvenue(us_airways_center).
+stadiumoreventvenue(vanderbilt_stadium).
+stadiumoreventvenue(vaught_hemingway_stadium).
+stadiumoreventvenue(verizon_wireless_arena).
+stadiumoreventvenue(wachovia_center).
+stadiumoreventvenue(waldo_stadium).
+stadiumoreventvenue(wallace_wade_stadium).
+stadiumoreventvenue(waterfront_park).
+stadiumoreventvenue(wells_fargo_arena).
+stadiumoreventvenue(williams_brice_stadium).
+stadiumoreventvenue(xcel_energy_center).
