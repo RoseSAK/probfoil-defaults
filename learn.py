@@ -36,7 +36,7 @@ def calc_significance(s, low=0.0, high=100.0, precision=1e-8) :
 class LearningProblem(object) :
     """Base class for FOIL learning algorithm."""
     
-    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, balance_negative=False, balance_negative_biased=False, verbose=False, use_limited_accuracy=False, no_closed_world=False, minrules=0, maxrules=-1, maxlength=0, pack_queries=True, use_recall=False, no_negation=False, absolute_score=False, class_balance=1, **other_args ) :
+    def __init__(self, language, knowledge, beam_size=5, significance_p_value=0.99, balance_negative=False, balance_negative_biased=False, verbose=False, use_limited_accuracy=False, no_closed_world=False, minrules=0, maxrules=-1, maxlength=0, pack_queries=True, use_recall=False, no_negation=False, absolute_score=False, class_balance=1, seed=None, **other_args ) :
         self.language = language
         language.learning_problem = self
         self.knowledge = knowledge
@@ -58,8 +58,9 @@ class LearningProblem(object) :
         self.NO_NEGATION = no_negation
         self.ABSOLUTE_SCORE = absolute_score
         self.CLASS_BALANCE = class_balance
+        self.RANDOM_SEED = seed
         
-    def calculateScore(self, rule) :
+    def calculateScore(self, rule, debug=False) :
         raise NotImplementedError('calculateScore')
 
     def learn(self, H) :
@@ -258,11 +259,11 @@ class ProbFOIL1(LearningProblem) :
         super(ProbFOIL1,self).__init__(*args, **kwdargs)
         self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
     
-    def calculateScore(self, rule) :
+    def calculateScore(self, rule, debug=False) :
         if not rule.previous :
-            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0, not self.ABSOLUTE_SCORE)
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0, not self.ABSOLUTE_SCORE, debug=debug)
         else :
-            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, rule.previous.score.TP, rule.previous.score.FP, not self.ABSOLUTE_SCORE)
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, rule.previous.score.TP, rule.previous.score.FP, not self.ABSOLUTE_SCORE, debug=debug)
 
 class ProbFOIL2(LearningProblem) :
     
@@ -270,12 +271,12 @@ class ProbFOIL2(LearningProblem) :
         super(ProbFOIL2,self).__init__(*args, **kwdargs)
         self.M_ESTIMATE_M = kwdargs.get('m_estimate_m',10)
     
-    def calculateScore(self, rule) :
+    def calculateScore(self, rule, debug=False) :
         if not rule.previous :
-            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0, not self.ABSOLUTE_SCORE)
+            return PF1Score(rule.score_correct, rule.getScorePredict(), self.M_ESTIMATE_M, 0.0, 0.0, not self.ABSOLUTE_SCORE, debug=debug)
         else :
             previous_prediction = rule.previous.getScorePredict()            
-            result = PF2Score(rule.score_correct, rule.getScorePredict(), previous_prediction, self.M_ESTIMATE_M, not self.ABSOLUTE_SCORE)
+            result = PF2Score(rule.score_correct, rule.getScorePredict(), previous_prediction, self.M_ESTIMATE_M, not self.ABSOLUTE_SCORE, debug=debug)
             return result
 
 class PFScore(object) :
@@ -337,11 +338,13 @@ class PFScore(object) :
         if self.relative :
             P = self.P - self.pTP
             N = self.N - self.pFP
-            self.mPNP = self.M_ESTIMATE_M  * ( P / (P+N) )
+            mPNP = self.M_ESTIMATE_M  * ( P / (P+N) )
             TP -= self.pTP
             FP -= self.pFP
-        
-        return (TP + self.mPNP) / (TP + FP + self.M_ESTIMATE_M) 
+        else :
+          mPNP = self.mPNP
+                  
+        return (TP + mPNP) / (TP + FP + self.M_ESTIMATE_M) 
 
     def __str__(self) :
         return '%.3f %.3f %.3f %.3f' % (self.TP, self.TN, self.FP, self.FN )
@@ -353,7 +356,7 @@ class PFScore(object) :
 
 class PF1Score(PFScore) :
 
-    def __init__(self, correct, predict, m, pTP, pFP, relative=True) :
+    def __init__(self, correct, predict, m, pTP, pFP, relative=True, debug=False) :
         super(PF1Score,self).__init__(relative)
         self.M_ESTIMATE_M = m
         self.max_x = 1
@@ -393,7 +396,7 @@ class PF1Score(PFScore) :
 
 class PF2Score(PFScore):
     
-    def __init__(self, correct, predict, predict_prev, m, relative=True) :
+    def __init__(self, correct, predict, predict_prev, m, relative=True, debug=False) :
         super(PF2Score,self).__init__(relative)
         self.M_ESTIMATE_M = m
         self.MIN_RULE_PROB = 0.01
@@ -485,6 +488,7 @@ class PF2Score(PFScore):
         if values : 
             values = sorted(values)
         
+            if debug: print ('CALCULATING SCORE')
             TP_x, FP_x, TN_x, FN_x = 0.0, 0.0, 0.0, 0.0
         
             max_score = None
@@ -503,6 +507,9 @@ class PF2Score(PFScore):
                     
                     score_x = self._m_estimate_m(TP_x, FP_x)
                     #print (x, score_x, TP_x, FP_x, self._m_estimate_m(TP_x,0))
+                    
+                    if debug:
+                      print (score_x, x, y, p, l, u)
                     if x >= self.MIN_RULE_PROB and ( max_score == None or score_x > max_score ) :
                         TN_x = N - FP_x
                         FN_x = P - TP_x
@@ -542,10 +549,11 @@ class PF2Score(PFScore):
             max_score_details = (TP_x, TN_x, FP_x, FN_x)
             max_score = score_x
             
+        if debug: print ('MAX_SCORE', max_score, max_x)
         self.max_s = max_score
         self.max_x = max_x
         self.TP, self.TN, self.FP, self.FN = max_score_details
-
+        if debug: print ('Score if p=1:', TP_x, FP_x)
         
         self.maxTP = TP_x
         self.localScore = self.m_estimate()

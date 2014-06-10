@@ -485,6 +485,8 @@ class RootRule(Rule) :
             #   first select combinations of values as they appear in the positive examples
             
             import random
+            if self.learning_problem.RANDOM_SEED != None :
+              random.seed(self.learning_problem.RANDOM_SEED)
             new_examples = []
             new_score_correct = []
             neg_examples = []
@@ -529,6 +531,13 @@ class RootRule(Rule) :
             
             self.__examples = new_examples + neg_examples
             self.__score_correct = new_score_correct + [0] * num_negs 
+            
+            print_examples = False
+            if print_examples :
+              with open('examples','w') as f :
+                for ex, sc in zip(self.__examples, self.__score_correct) :
+                
+                  print ('%s %s' % ( sc, ' '.join(ex) ), file=f)
             
         if self.learning_problem.NO_CLOSED_WORLD :
             new_examples = []

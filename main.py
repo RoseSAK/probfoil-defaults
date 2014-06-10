@@ -57,6 +57,7 @@ def parse_args(args) :
     p.add_argument('--separate_examples', action="store_true", default=False, help="Compile examples separately.")
     p.add_argument('--class_balance', type=float, default=1, help="Balance negative/positive examples (requires --balance_negative[_biased]).")
     p.add_argument('--ppmode', choices=['none', 'rr'], default='none')
+    p.add_argument('-S', '--seed', type=int, default=None, help='Random seed')
     
     return p.parse_args(args)
 
