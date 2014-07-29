@@ -176,6 +176,11 @@ class PrologInterface(object) :
                         gp.append( clause )
             
                     # Add queries to ground program.
+#                     query = str(Literal( 'target', rule.target.arguments)) 
+#                     gp.append( query + ':-' + str(Literal( clause_pred, rule.target.arguments)) + '.')
+#                     gp.append( 'query(%s).' % (query, ) )
+#                     qr.append( query )
+                    
                     for ex_id in ex_ids :
                         query = Literal('pf_query_%s_%s' % (rule_id, ex_id), [])
                         
@@ -185,15 +190,17 @@ class PrologInterface(object) :
                             real_query = Literal( clause_pred, rule.examples[ex_id] )
                         gp.append( '%s :- %s.' % (query, real_query) )
                         gp.append( 'query(%s).' % (query, ) )
-                        qr.append(str(query))
+                        #qr.append(str(query))
+                    
 
             # Call grounder
             ground_result = []
-            names_nodes = self._ground(gp)
+            names_nodes, qr = self._ground(gp)
             
             # Extract node ids from grounder result
             for name in qr :
                 node_id = names_nodes.get(name, None)
+                #print (name)
                 rule, ex_id = name.split('_')[2:]
                 if node_id != None : node_id = int(node_id)
                 ground_result.append( ( self.toGround[int(rule)][0], int(ex_id), node_id ))
@@ -300,13 +307,13 @@ class PrologInterface(object) :
                 
             with Timer(category='grounding_grounding') as tmr : 
                 # 2) Call grounder in Yap
-                grounder_result = self._call_grounder( pl_filename)
+                grounder_result, qr = self._call_grounder( pl_filename)
     
             with Timer(category='grounding_integrating') as tmr : 
                 # 3) Read in grounding and insert new things into Grounding data structure
-                return self.grounding.integrate(grounder_result)
+                return self.grounding.integrate(grounder_result), qr
         else :
-            return {}
+            return {}, []
             
     def _call_grounder(self, in_file) :
         PROBLOG_GROUNDER= bin_path('problog/ground_compact.pl')
@@ -316,13 +323,16 @@ class PrologInterface(object) :
         # Remove output file
         if os.path.exists(ground_program) : os.remove(ground_program)
         
+        queries = self.env.tmp_path('probfoil.queries')
         evidence = '/dev/null'
-        queries = '/dev/null'
+        #queries = '/dev/null'
                 
         import subprocess
         output = subprocess.check_output(['yap', "-L", PROBLOG_GROUNDER , '--', in_file, ground_program, evidence, queries ])
-                
-        return self._read_grounding(ground_program)
+        
+        with open(queries) as f :
+            qr = [ line.strip() for line in f ]
+        return self._read_grounding(ground_program), qr
     
     def base(self, predicate, arity) :
         result = self.datafile.base(predicate, arity)
@@ -447,7 +457,7 @@ class PrologInterface(object) :
         program = ['query(%s).' % target ]
         
     
-        grounding = self._ground(program)
+        grounding, qr = self._ground(program)
         
         for i, ex in enumerate(examples) :
             node = grounding.get(str(target.withArgs(ex)), None)
@@ -682,6 +692,7 @@ class Grounding(object) :
             self.__probabilities[index-1] = p
         
     def integrate(self, lines, rules=None) :
+    
         # Dictionary query_name => node_id
         result = {}
         
