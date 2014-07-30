@@ -206,17 +206,68 @@ class Rule(object) :
         
     def __len__(self) :
         return self.__length
+        
+    def refine_rpf(self) :
+# 1) Construct a list of constants ordered by their weight
+#         weights = defaultdict(float)
+#         
+#         for i, ex in self.enum_examples() :
+#             miss_p = max(0,self.score_correct[i] - self.previous.getScorePredict(i))
+#             if miss_p > 0 and self.previous.getScorePredict(i) < 0.1 :
+#                 for c in zip(ex, self.language.getArgumentTypes(self.target),range(0,len(ex))) :
+#                     weights[c] += miss_p
+#         constants = sorted( [ (w,c) for c,w in weights.items() if w > 0 ], reverse=True )
+#         
+#         examples = [ x for i,x in self.enum_examples() if self.score_correct[i] - self.previous.getScorePredict(i) > 0 ]
+#         
+#         for score, constant in constants :
+#             args = [self.target.arguments[constant[2]]] + [ a for i,a in enumerate(self.target.arguments) if i != constant[2] ]
+#             new_examples = []
+#             other_constants = set([])
+#             for ex in examples :
+#                 
+#                 if constant[0] == ex[constant[2]] :
+#                     for j,x in enumerate(zip(ex,self.language.getArgumentTypes(self.target))) :
+#                         if j != constant[2] : other_constants.add(x)
+# 
+#                 else :
+#                     new_examples.append(ex)
+#             #print (constant[0:2], other_constants)
+#             paths = self.language.rpf_1d( constant[0:2], other_constants, args )
+#             
+#             if paths : return [MultiLiteral(*l) for l in paths ]        
+#             examples = new_examples
+        
+        s_ex = sorted( [ (self.score_correct[i] - self.previous.getScorePredict(i),ex) for i, ex in self.enum_examples() ] , reverse=True)
+        for s_max in s_ex :
+            if self.learning_problem.VERBOSE > 5 : print (s_max)
+            if (s_max[0] <= 0) : return []
+            with Log('rpf', example=s_max[1], p=s_max[0]) :
+                paths = self.language.rpf( self.target, self.target.withArgs(s_max[1]) )
+                if paths :
+                    return [MultiLiteral( *l ) for l in paths]
+        return []
+
     
     def refine(self, update=False) :
         """Generate refinement literals for this rule."""
-        # generate refined clauses
-        if update :
-            # Only generate extensions that use a variable introduced by the last literal
-            use_vars = [ vn for vn,vt in self._new_vars ]
-            if not use_vars : return [] # no variables available
-        else :
-            use_vars = None
-        return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) if literal != self.literal ]
+        RPF = self.learning_problem.RPF
+        if RPF and not self.parent  :
+            if not update :
+                return self.refine_rpf()
+            else :
+                return []
+#                 use_vars = None
+#                 return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) if literal != self.literal ]
+        else :        
+            # generate refined clauses
+            if update and not RPF :
+                # Only generate extensions that use a variable introduced by the last literal
+                use_vars = [ vn for vn,vt in self._new_vars ]
+                if not use_vars : return [] # no variables available
+            else :
+                use_vars = None
+            return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) if literal != self.literal ]
         
     def hasScore(self) :
          return self.__score != None
@@ -619,6 +670,40 @@ class Literal(object) :
         else :
             return self.functor == other.functor and self.arguments == other.arguments and self.is_negated == other.is_negated
 
+from itertools import chain
+class MultiLiteral(object) :
+    
+    def __init__(self, *literals) :
+        self.literals = literals
+        self.arguments = None
+                
+#     def withArgs(self, args) :
+#         raise RuntimeError("Operation not permitted!")
+                
+    def _get_variables(self) :
+        return set(chain( *[ l.variables for l in self.literals ] ) )
+        
+    def getTypedVariables(self, language) :
+        return set(chain( *[ l.getTypedVariables(language) for l in self.literals ] ) )
+        
+    variables = property( _get_variables )  
+    #arity = property (lambda s : len(s.arguments) )
+    #key = property( lambda s : ( s.functor, s.arity ) )
+    
+    def __repr__(self) :
+        return ', '.join(map(repr, self.literals))
+                                    
+    def __hash__(self) :
+        return hash(str(self))
+            
+    def __eq__(self, other) :
+        if other == None :
+            return False
+        else :
+            return self.literals == other.literals
+
+
+
 class Language(object) :
     
     def __init__(self) :
@@ -678,16 +763,131 @@ class Language(object) :
         self.__varcount += 1
         return 'Var_' + str(self.__varcount)
         
+    def relationsByConstant(self, constant ) :
+        kb = self.learning_problem.knowledge
+
+        c,vt = constant
+        
+        res = []
+        varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        for pred_id in self.__modes :
+            index = [ i for i,x in enumerate(self.getArgumentTypes(key = pred_id)) if x == vt ]
+            for i in index :
+                vars = [ varnames[j] for j in range(0, pred_id[1]) ]
+                args = vars[:]
+                args[i] = c
+                for r in kb.query( Literal( pred_id[0], args ), vars ) :
+                    r[i] = c
+                    res.append(Literal( pred_id[0], r) )
+                
+#        print (res)
+#         
+#         res = []
+#         res += [ Literal('parent',(c,r[0])) for r in kb.query( Literal('parent', (c,'Y')), 'Y' ) ] 
+#         res += [ Literal('parent',(r[0],c)) for r in kb.query( Literal('parent', ('Y',c)), 'Y' ) ] 
+#         res += [ Literal('married',(c,r[0])) for r in kb.query( Literal('married', (c,'Y')), 'Y' ) ] 
+#         res += [ Literal('married',(r[0],c)) for r in kb.query( Literal('married', ('Y',c)), 'Y' ) ] 
+        with Log('nodes', constant=c, extra=res) : pass
+#         print ('A',res)
+        return res
+    
+    def rpf(self, free_target, target) :
+        
+        # TODO support arity > 2
+        assert(target.arity == 2)
+
+        GRAPHS = [ RPFGraph(free_target.arguments[i]) for i in range(0,target.arity) ]
+    
+        tps = self.getArgumentTypes(target)
+        for i in range(0, target.arity) :
+            a = RPFNode()
+            a.setValues( free_target.arguments[i], [ ( target.arguments[i], tps[i])] )
+            GRAPHS[i].addNode(a)
+   
+    
+        A = GRAPHS[0]
+        B = GRAPHS[1]
+    
+        overlap, G = A.connect(B)
+    
+        # TODO add stopping criteria
+    
+        ea = True
+        eb = True
+        while not overlap :
+            with Log('iteration') :
+                with Log('expand', graph=A.id) :
+                    if not A.expand(self) : break
+                with Log('expand', graph=B.id) :
+                    if not B.expand(self) : break
+            #print (len(A.constants), len(B.constants))
+            overlap, G = A.connect(B)
+                    
+        rules = set([])
+        
+        if overlap :
+            with Log('overlap', constants=','.join(map(str,overlap))) : pass
+            with Log('rules') :
+                for c in overlap :
+                    for nA,vA in A.constants[c] :
+                        for nB,vB in B.constants[c] :
+                            pA = nA.path()
+                            pB = nB.path()
+                            vA = vA[0]
+                            vB = vB[0]
+                            rule = makeRule( pA, pB, vA, vB, free_target.arguments )
+                            rules.add(rule)
+                            with Log('rule', rule=rule) : pass
+        return rules    
+        
+    def rpf_1d(self, c1, c2s, args) :
+        
+        # TODO support arity > 2
+        assert(len(args) == 2)
+
+        A = RPFGraph( args[0] )
+        a = RPFNode()
+        a.setValues( args[0], [c1] )
+        A.addNode(a)
+       
+        overlap = set(A.constants.keys()) & c2s
+            
+        ea = True
+        while not overlap :
+            with Log('iteration') :
+                with Log('expand', graph=A.id) :
+                    if not A.expand(self) : break
+            overlap = set(A.constants.keys()) & c2s
+            print (c1, len(A.constants))
+        rules = set([])
+        
+        print (overlap)
+        if overlap :
+            with Log('overlap', constants=','.join(map(str,overlap))) : pass
+            with Log('rules') :
+                for c in overlap :
+                    for nA,vA in A.constants[c] :
+                        #for nB,vB in B.constants[c] :
+                        pA = nA.path()
+                        pB = ()
+                        vA = vA[0]
+                        vB = args[1]
+                        rule = makeRule( pA, pB, vA, vB, args )
+                        rules.add(rule)
+                        with Log('rule', rule=rule) : pass
+        return rules    
+        
     def refinements(self, variables, use_vars) :
+    
         existing_variables = defaultdict(list)
         existing_variables_set = set([])
         for varname, vartype in variables :
             existing_variables[vartype].append( varname ) 
             existing_variables_set.add(varname)
-        
+    
         if use_vars != None :
             use_vars = set(use_vars) # set( [ varname for varname, vartype in use_vars ] )
-        
+    
         for pred_id in self.__modes :
             pred_name = pred_id[0]
             arg_info = list(zip(self.getArgumentTypes(key = pred_id), self.getArgumentModes(key = pred_id)))
@@ -695,7 +895,7 @@ class Language(object) :
                 new_lit = Literal(pred_name, args)
                 if new_lit.variables & existing_variables_set :
                     yield new_lit
-            
+        
             if not self.learning_problem.NO_NEGATION :
                 for args in self._build_refine(existing_variables, False, arg_info, use_vars) :
                     new_lit = Literal(pred_name, args, True)                
@@ -706,7 +906,7 @@ class Language(object) :
         if arg_mode in ['+','-'] :
             for var in existing_variables[arg_type] :
                 yield var
-        if arg_mode == '-' and positive :
+        if arg_mode == '-' and positive and not self.learning_problem.RPF :
             yield '#'
         if arg_mode == 'c' :
             if positive :
@@ -730,3 +930,165 @@ class Language(object) :
         else :
             if use_vars == None :
                 yield []
+
+
+class RPFGraph(object) :
+
+    def __init__(self, id) :
+        self.constants = defaultdict(list)
+        self.id = id
+        self.varcount = 0 
+        self.border = []
+        
+    def addNode(self, node) :
+        node.graph = self
+        for c in node.constants :
+            self.constants[c].append((node,node.constants[c]))
+        self.border.append(node)
+            
+    def connect(self, other) :
+        c_s = set(self.constants.keys())
+        c_o = set(other.constants.keys())
+        
+        res = c_s & c_o
+        if (res) :
+            return res, self.merge(other)
+        else :
+            return None, None
+        
+    def newVar(self) :
+        self.varcount += 1
+        return id + str(self.varcount)
+        
+    def expand(self, kb) :
+        nodes = []
+        for node in self.border :
+            nodes += node.expand(kb)
+        
+        x = len(self.constants)
+        self.border = []      
+        for n in nodes :
+            self.addNode(n)
+        return len(self.constants) > x
+            
+    def merge(self, other) :
+        constants = defaultdict(list)
+        
+        for c in self.constants :
+            constants[c] += self.constants[c]
+        for c in other.constants :
+            constants[c] += other.constants[c]
+        
+        res = RPFGraph( self.id + other.id )
+        res.constants = constants
+        res.border = self.border + other.border
+        return res
+    
+class RPFNode(object) :
+    
+    # For example: r(a,R)
+    
+    def __init__(self) :
+        self.assignments = {}   # var : [ constants ]    
+        self.parent = None       # (relation, node)
+        self.constants = defaultdict(list)
+        self.all_constants = set([])
+        self.graph = None
+    #    self.
+        # NEW CONSTANTS !!
+    
+    def setParent(self, relation, parent) :
+        self.parent = (relation,parent)
+        self.all_constants |= parent.all_constants
+    
+    def isNewVar(self, var) :
+        if not self.parent : 
+            return True
+        elif not var in self.parent[1].assignments :
+            return True
+        else :
+            return False
+    
+    def setValues(self, var, values) :
+        self.assignments[var] = values
+        if self.isNewVar(var) :
+            for v in values :
+                self.constants[v].append(var)
+        self.all_constants |= set(values)
+        
+    def path(self) :
+        if not self.parent :
+            return ()
+        else :
+            rel, node = self.parent
+            return (rel,) + node.path()
+                    
+    def expand( self, kb ) :
+        
+        edges = defaultdict(lambda : defaultdict(set))
+    
+        for c in self.constants :
+            for r in kb.relationsByConstant(c) :
+                lit, ass, con = self.abstract(r, c, self.constants[c][0], kb)
+                for x in ass :
+                    edges[lit][x] |= ( ass[x] - self.all_constants )
+        
+        nodes = []
+        m = 0
+        for rel in edges :
+            m = max( m, len(edges[rel]) )
+            node = RPFNode()
+            node.setParent( rel, self)
+            for var in edges[rel] :
+                node.setValues( var, edges[rel][var] )
+            nodes.append(node)
+        self.graph.varcount += m
+        return nodes
+
+    def abstract(self, literal, constantdesc, varname, kb ) :
+        constant, constanttype = constantdesc
+    
+        varpos = self.graph.varcount
+        
+        variables = {}
+        constants = set([])
+        new_args = []
+        for arg,argtype in zip(literal.arguments,kb.getArgumentTypes(literal)) :
+            if arg == constant :
+                new_args.append( varname )
+            else :
+                vn = '_' + self.graph.id + str(varpos)
+                variables[vn] = set([(arg,argtype)])
+                new_args.append( vn )
+                constants.add((arg,argtype))
+                varpos += 1
+        return literal.withArgs(new_args), variables, constants
+
+
+def translate(pA, vA, trans_table) :
+    res = []
+    for lA in pA :
+        args = []
+        for a in lA.arguments :
+            if a.startswith('_') :
+                if a == vA :
+                    a = '#CONNECT#'
+                ta = trans_table.get(a, None)
+                if ta == None:
+                    ta = '_V' + str(len(trans_table))
+                    trans_table[a] = ta
+                args.append(ta)
+            else :
+                args.append(a)
+        res.append( lA.withArgs(args) )
+    return res
+
+def makeRule( pA, pB, vA, vB, original) :
+    trans_table = {}
+    if vA in original :
+        trans_table['#CONNECT#'] = vA
+    elif vB in original :
+        trans_table['#CONNECT#'] = vB
+    tA = translate(reversed(pA),vA,trans_table)
+    tB = translate(pB,vB,trans_table)
+    return tuple(tA + tB)

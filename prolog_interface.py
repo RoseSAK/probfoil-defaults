@@ -156,13 +156,19 @@ class PrologInterface(object) :
             self.toEvaluate |= toEvaluate
             
     def process_queue(self) :
+        RPF = False
+    
         with Timer(category="grounding") :
             with Timer(category="grounding_generateprogram") :
                 gp = []
                 qr = []
+                lt = None
                 # Create ground program.
                 for rule_id, rule_exids in enumerate(self.toGround) :
                     rule, ex_ids = rule_exids
+                    #RPF = rule.learning_problem.RPF
+                    if lt == None and RPF :
+                        lt = dict( (','.join(x),i) for i,x in rule.enum_examples() ) 
             
                     if not rule.parent :
                         # We are evaluating the target => everything we need is in the data.
@@ -175,36 +181,44 @@ class PrologInterface(object) :
                         clause += '.'
                         gp.append( clause )
             
-                    # Add queries to ground program.
-#                     query = str(Literal( 'target', rule.target.arguments)) 
-#                     gp.append( query + ':-' + str(Literal( clause_pred, rule.target.arguments)) + '.')
-#                     gp.append( 'query(%s).' % (query, ) )
-#                     qr.append( query )
-                    
-                    for ex_id in ex_ids :
-                        query = Literal('pf_query_%s_%s' % (rule_id, ex_id), [])
-                        
-                        if ex_id == None :
-                            real_query = Literal( clause_pred, [] )
-                        else :
-                            real_query = Literal( clause_pred, rule.examples[ex_id] )
-                        gp.append( '%s :- %s.' % (query, real_query) )
+                    if RPF :
+                        # Add queries to ground program.
+                        query = str(Literal( 'target_%s_X' % rule_id, rule.target.arguments)) 
+                        gp.append( query + ':-' + str(Literal( clause_pred, rule.target.arguments)) + '.')
                         gp.append( 'query(%s).' % (query, ) )
-                        #qr.append(str(query))
-                    
+    #                    qr.append( query )
 
+                    else :                    
+                        for ex_id in ex_ids :
+                            query = Literal('pf_query_%s_%s' % (rule_id, ex_id), [])
+                        
+                            if ex_id == None :
+                                real_query = Literal( clause_pred, [] )
+                            else :
+                                real_query = Literal( clause_pred, rule.examples[ex_id] )
+                            gp.append( '%s :- %s.' % (query, real_query) )
+                            gp.append( 'query(%s).' % (query, ) )
+                            #qr.append(str(query))        
+
+            #if gp : print ('\n'.join(gp))
             # Call grounder
             ground_result = []
             names_nodes, qr = self._ground(gp)
-            
+            #if lt : print (lt.keys()[0])
             # Extract node ids from grounder result
             for name in qr :
                 node_id = names_nodes.get(name, None)
-                #print (name)
-                rule, ex_id = name.split('_')[2:]
+                if RPF :
+                    rule = name.split('_')[1]
+                    ex_id = name.split('(',1)[1][:-1]
+                    ex_id = lt.get(ex_id, None)
+                    if ex_id == None : continue
+                else :
+                    rule, ex_id = name.split('_')[2:]
                 if node_id != None : node_id = int(node_id)
                 ground_result.append( ( self.toGround[int(rule)][0], int(ex_id), node_id ))
             
+            # TODO also process examples for which this query failed
             with Timer(category="grounding_process") :
                 # Process the grounding
                 for rule, ex_id, node_id in ground_result :
@@ -375,6 +389,8 @@ class PrologInterface(object) :
             f.write( 'write_all. \n')
             f.write( ':- write_all.')
         
+        
+        
         import subprocess as sp
         result = sp.check_output( ['yap', '-L', program_file ]).decode("utf-8").split('\n')[:-1]
         return map(lambda s : s.split('|'), result)
@@ -467,8 +483,7 @@ class PrologInterface(object) :
                 result[i] = 1
         return result
         
-        
-        
+    
 class DefaultEvaluator(object) :
     
     def __init__(self, knowledge, facts, pl) :
