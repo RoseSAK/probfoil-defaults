@@ -201,6 +201,11 @@ class LearningProblem(object) :
 
     def update_refinements(self, rule, refine, best_score) :
 
+        if self.RPF and rule.parent :
+            # remove MultiLiteral refinements
+            from language import MultiLiteral
+            refine = [ ref for ref in refine if not isinstance(ref, MultiLiteral) ]
+
         if refine == None :
             # No refinements available
             return []
@@ -211,6 +216,7 @@ class LearningProblem(object) :
             
             # Add new refinements
             refine += new_refine
+            
                 
         if self.VERBOSE > 2 : print('Evaluating %s refinements...' % len(refine) )
         

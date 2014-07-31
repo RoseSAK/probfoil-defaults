@@ -222,9 +222,15 @@ class Rule(object) :
                 return []
 #                 use_vars = None
 #                 return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) if literal != self.literal ]
+        elif RPF and self.parent :
+            # Determine whether this is the first extension after RPF
+            if isinstance(self.parent.literal, MultiLiteral) : # YES
+                return [ literal for literal in self.language.refinements( self.typed_variables, None ) if literal != self.literal ]
+            else :
+                return []
         else :        
             # generate refined clauses
-            if update and not RPF :
+            if update :
                 # Only generate extensions that use a variable introduced by the last literal
                 use_vars = [ vn for vn,vt in self._new_vars ]
                 if not use_vars : return [] # no variables available
