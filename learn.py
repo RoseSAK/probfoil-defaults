@@ -201,14 +201,15 @@ class LearningProblem(object) :
 
     def update_refinements(self, rule, refine, best_score) :
 
+        if refine == None :
+            # No refinements available
+            return []
+
         if self.RPF and rule.parent :
             # remove MultiLiteral refinements
             from language import MultiLiteral
             refine = [ ref for ref in refine if not isinstance(ref, MultiLiteral) ]
 
-        if refine == None :
-            # No refinements available
-            return []
             
         # Calculate new refinements in case a variable was added by the previous literal    
         with Timer(category='refine') :
