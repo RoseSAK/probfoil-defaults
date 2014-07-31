@@ -104,7 +104,8 @@ class Rule(object) :
         if not self.learning_problem.PACK_QUERIES :
             if self.learning_problem.VERBOSE > 6 :
                 print ('Evaluating rule', result, '...')
-            ss = self.score
+            self.knowledge.process_queue()    
+#            ss = self.score
             # print (ss)
             # if not (self.getScorePredict() >= result.getScorePredict() - 1e-10  ).all() :
             #     print ('PARENT', self, self.score)
@@ -208,45 +209,7 @@ class Rule(object) :
         return self.__length
         
     def refine_rpf(self) :
-# 1) Construct a list of constants ordered by their weight
-#         weights = defaultdict(float)
-#         
-#         for i, ex in self.enum_examples() :
-#             miss_p = max(0,self.score_correct[i] - self.previous.getScorePredict(i))
-#             if miss_p > 0 and self.previous.getScorePredict(i) < 0.1 :
-#                 for c in zip(ex, self.language.getArgumentTypes(self.target),range(0,len(ex))) :
-#                     weights[c] += miss_p
-#         constants = sorted( [ (w,c) for c,w in weights.items() if w > 0 ], reverse=True )
-#         
-#         examples = [ x for i,x in self.enum_examples() if self.score_correct[i] - self.previous.getScorePredict(i) > 0 ]
-#         
-#         for score, constant in constants :
-#             args = [self.target.arguments[constant[2]]] + [ a for i,a in enumerate(self.target.arguments) if i != constant[2] ]
-#             new_examples = []
-#             other_constants = set([])
-#             for ex in examples :
-#                 
-#                 if constant[0] == ex[constant[2]] :
-#                     for j,x in enumerate(zip(ex,self.language.getArgumentTypes(self.target))) :
-#                         if j != constant[2] : other_constants.add(x)
-# 
-#                 else :
-#                     new_examples.append(ex)
-#             #print (constant[0:2], other_constants)
-#             paths = self.language.rpf_1d( constant[0:2], other_constants, args )
-#             
-#             if paths : return [MultiLiteral(*l) for l in paths ]        
-#             examples = new_examples
-        
-        s_ex = sorted( [ (self.score_correct[i] - self.previous.getScorePredict(i),ex) for i, ex in self.enum_examples() ] , reverse=True)
-        for s_max in s_ex :
-            if self.learning_problem.VERBOSE > 5 : print (s_max)
-            if (s_max[0] <= 0) : return []
-            with Log('rpf', example=s_max[1], p=s_max[0]) :
-                paths = self.language.rpf( self.target, self.target.withArgs(s_max[1]) )
-                if paths :
-                    return [MultiLiteral( *l ) for l in paths]
-        return []
+        return [MultiLiteral( *l ) for l in self.language.RPF_paths]
 
     
     def refine(self, update=False) :
@@ -606,6 +569,11 @@ class RootRule(Rule) :
         self.initScorePredict()
         self.eval_nodes = None
         self.self_nodes = None
+        
+        if (self.learning_problem.RPF) :
+            if self.learning_problem.VERBOSE > 0 : 
+                print ('Performing relational path finding...')
+            self.language.rpf_init(self)
             
     def _str_parts(self) :
         return []
@@ -622,6 +590,9 @@ class Literal(object) :
         
     def withArgs(self, args) :
         return Literal(self.functor, args, self.is_negated)
+        
+    def withAssign(self, assign) :
+        return Literal( self.functor, [ assign.get(arg,arg) for arg in self.arguments ], self.is_negated)
         
     def _is_var(self, arg) :
         return arg[0] in '_ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -669,6 +640,13 @@ class Literal(object) :
             return False
         else :
             return self.functor == other.functor and self.arguments == other.arguments and self.is_negated == other.is_negated
+            
+    @classmethod
+    def parse(self, s) :
+        s = s[:-1]
+        functor, args = s.split('(')
+        args = args.split(',')
+        return Literal(functor, args)
 
 from itertools import chain
 class MultiLiteral(object) :
@@ -677,8 +655,8 @@ class MultiLiteral(object) :
         self.literals = literals
         self.arguments = None
                 
-#     def withArgs(self, args) :
-#         raise RuntimeError("Operation not permitted!")
+    def withAssign(self, assign) :
+        return MultiLiteral( *[ lit.withAssign(assign) for lit in self.literals ] )
                 
     def _get_variables(self) :
         return set(chain( *[ l.variables for l in self.literals ] ) )
@@ -770,16 +748,23 @@ class Language(object) :
         
         res = []
         varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        
+        goals = []
         for pred_id in self.__modes :
+            if pred_id[1] < 2 : continue
             index = [ i for i,x in enumerate(self.getArgumentTypes(key = pred_id)) if x == vt ]
             for i in index :
                 vars = [ varnames[j] for j in range(0, pred_id[1]) ]
                 args = vars[:]
                 args[i] = c
-                for r in kb.query( Literal( pred_id[0], args ), vars ) :
-                    r[i] = c
-                    res.append(Literal( pred_id[0], r) )
+                goals.append( Literal( pred_id[0], args ) )
                 
+#                 for r in kb.query( Literal( pred_id[0], args ), vars ) :
+#                     r[i] = c
+#                     res.append(Literal( pred_id[0], r) )
+
+        return ( map( Literal.parse, kb.query_goals(goals) ) )
+
 #        print (res)
 #         
 #         res = []
@@ -790,6 +775,149 @@ class Language(object) :
         with Log('nodes', constant=c, extra=res) : pass
 #         print ('A',res)
         return res
+        
+    def rpf_eval_path(self, path, rule, prd ) :
+        #print ('EVALUATING:', path)
+
+        predict = [0] * len(rule.examples) 
+        qs = []
+        for i, ex in enumerate(rule.examples) :
+        
+            if rule.score_correct[i] - prd[i] > 0 :
+                assign = dict( zip( rule.target.arguments, ex ) )   
+                qs.append( MultiLiteral(*path).withAssign(assign) )
+        
+        j = 0
+        res = rule.knowledge.verify(qs)
+        for i, ex in enumerate(rule.examples) :
+            if rule.score_correct[i] - prd[i] > 0 :
+                if res[j] == '1' : predict[i] = 1
+                j+=1
+
+        return predict
+                
+                
+#                 assign = dict( zip( rule.target.arguments, ex ) )
+#                 eval = rule.knowledge.query( MultiLiteral(*path).withAssign(assign), ('t') ) 
+#                 if eval : predict[i] = 1
+#        return predict
+
+
+
+        predict = [0] * len(rule.examples) 
+        for i, ex in enumerate(rule.examples) :
+            if prd[i] < 1 :
+                assign = dict( zip( rule.target.arguments, ex ) )
+                eval = rule.knowledge.query( MultiLiteral(*path).withAssign(assign), ('t') ) 
+                if eval : predict[i] = 1
+        return predict
+
+        eval = (set(map(tuple, rule.knowledge.query( path, rule.target.arguments ))) )
+        print (len(eval))
+        predict = [0] * len(rule.examples) 
+        for i, ex in enumerate(rule.examples) :
+            if prd[i] < 1 :
+                if ex in eval :
+                    predict[i] = 1
+        return predict
+    
+
+        new_rule = RuleHead(previous=rule) + MultiLiteral( *path)
+        s = new_rule.score  # Force computation
+        return new_rule.getScorePredict()
+        
+    def rpf_init(self, rule, num_paths=0, pos_threshold=0.01, max_level=2) :
+      with Log('rpf_init') :
+        target = rule.target
+        argnames = target.arguments
+        argtypes = self.getArgumentTypes(target)
+        
+        # Sort examples by remaining positive weight
+        examples = sorted( [ (rule.score_correct[i],i,ex) for i, ex in rule.enum_examples() if rule.score_correct[i] > pos_threshold ])
+        
+        paths = set([])                     # current paths
+        predict = [0.0] * len(rule.examples)     # prediction of best path per example
+        
+        # While there are still examples and not enough paths have been found
+        while examples and (num_paths==0 or len(paths) >= num_paths) :
+            ex_score, ex_idx, example = examples.pop(-1)
+            with Log('example', example=example, score=ex_score) :
+                if self.learning_problem.VERBOSE > 9 :
+                    print ('EXAMPLE:', example, ex_score, 'of', len(examples) )
+                spec = [ arg for arg in zip( argnames, argtypes, example ) ]     # (varname, vartype, varvalue)
+                ex_paths = self.rpf_new( *spec , max_level=max_level)
+                update = False
+                for ex_path in ex_paths :
+                    if not ex_path in paths :
+                        # Evaluate path + update predict
+                        path_update = False
+#                         for i, x in enumerate(self.rpf_eval_path( ex_path, rule, predict ) ) :
+#                             if x > predict[i] : 
+#                                 predict[i] = x
+#                                 path_update = True
+#                     if path_update :
+                        with Log('found', path=ex_path) : pass
+                        if self.learning_problem.VERBOSE > 9 :
+                            print ('PATH FOUND:', ex_path)
+                        paths.add( ex_path )
+                        update = True
+                # Update examples
+                #print ([ rule.score_correct[i] - predict[i] for i in range(0,len(rule.examples)) ])
+                examples = sorted( [ (rule.score_correct[i]-predict[i],i,ex) for s, i, ex in examples if rule.score_correct[i]-predict[i] > pos_threshold ])
+            
+        with Log('paths', paths='\n'.join( map(str,paths ))) : pass
+        
+        self.RPF_paths = list(paths)
+        #sys.exit(0)        
+    
+    def rpf_new(self, arg1, arg2, max_level) :
+        var1, type1, val1 = arg1
+        var2, type2, val2 = arg2
+        
+        A = RPFGraph( var1 )
+        a = RPFNode()
+        a.setValues( var1, [ (val1, type1 ) ] )
+        A.addNode(a)        
+        
+        B = RPFGraph( var2 )
+        b = RPFNode()
+        b.setValues( var2, [ (val2, type2 ) ] )
+        B.addNode(b)
+        
+        overlap, G = A.connect(B)
+    
+        # TODO add stopping criteria
+    
+        level = 0
+        ea = True
+        eb = True
+        while not overlap and (max_level==0 or level < max_level) :
+#             with Log('iteration') :
+#                 with Log('expand', graph=A.id) :
+            if not A.expand(self) : break
+#                 with Log('expand', graph=B.id) :
+            if not B.expand(self) : break
+            #print (len(A.constants), len(B.constants))
+            overlap, G = A.connect(B)
+            level += 1
+                    
+        rules = set([])
+        
+        if overlap :
+            with Log('overlap', constants=','.join(map(str,overlap))) : pass
+            #with Log('rules') :
+            for c in overlap :
+                    for nA,vA in A.constants[c] :
+                        for nB,vB in B.constants[c] :
+                            pA = nA.path()
+                            pB = nB.path()
+                            vAx = vA[0]
+                            vBx = vB[0]
+                            rule = makeRule( pA, pB, vAx, vBx, (var1,var2) )
+                            rules.add(rule)
+                            #with Log('rule', rule=rule) : pass
+        return rules    
+
     
     def rpf(self, free_target, target) :
         
@@ -1084,6 +1212,8 @@ def translate(pA, vA, trans_table) :
     return res
 
 def makeRule( pA, pB, vA, vB, original) :
+    #print ('\t\tMAKING RULE', pA, pB, vA, vB)
+
     trans_table = {}
     if vA in original :
         trans_table['#CONNECT#'] = vA
@@ -1091,4 +1221,6 @@ def makeRule( pA, pB, vA, vB, original) :
         trans_table['#CONNECT#'] = vB
     tA = translate(reversed(pA),vA,trans_table)
     tB = translate(pB,vB,trans_table)
+    
+    #print ('\t\t ==>', tA + tB)
     return tuple(tA + tB)

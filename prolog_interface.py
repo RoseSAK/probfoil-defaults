@@ -45,6 +45,7 @@ class PrologInterface(object) :
         
         self.grounding = Grounding()
         self.datafile = None
+        self.datafile_det = None
         
     def reset(self) :
       self.grounding = Grounding()
@@ -166,6 +167,7 @@ class PrologInterface(object) :
                 # Create ground program.
                 for rule_id, rule_exids in enumerate(self.toGround) :
                     rule, ex_ids = rule_exids
+                    #print (rule)
                     #RPF = rule.learning_problem.RPF
                     if lt == None and RPF :
                         lt = dict( (','.join(x),i) for i,x in rule.enum_examples() ) 
@@ -187,6 +189,16 @@ class PrologInterface(object) :
                         gp.append( query + ':-' + str(Literal( clause_pred, rule.target.arguments)) + '.')
                         gp.append( 'query(%s).' % (query, ) )
     #                    qr.append( query )
+                        
+                        for ex_id in ex_ids :
+                            rule.setSelfNode(ex_id, None)
+                            if rule.previous and rule.previous.previous :
+                                prev_node = rule.previous.getEvalNode( ex_id )
+                                rule.setEvalNode(ex_id, prev_node)
+                                rule.setScorePredict( ex_id, rule.previous.getScorePredict(ex_id))    
+                            else :
+                                rule.setEvalNode(ex_id, None)
+                                rule.setScorePredict( ex_id, 0)    
 
                     else :                    
                         for ex_id in ex_ids :
@@ -199,6 +211,18 @@ class PrologInterface(object) :
                             gp.append( '%s :- %s.' % (query, real_query) )
                             gp.append( 'query(%s).' % (query, ) )
                             #qr.append(str(query))        
+                            
+                            # Set default evaluations
+                            rule.setSelfNode(ex_id, None)
+                            if rule.previous and rule.previous.previous :
+                                prev_node = rule.previous.getEvalNode( ex_id )
+                                rule.setEvalNode(ex_id, prev_node)
+                                rule.setScorePredict( ex_id, rule.previous.getScorePredict(ex_id))    
+                            else :
+                                rule.setEvalNode(ex_id, None)
+                                rule.setScorePredict( ex_id, 0)    
+
+
 
             #if gp : print ('\n'.join(gp))
             # Call grounder
@@ -218,7 +242,6 @@ class PrologInterface(object) :
                 if node_id != None : node_id = int(node_id)
                 ground_result.append( ( self.toGround[int(rule)][0], int(ex_id), node_id ))
             
-            # TODO also process examples for which this query failed
             with Timer(category="grounding_process") :
                 # Process the grounding
                 for rule, ex_id, node_id in ground_result :
@@ -342,11 +365,18 @@ class PrologInterface(object) :
         #queries = '/dev/null'
                 
         import subprocess
-        output = subprocess.check_output(['yap', "-L", PROBLOG_GROUNDER , '--', in_file, ground_program, evidence, queries ])
         
-        with open(queries) as f :
-            qr = [ line.strip() for line in f ]
-        return self._read_grounding(ground_program), qr
+        try :
+            output = subprocess.check_output(['yap', "-L", PROBLOG_GROUNDER , '--', in_file, ground_program, evidence, queries ])
+        
+            with open(queries) as f :
+                qr = [ line.strip() for line in f ]
+        
+            return self._read_grounding(ground_program), qr
+        except subprocess.CalledProcessError :
+            print ('Error during grounding', file=sys.stderr)
+            with Log('error', context='grounding') : pass
+            return [], []    
     
     def base(self, predicate, arity) :
         result = self.datafile.base(predicate, arity)
@@ -366,25 +396,69 @@ class PrologInterface(object) :
             literal = Literal(predicate, args)
             result = list(self.query( literal, args ))
         return result
+        
+    def verify(self, queries ) :
+    
+        query_str = '[(' + '),('.join( map(str,queries) ) + ')]'
+    
+        self._create_file_det()
+        
+        program_file = self.env.tmp_path('query.pl')
+        with open(program_file, 'w') as f :
+            f.write( ":- consult('%s').\n" % self.datafile_det )
+            
+            s = "verify([]).\n"
+            s += "verify([H|T]) :- \+(\+(call(H))), !, write(1), verify(T).\n"
+            s += "verify([_|T]) :- write(0), verify(T).\n"
+            s += ":- verify( %s ).\n" % query_str
+            
+            #print(s)
+            f.write(s)
+        
+        import subprocess as sp
+        result = sp.check_output( ['yap', '-L', program_file ]).decode("utf-8")
+        return result
+
+    def _create_file_det(self) :
+        if self.datafile_det == None :
+            self.datafile_det = self.env.tmp_path('probfoil_det.pl')
+            
+            import re
+            regex = re.compile('\d([.]\d+)?\s*::')
+        
+            def make_det(line) :
+                line = regex.sub('', line)
+                line = line.replace('<-', ':-')
+                return line
+        
+            with open(self.datafile_det, 'w') as f :
+                print( '\n'.join(map(make_det, self.datafile.toProlog().split('\n') )), file=f)  
+    
+    def query_goals( self, goals ) :
+    
+        query_str = '[(' + '), ('.join( map(str,goals) ) + ')]'
+    
+        self._create_file_det()
+        program_file = self.env.tmp_path('query.pl')
+        with open(program_file, 'w') as f :
+            f.write( ":- consult('%s').\n" % self.datafile_det )
+            f.write( 'write_all([H|T]):- call(H), write(H), nl, fail.\n' )
+            f.write( 'write_all([_|T]):- write_all(T).\n')
+            f.write( 'write_all([]). \n')
+            f.write( ':- write_all(%s).' % query_str )
+        
+        import subprocess as sp
+        result = sp.check_output( ['yap', '-L', program_file ]).decode("utf-8").split('\n')[:-1]
+        return result
     
     def query(self, literal, variables) :
         """Execute a query."""
         
-        program_file = self.env.tmp_path('probfoil.pl')
-        
-        import re
-        regex = re.compile('\d([.]\d+)?\s*::')
-        
-        def make_det(line) :
-            line = regex.sub('', line)
-            line = line.replace('<-', ':-')
-            return line
-        
+        self._create_file_det()
+        program_file = self.env.tmp_path('query.pl')
         with open(program_file, 'w') as f :
-            print( '\n'.join(map(make_det, self.datafile.toProlog().split('\n') )), file=f)  
-            
             writes = ", write('|'), ".join( ('write(%s)' % v ) for v in variables )
-            f.write( '\n')
+            f.write( ":- consult('%s').\n" % self.datafile_det )
             f.write( 'write_all :- %s, %s, nl, fail.\n' % (literal, writes) )
             f.write( 'write_all. \n')
             f.write( ':- write_all.')
