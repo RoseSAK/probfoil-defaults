@@ -224,7 +224,7 @@ class Rule(object) :
 #                 return [ literal for literal in self.language.refinements( self.typed_variables, use_vars ) if literal != self.literal ]
         elif RPF and self.parent :
             # Determine whether this is the first extension after RPF
-            if isinstance(self.parent.literal, MultiLiteral) : # YES
+            if isinstance(self.literal, MultiLiteral) : # YES
                 return [ literal for literal in self.language.refinements( self.typed_variables, None ) if literal != self.literal ]
             else :
                 return []
