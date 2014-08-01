@@ -225,7 +225,7 @@ class Rule(object) :
         elif RPF and self.parent :
             # Determine whether this is the first extension after RPF
             if isinstance(self.literal, MultiLiteral) : # YES
-                return [ literal for literal in self.language.refinements( self.typed_variables, None ) if literal != self.literal ]
+                return [ literal for literal in self.language.refinements( self.typed_variables, None ) if not literal in self.literal ]
             else :
                 return []
         else :        
@@ -686,6 +686,8 @@ class MultiLiteral(object) :
         else :
             return self.literals == other.literals
 
+    def __contains__(self, literal) :
+        return literal in self.literals
 
 
 class Language(object) :
@@ -785,54 +787,54 @@ class Language(object) :
     def rpf_eval_path(self, path, rule, prd ) :
         #print ('EVALUATING:', path)
 
-        predict = [0] * len(rule.examples) 
-        qs = []
-        for i, ex in enumerate(rule.examples) :
+        evaluation_process = 4
+
+        if evaluation_process == 1 :
+            predict = [0] * len(rule.examples) 
+            qs = []
+            for i, ex in enumerate(rule.examples) :
         
-            if rule.score_correct[i] - prd[i] > 0 :
-                assign = dict( zip( rule.target.arguments, ex ) )   
-                qs.append( MultiLiteral(*path).withAssign(assign) )
+                if rule.score_correct[i] - prd[i] > 0 :
+                    assign = dict( zip( rule.target.arguments, ex ) )   
+                    qs.append( MultiLiteral(*path).withAssign(assign) )
         
-        j = 0
-        res = rule.knowledge.verify(qs)
-        for i, ex in enumerate(rule.examples) :
-            if rule.score_correct[i] - prd[i] > 0 :
-                if res[j] == '1' : predict[i] = 1
-                j+=1
+            j = 0
+            res = rule.knowledge.verify(qs)
+            for i, ex in enumerate(rule.examples) :
+                if rule.score_correct[i] - prd[i] > 0 :
+                    if res[j] == '1' : predict[i] = 1
+                    j+=1
 
-        return predict
+            return predict
                 
-                
-#                 assign = dict( zip( rule.target.arguments, ex ) )
-#                 eval = rule.knowledge.query( MultiLiteral(*path).withAssign(assign), ('t') ) 
-#                 if eval : predict[i] = 1
-#        return predict
+        elif evaluation_process == 2 :
 
 
+            predict = [0] * len(rule.examples) 
+            for i, ex in enumerate(rule.examples) :
+                if prd[i] < 1 :
+                    assign = dict( zip( rule.target.arguments, ex ) )
+                    eval = rule.knowledge.query( MultiLiteral(*path).withAssign(assign), ('t') ) 
+                    if eval : predict[i] = 1
+            return predict
 
-        predict = [0] * len(rule.examples) 
-        for i, ex in enumerate(rule.examples) :
-            if prd[i] < 1 :
-                assign = dict( zip( rule.target.arguments, ex ) )
-                eval = rule.knowledge.query( MultiLiteral(*path).withAssign(assign), ('t') ) 
-                if eval : predict[i] = 1
-        return predict
-
-        eval = (set(map(tuple, rule.knowledge.query( path, rule.target.arguments ))) )
-        print (len(eval))
-        predict = [0] * len(rule.examples) 
-        for i, ex in enumerate(rule.examples) :
-            if prd[i] < 1 :
-                if ex in eval :
-                    predict[i] = 1
-        return predict
+        elif evaluation_process == 3 :
+            eval = (set(map(tuple, rule.knowledge.query( path, rule.target.arguments ))) )
+            print (len(eval))
+            predict = [0] * len(rule.examples) 
+            for i, ex in enumerate(rule.examples) :
+                if prd[i] < 1 :
+                    if ex in eval :
+                        predict[i] = 1
+            return predict
     
-
-        new_rule = RuleHead(previous=rule) + MultiLiteral( *path)
-        s = new_rule.score  # Force computation
-        return new_rule.getScorePredict()
+        else :
+            new_rule = RuleHead(previous=rule) + MultiLiteral( *path)
+            s = new_rule.score  # Force computation
+            return new_rule.getScorePredict()
         
     def rpf_init(self, rule, num_paths=0, pos_threshold=0.01, max_level=2) :
+     with Timer(category="rpf") :
       with Log('rpf_init') :
         target = rule.target
         argnames = target.arguments
@@ -841,9 +843,11 @@ class Language(object) :
         # Sort examples by remaining positive weight
         examples = sorted( [ (rule.score_correct[i],i,ex) for i, ex in rule.enum_examples() if rule.score_correct[i] > pos_threshold ])
         
+        paths_discarded = set([])
         paths = set([])                     # current paths
         predict = [0.0] * len(rule.examples)     # prediction of best path per example
         
+        ELIMINATE = True                
         # While there are still examples and not enough paths have been found
         while examples and (num_paths==0 or len(paths) >= num_paths) :
             ex_score, ex_idx, example = examples.pop(-1)
@@ -854,19 +858,23 @@ class Language(object) :
                 ex_paths = self.rpf_new( *spec , max_level=max_level)
                 update = False
                 for ex_path in ex_paths :
-                    if not ex_path in paths :
+                    if not ex_path in paths and not ex_path in paths_discarded :
                         # Evaluate path + update predict
                         path_update = False
-#                         for i, x in enumerate(self.rpf_eval_path( ex_path, rule, predict ) ) :
-#                             if x > predict[i] : 
-#                                 predict[i] = x
-#                                 path_update = True
-#                     if path_update :
-                        with Log('found', path=ex_path) : pass
-                        if self.learning_problem.VERBOSE > 9 :
-                            print ('PATH FOUND:', ex_path)
-                        paths.add( ex_path )
-                        update = True
+                        if ELIMINATE :
+                            for i, x in enumerate(self.rpf_eval_path( ex_path, rule, predict ) ) :
+                                if x > predict[i] : 
+                                    predict[i] = x
+                                    path_update = True
+                        if path_update or not ELIMINATE :
+                            with Log('found', path=ex_path) : pass
+                            if self.learning_problem.VERBOSE > 9 :
+                                print ('PATH FOUND:', ex_path)
+                            paths.add( ex_path )
+                            update = True
+                        else :
+                            with Log('discarded', path=ex_path) : pass
+                            paths_discarded.add( ex_path )
                 # Update examples
                 #print ([ rule.score_correct[i] - predict[i] for i in range(0,len(rule.examples)) ])
                 examples = sorted( [ (rule.score_correct[i]-predict[i],i,ex) for s, i, ex in examples if rule.score_correct[i]-predict[i] > pos_threshold ])
