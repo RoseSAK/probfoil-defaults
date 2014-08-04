@@ -327,7 +327,7 @@ class Rule(object) :
             return []
             
     def consolidate(self) : 
-        
+                
         if self.probability != 1 :
             p = self.probability
             for i, ex in self.enum_examples() :
@@ -347,11 +347,16 @@ class Rule(object) :
                         else :
                             nodetype, content = self.knowledge.grounding.getNode(abs(n))  
                         
-                            if nodetype == 'or' :
-                                if content[0] == prev_node :
-                                    rule_node = content[1]
+                            if nodetype == 'or' :                            
+                                if len(content) == 2 :
+                                    if content[0] == prev_node :
+                                        rule_node = content[1]
+                                    elif content[1] == prev_node :
+                                        rule_node = content[0]
+                                    else :
+                                        rule_node = n
                                 else :
-                                    rule_node = content[0]
+                                    rule_node = n
                                 
                                 fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                                 new_fact = self.knowledge.grounding.addFact(fact_name, p)
@@ -363,11 +368,9 @@ class Rule(object) :
                                 f = self.knowledge.grounding.addFact(fact_name, p)
                                 self.setEvalNode( i, self.knowledge.grounding.addAndNode( (f, n) ) )
                         
-                        pp = self.knowledge.grounding.getProbability(self.getEvalNode(i))
-                        self.setScorePredict(i, pp)
-#                         l = self.previous.getScorePredict(i) if self.previous else 0
-#                         u = self.getScorePredict(i)
-#                         self.setScorePredict(i, (u-l) * p + l )            
+                        l = self.previous.getScorePredict(i) if self.previous else 0
+                        u = self.getScorePredict(i)
+                        self.setScorePredict(i, (u-l) * p + l )
         return self
     
 class RuleBody(Rule) :
@@ -836,6 +839,7 @@ class Language(object) :
             return new_rule.getScorePredict()
         
     def rpf_init(self, rule, num_paths=0, pos_threshold=0.1, max_level=2) :
+    
      with Timer(category="rpf") :
       with Log('rpf_init') :
         target = rule.target
