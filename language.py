@@ -362,10 +362,12 @@ class Rule(object) :
                                 fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                                 f = self.knowledge.grounding.addFact(fact_name, p)
                                 self.setEvalNode( i, self.knowledge.grounding.addAndNode( (f, n) ) )
-                            
-                        l = self.previous.getScorePredict(i) if self.previous else 0
-                        u = self.getScorePredict(i)
-                        self.setScorePredict(i, (u-l) * p + l )            
+                        
+                        pp = self.knowledge.grounding.getProbability(self.getEvalNode(i))
+                        self.setScorePredict(i, pp)
+#                         l = self.previous.getScorePredict(i) if self.previous else 0
+#                         u = self.getScorePredict(i)
+#                         self.setScorePredict(i, (u-l) * p + l )            
         return self
     
 class RuleBody(Rule) :
@@ -833,7 +835,7 @@ class Language(object) :
             s = new_rule.score  # Force computation
             return new_rule.getScorePredict()
         
-    def rpf_init(self, rule, num_paths=0, pos_threshold=0.01, max_level=2) :
+    def rpf_init(self, rule, num_paths=0, pos_threshold=0.1, max_level=2) :
      with Timer(category="rpf") :
       with Log('rpf_init') :
         target = rule.target
