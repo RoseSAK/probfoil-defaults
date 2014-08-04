@@ -348,19 +348,9 @@ class Rule(object) :
                             nodetype, content = self.knowledge.grounding.getNode(abs(n))  
                         
                             if nodetype == 'or' :                            
-                                if len(content) == 2 :
-                                    if content[0] == prev_node :
-                                        rule_node = content[1]
-                                    elif content[1] == prev_node :
-                                        rule_node = content[0]
-                                    else :
-                                        rule_node = n
-                                else :
-                                    rule_node = n
-                                
                                 fact_name = 'rule_prob_%s_%s' % (self.identifier,i)
                                 new_fact = self.knowledge.grounding.addFact(fact_name, p)
-                                new_node = self.knowledge.grounding.addAndNode( (new_fact, rule_node) )
+                                new_node = self.knowledge.grounding.addAndNode( (new_fact, n) )
                             
                                 self.setEvalNode(i, self.knowledge.grounding.addOrNode( (prev_node, new_node) ) )
                             else :
