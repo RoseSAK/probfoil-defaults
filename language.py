@@ -1101,7 +1101,7 @@ class RPF(object) :
         stop_threshold = sum(rule.score_correct) * (1.0 - stop_threshold)
 
         examples = [ i for i, s in enumerate(rule.score_correct) if s > threshold ] 
-        predicts = [ 0 ] * len(examples)
+        predicts = [ 0 ] * len(rule.examples)
         
         paths = set([])
         paths_to_eval = set([])
