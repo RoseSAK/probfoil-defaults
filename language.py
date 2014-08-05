@@ -700,6 +700,8 @@ class Language(object) :
         self.__varcount = 0
         self.learning_problem = None
         
+    modes = property( lambda s : s.__modes )
+        
     def initialize(self, knowledge) :
         predicates = list(self.__modes) + self.__targets
         for predicate, arity in predicates :
@@ -1094,9 +1096,14 @@ class RPF(object) :
     def evaluate(self, rule) :
         assert(rule.target.arity == 2)
         
+        modes = str([ Literal( pred_id[0], ['_'] * pred_id[1]) for pred_id in rule.language.modes if pred_id[1] == 2 ])
+        print (modes)
+        
+        
         threshold = 0.1         # discard example if it's score falls below this value
         eval_cutoff = 20        # evaluate paths when less than this number of examples is removed => None means always evaluate
         stop_threshold = 0.8    # stop when this percentage of positive weight is covered by the rules
+        maxl = -1
 
         stop_threshold = sum(rule.score_correct) * (1.0 - stop_threshold)
 
@@ -1145,7 +1152,7 @@ class RPF(object) :
             with Log('step', target=target, before=len(examples), after=len(remaining_examples)) : pass   
                 
             # 5) Find paths for the given constants
-            current_paths = self._call_yap( target, varargs, constants )
+            current_paths = self._call_yap( target, varargs, modes, constants, maxl=maxl )
             # 6) Evaluate paths (probabilistically)
             # Only evaluate on remaining examples
             for path in current_paths :
@@ -1186,14 +1193,14 @@ class RPF(object) :
         self.paths = list(paths - paths_to_discard)
 
         
-    def _call_yap( self, target, args, constants, maxl=-1) :
+    def _call_yap( self, target, args, modes, constants, maxl=-1) :
 
         DATAFILE = self.rule.knowledge.datafile_det
     
         RPF_PROLOG = bin_path('rpf.pl')
         import subprocess
 #        try :
-        output = subprocess.check_output(['yap', "-L", RPF_PROLOG , '--', DATAFILE, str(maxl), str(target) ] + constants )
+        output = subprocess.check_output(['yap', "-L", RPF_PROLOG , '--', DATAFILE, str(maxl), str(target), modes ] + constants )
         paths = []
         for line in output.strip().split('\n') :
             parts = line.split('|')
