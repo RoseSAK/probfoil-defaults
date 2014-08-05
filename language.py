@@ -44,7 +44,9 @@ class Rule(object) :
         
         self.__eval_nodes = None
         self.__self_nodes = None
+        self.example_filter = None
         self.examples_to_evaluate = None
+        self.invalid_scores = False
         
     def initSelfNodes(self, value=None) :
         if self.knowledge.isPropositional :
@@ -155,6 +157,9 @@ class Rule(object) :
             for ex_id, example in self.parent.enum_examples() :
                 if self.parent.getScorePredict(ex_id) != 0 :
                     yield ex_id, example
+        elif self.example_filter != None :
+            for i in self.example_filter :
+                yield i, self.examples[i]
         else :
             for x in enumerate(self.examples) :
                 yield x
@@ -824,14 +829,19 @@ class Language(object) :
             return predict
     
         else :
+            # TODO only evaluate rule for remaining positive examples
             new_rule = RuleHead(previous=rule) + MultiLiteral( *path)
             s = new_rule.score  # Force computation
             return new_rule.getScorePredict()
         
     def rpf_init(self, rule, num_paths=0, pos_threshold=0.1, max_level=2) :
-    
+
      with Timer(category="rpf") :
       with Log('rpf_init') :
+        R = RPF(rule)
+        self.RPF_paths = list(R.paths)
+        return 
+        
         target = rule.target
         argnames = target.arguments
         argtypes = self.getArgumentTypes(target)
@@ -1068,6 +1078,131 @@ class Language(object) :
         else :
             if use_vars == None :
                 yield []
+
+import os
+def bin_path(relative) :
+    return os.path.join( os.path.split( os.path.abspath(__file__) )[0], relative )
+
+class RPF(object) :
+    
+    def __init__(self, rule) :
+        self.rule = rule
+        self.paths = None
+        self.rule.knowledge._create_file_det()
+        self.evaluate(self.rule)
+                
+    def evaluate(self, rule) :
+        assert(rule.target.arity == 2)
+        
+        threshold = 0.1         # discard example if it's score falls below this value
+        eval_cutoff = 20        # evaluate paths when less than this number of examples is removed => None means always evaluate
+        stop_threshold = 1    # stop when this percentage of positive weight is covered by the rules
+
+        stop_threshold = sum(rule.score_correct) * (1.0 - stop_threshold)
+
+        examples = [ i for i, s in enumerate(rule.score_correct) if s > threshold ] 
+        predicts = [ 0 ] * len(examples)
+        
+        paths = set([])
+        paths_to_eval = set([])
+        paths_to_discard = set([])
+        while examples :
+        
+            # 1) Order constants by total score of examples in which they occur
+            scores = defaultdict(float)
+            for i in examples :
+                ex = rule.examples[i]
+                s = rule.score_correct[i] - predicts[i]
+                for j,e in enumerate(ex) :
+                    scores[(e,j)] += s
+            scores = list(sorted([ (s,) + e for e, s in scores.items() ]))
+        
+            # 2) Select the best constant
+            score, constant, position = scores[-1]
+        
+            # 3) Construct target 
+            args = ['_'] * rule.target.arity
+            args[ position ] = constant
+            target = rule.target.withArgs( args )
+            varargs = rule.target.arguments[:]
+            v1 = varargs.pop( position )
+            varargs = [v1] + varargs
+        
+            # 4) Construct list of constants
+            constants = []
+            remaining_examples = []
+            for i in examples :
+                ex = rule.examples[i]
+                if ex[position] == constant :
+                    constants.append( ex[1-position] )
+                else :
+                    remaining_examples.append( i )
+            if rule.learning_problem.VERBOSE > 9 :
+                print ('RPF:', target, '-', len(examples), len(remaining_examples))
+            with Log('step', target=target, before=len(examples), after=len(remaining_examples)) : pass   
+                
+            # 5) Find paths for the given constants
+            current_paths = self._call_yap( target, varargs, constants )
+            # 6) Evaluate paths (probabilistically)
+            # Only evaluate on remaining examples
+            rule.example_filter = remaining_examples
+            for path in current_paths :
+                if not path in paths :
+                    if rule.learning_problem.VERBOSE > 9 :
+                        print ('PATH FOUND', path)
+                    with Log('found', path=path) : pass
+                    paths.add(path)
+                    paths_to_eval.add(path)
+                            
+            if eval_cutoff == None or len(examples) - len(remaining_examples) < eval_cutoff :                    
+                for path in paths_to_eval :
+                    new_rule = RuleHead(previous=rule) + MultiLiteral( *path)
+                    s = new_rule.score  # Force computation
+                    s = sum(new_rule.getScorePredict())
+                    if new_rule.invalid_scores : # Evaluation error
+                        paths_to_discard.add(path)                        
+                    else :
+                        for i in remaining_examples :
+                            predicts[i] = max( predicts[i], new_rule.getScorePredict(i) )
+                paths_to_eval = set([])
+
+            examples = [ i for i in remaining_examples if rule.score_correct[i] - predicts[i] > threshold ] 
+            
+            remain_score = sum([ rule.score_correct[i] - predicts[i] for i in remaining_examples ])
+            if remain_score < stop_threshold :
+                break
+        
+        rule.example_filter = None
+        if rule.learning_problem.VERBOSE > 9 :
+            print (paths)
+        with Log('paths', paths='\n'.join( map(str,paths )), discard='\n'.join( map(str,paths_to_discard ))) : pass
+        
+        self.paths = list(paths - paths_to_discard)
+
+        
+    def _call_yap( self, target, args, constants, maxl=-1) :
+
+        DATAFILE = self.rule.knowledge.datafile_det
+    
+        RPF_PROLOG = bin_path('rpf.pl')
+        import subprocess
+#        try :
+        output = subprocess.check_output(['yap', "-L", RPF_PROLOG , '--', DATAFILE, str(maxl), str(target) ] + constants )
+        paths = []
+        for line in output.strip().split('\n') :
+            parts = line.split('|')
+            varname = parts[0]
+            if len(parts) <= 1 :
+                continue
+            path = tuple(map( lambda x : Literal.parse(x).withAssign( { varname : args[1], 'V_0' : args[0] } ), parts[1:] ) )
+            paths.append(path)
+        return paths
+        
+#        except subprocess.CalledProcessError :
+#            print ('Error during rpf', file=sys.stderr)
+#            with Log('error', context='grounding') : pass
+
+        
 
 
 class RPFGraph(object) :

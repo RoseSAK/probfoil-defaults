@@ -158,7 +158,6 @@ class PrologInterface(object) :
             
     def process_queue(self) :
         RPF = False
-    
         with Timer(category="grounding") :
             with Timer(category="grounding_generateprogram") :
                 gp = []
@@ -256,8 +255,6 @@ class PrologInterface(object) :
                             new_node = self.grounding.addOrNode( ( prev_node, node_id ) ) 
                     else :
                         new_node = node_id
-                        
-                    
             
                     # Store node information in rule and determine which nodes still need to be evaluated
                     rule.setSelfNode(ex_id, node_id)
@@ -309,6 +306,7 @@ class PrologInterface(object) :
                     evaluator = self._compile_cnf(cnf, facts)
                     if evaluator == None :
                         for rule, ex_ids in self.toScore :
+                            rule.invalid_scores = True
                             for ex_id in ex_ids :
                                 rule.setScorePredict(ex_id, rule.previous.getScorePredict(ex_id))
                         # Clear queues
@@ -779,7 +777,7 @@ class Grounding(object) :
             self.__probabilities[-index-1] = 1 - p
         else :
             self.__probabilities[index-1] = p
-        
+                    
     def integrate(self, lines, rules=None) :
     
         # Dictionary query_name => node_id
@@ -900,7 +898,7 @@ class Grounding(object) :
         return namedtuple('IndexStats', ('atom_count', 'name_count', 'fact_count' ) )(len(self), 0, len(self.__fact_names))
         
     def __str__(self) :
-        return '\n'.join('%s: %s' % (i+1,n) for i, n in enumerate(self.__nodes))   
+        return '\n'.join('%s: %s (p=%s)' % (i+1,n, self.__probabilities[i]) for i, n in enumerate(self.__nodes))   
 
 class DataFile(object) :
     
