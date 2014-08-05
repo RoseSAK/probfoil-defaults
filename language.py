@@ -1096,7 +1096,7 @@ class RPF(object) :
         
         threshold = 0.1         # discard example if it's score falls below this value
         eval_cutoff = 20        # evaluate paths when less than this number of examples is removed => None means always evaluate
-        stop_threshold = 1    # stop when this percentage of positive weight is covered by the rules
+        stop_threshold = 0.8    # stop when this percentage of positive weight is covered by the rules
 
         stop_threshold = sum(rule.score_correct) * (1.0 - stop_threshold)
 
@@ -1106,6 +1106,9 @@ class RPF(object) :
         paths = set([])
         paths_to_eval = set([])
         paths_to_discard = set([])
+        
+        eval_rule = RuleHead(previous=rule)
+        
         while examples :
         
             # 1) Order constants by total score of examples in which they occur
@@ -1145,7 +1148,6 @@ class RPF(object) :
             current_paths = self._call_yap( target, varargs, constants )
             # 6) Evaluate paths (probabilistically)
             # Only evaluate on remaining examples
-            rule.example_filter = remaining_examples
             for path in current_paths :
                 if not path in paths :
                     if rule.learning_problem.VERBOSE > 9 :
@@ -1154,13 +1156,18 @@ class RPF(object) :
                     paths.add(path)
                     paths_to_eval.add(path)
                             
+            eval_rule.example_filter = remaining_examples
             if eval_cutoff == None or len(examples) - len(remaining_examples) < eval_cutoff :                    
                 for path in paths_to_eval :
-                    new_rule = RuleHead(previous=rule) + MultiLiteral( *path)
+                    new_rule = eval_rule + MultiLiteral( *path)
                     s = new_rule.score  # Force computation
                     s = sum(new_rule.getScorePredict())
                     if new_rule.invalid_scores : # Evaluation error
-                        paths_to_discard.add(path)                        
+                        paths_to_discard.add(path)   
+                        if rule.learning_problem.VERBOSE > 9 :
+                            print ('PATH DISCARDED', path)
+
+                                             
                     else :
                         for i in remaining_examples :
                             predicts[i] = max( predicts[i], new_rule.getScorePredict(i) )
@@ -1172,7 +1179,6 @@ class RPF(object) :
             if remain_score < stop_threshold :
                 break
         
-        rule.example_filter = None
         if rule.learning_problem.VERBOSE > 9 :
             print (paths)
         with Log('paths', paths='\n'.join( map(str,paths )), discard='\n'.join( map(str,paths_to_discard ))) : pass
@@ -1194,7 +1200,7 @@ class RPF(object) :
             varname = parts[0]
             if len(parts) <= 1 :
                 continue
-            path = tuple(map( lambda x : Literal.parse(x).withAssign( { varname : args[1], 'V_0' : args[0] } ), parts[1:] ) )
+            path = tuple(sorted(map( lambda x : Literal.parse(x).withAssign( { varname : args[1], 'V_0' : args[0] } ), parts[1:] ) ))
             paths.append(path)
         return paths
         
