@@ -587,6 +587,7 @@ class RootRule(Rule) :
     def __str__(self) :
         return str(self.target) + ' :- fail.'
 
+@total_ordering
 class Literal(object) :
     
     def __init__(self, functor, arguments, is_negated=False) :
@@ -646,6 +647,12 @@ class Literal(object) :
             return False
         else :
             return self.functor == other.functor and self.arguments == other.arguments and self.is_negated == other.is_negated
+    
+    def __lt__(self, other) :
+        if other == None :
+            return False
+        else :
+            return (self.functor, self.arguments) < (other.functor, other.arguments)
             
     @classmethod
     def parse(self, s) :
@@ -920,7 +927,7 @@ class RPF(object) :
         threshold = 0.1         # discard example if it's score falls below this value
         eval_cutoff = 20        # evaluate paths when less than this number of examples is removed => None means always evaluate
         stop_threshold = 0.8    # stop when this percentage of positive weight is covered by the rules
-        maxl = -1
+        maxl = 4
 
         stop_threshold = sum(rule.score_correct) * (1.0 - stop_threshold)
 
@@ -1017,12 +1024,20 @@ class RPF(object) :
         RPF_PROLOG = bin_path('rpf.pl')
         import subprocess
 #        try :
+#         print (' '.join(['yap', "-L", RPF_PROLOG , '--', DATAFILE, str(maxl), str(target), modes ] + constants))
+
         output = subprocess.check_output(['yap', "-L", RPF_PROLOG , '--', DATAFILE, str(maxl), str(target), modes ] + constants )
+
+#         print ('#### OUTPUT #####')
+#         print (output)
+#         print ('#################')
+        
+
         paths = []
         for line in output.strip().split('\n') :
             parts = line.split('|')
             varname = parts[0]
-            if len(parts) <= 1 :
+            if len(parts) <= 1 or not '(' in parts[1] :
                 continue
             path = tuple(sorted(map( lambda x : Literal.parse(x).withAssign( { varname : args[1], 'V_0' : args[0] } ), parts[1:] ) ))
             paths.append(path)

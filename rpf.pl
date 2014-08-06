@@ -136,11 +136,10 @@ extract_constant( [A,B], Constant, OtherVar) :-
         var(A) -> OtherVar=A, Constant=B; Constant=A, OtherVar=B
     ).
     
-rpf( Target ) :- rpf( Target, -1, []).
-rpf( Target, MaxLevel, Constants ) :-
+%rpf( Target ) :- findall( Mode, (base(R), R =.. [F|A], F\=TF, length(A,2), length(A2,2), Mode=..[F|A2]), Modes), rpf( Target, -1, Modes, [])
+rpf( Target, MaxLevel, Modes, Constants ) :-
     Target =.. [TF|TArgs],
     extract_constant(TArgs, Constant, OtherVar),
-    findall( Mode, (base(R), R =.. [F|A], F\=TF, length(A,2), length(A2,2), Mode=..[F|A2]), Modes),
     run(Constant, Modes),
     ( Constants == [] ->
         findall( OtherVar, call(Target) , L )
@@ -152,10 +151,14 @@ rpf( Target, MaxLevel, Constants ) :-
     write_path(P),
     nl,
     fail.
-rpf( _, _, _ ).
+rpf( _, _,_,_ ).
 
-main(Data, MaxLevel, Target, Constants) :-
+main(Data, MaxLevel, Target, Modes, Constants) :-
     consult(Data),
-    rpf(Target, MaxLevel, Constants).
+    rpf(Target, MaxLevel, Modes, Constants).
 
-:- unix( argv([Data,MaxLevelS,TargetS|Constants]) ), atom_to_term( TargetS, Target, _ ), atom_number( MaxLevelS, MaxLevel), main( Data, MaxLevel, Target, Constants).
+:- unix( argv([Data,MaxLevelS,TargetS,ModesS|Constants]) ), 
+    atom_to_term( TargetS, Target, _ ), 
+    atom_to_term(ModesS,Modes,_),  
+    atom_number( MaxLevelS, MaxLevel), 
+    main( Data, MaxLevel, Target, Modes, Constants).
