@@ -223,7 +223,7 @@ class LearningProblem(object) :
         
         if self.VERBOSE > 5 : print (rule, refine)
             
-        with Log('new_refine', new=new_refine, all=refine) : pass
+        with Log('new_refine', new='(' + '), ('.join(map(str,new_refine)) + ')', all='(' + '), ('.join(map(str,refine)) + ')') : pass
         
         # Update scores for all literals in batch
         refine = sorted((rule + ref for ref in refine), reverse = True)
@@ -466,7 +466,15 @@ class PF2Score(PFScore):
         
         dS_total = 0.0
         
-        for p,l,u in zip(correct, predict_prev, predict ) :                                    
+        j = 0
+        for p,l,u in zip(correct, predict_prev, predict ) :  
+            #print (j, p,l,u)
+            j += 1
+            if u <= l - 1e-10 :
+                for i, plu in enumerate(zip(correct, predict_prev, predict )) :
+                    if plu[2] <= plu[1] - 1e-10 :
+                        print (i, plu)
+                                          
             assert( u > l - 1e-10)
         
             TP_previous += min(l,p)
