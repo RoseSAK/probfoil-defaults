@@ -115,12 +115,16 @@ paths_for_constants( Constants, Paths, MaxLevel ) :-
     
 paths_for_constant( Constant, Path, Level, MaxLevel ) :-
     recorded(Constant, (Level,Nodes), _),
-    member(Node,Nodes),
-    path_for_node( Node, Path, MaxLevel ).
+    (MaxLevel > -1, Level > MaxLevel ->
+        fail
+    ;
+        member(Node,Nodes),
+        path_for_node( Node, Path, MaxLevel )
+    ).
         
 path_for_node(Node, Result, MaxLevel) :-
     node(Level,Node,Parent,Relation,_,_),
-    ( ( Parent == nil; MaxLevel == Level) ->
+    ( ( Parent == nil ) ->
         Result = []
     ;
         Result = [Relation|Path],
