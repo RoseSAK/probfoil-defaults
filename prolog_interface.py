@@ -510,9 +510,16 @@ class PrologInterface(object) :
                 for line in cnf :
                     print(line,file=f)
                  
+            
+            USE_C2D = self.env['USE_C2D']
             with Timer('Compiling %s' % cnf[0], verbose=self.env['verbose']>1) :
-                executable = bin_path('problog/dsharp')
-                cmd = [executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file]
+                if USE_C2D :
+                    executable = bin_path('problog/cnf2dDNNF') 
+                    cmd = [executable, '-dt_method', '0', '-reduce', '-visualize', '-in', cnf_file]
+                    nnf_file = cnf_file + '.nnf'
+                else :
+                    executable = bin_path('problog/dsharp')
+                    cmd = [executable, "-Fnnf", nnf_file , "-disableAllLits", cnf_file]
                 with open(os.devnull) as null :
                     process = subprocess.Popen(cmd, stdout=null)
         #            subprocess.check_output(cmd)

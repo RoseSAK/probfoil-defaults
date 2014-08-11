@@ -60,6 +60,7 @@ def parse_args(args) :
     p.add_argument('-S', '--seed', type=int, default=None, help='Random seed')
     p.add_argument('--rpf', action='store_true', help='Enable relational path finding')
     p.add_argument('--generate_data', type=str, default=None, help="Generate data and place it in the given file.")
+    p.add_argument('--c2d', action='store_true', help='Use c2d instead of dsharp for knowledge compilation.')
     
     return p.parse_args(args)
 
@@ -72,7 +73,7 @@ def main(arguments) :
     memlimit = int(args.memlimit * (1 << 30))
 
     with open(args.log, 'w') as Log.LOG_FILE :
-     with WorkEnv(verbose=args.verbose,memlimit=memlimit, SPLIT_EXAMPLES=args.separate_examples) as env :    # Set up a temporary working directory
+     with WorkEnv(verbose=args.verbose,memlimit=memlimit, SPLIT_EXAMPLES=args.separate_examples, USE_C2D=args.c2d) as env :    # Set up a temporary working directory
 
       # if args.input.endswith('.arff') :
       #     pl_file = env.tmp_path(os.path.splitext(os.path.split( args.input )[1])[0] + '.pl')
