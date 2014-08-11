@@ -552,12 +552,6 @@ class RootRule(Rule) :
             self.__examples = new_examples + neg_examples
             self.__score_correct = new_score_correct + [0] * num_negs 
             
-            print_examples = False
-            if print_examples :
-              with open('examples','w') as f :
-                for ex, sc in zip(self.__examples, self.__score_correct) :
-                
-                  print ('%s %s' % ( sc, ' '.join(ex) ), file=f)
             
         if self.learning_problem.NO_CLOSED_WORLD :
             new_examples = []
@@ -571,6 +565,19 @@ class RootRule(Rule) :
         
         if self.learning_problem.VERBOSE > 3 :
             print ('Number of examples: %s' % (len(self.examples),))    
+        
+        if self.learning_problem.GENERATE_DATA != None :
+            import re
+            re_target = re.compile( '(.*::)?' + self.target.functor + '[(].*[)].')
+            with open(self.learning_problem.GENERATE_DATA,'w') as f :
+                line_filter = lambda x : re_target.match( x ) == None 
+            
+                print (self.knowledge.datafile.toProlog( line_filter ), file=f)
+                for ex, sc in zip(self.__examples, self.__score_correct) :
+                    print ('%s::%s.' % ( sc, self.target.withArgs(ex) ), file=f)
+            
+            # Stop here
+            sys.exit(0)
         
         self.initScorePredict()
         self.eval_nodes = None
@@ -921,8 +928,6 @@ class RPF(object) :
         assert(rule.target.arity == 2)
         
         modes = str([ Literal( pred_id[0], ['_'] * pred_id[1]) for pred_id in rule.language.modes if pred_id[1] == 2 ])
-        print (modes)
-        
         
         threshold = 0.1         # discard example if it's score falls below this value
         eval_cutoff = 20        # evaluate paths when less than this number of examples is removed => None means always evaluate
@@ -1024,7 +1029,7 @@ class RPF(object) :
         RPF_PROLOG = bin_path('rpf.pl')
         import subprocess
 #        try :
-#         print (' '.join(['yap', "-L", RPF_PROLOG , '--', DATAFILE, str(maxl), str(target), modes ] + constants))
+        #print (' '.join(['yap', "-L", RPF_PROLOG , '--', DATAFILE, str(maxl), "'" + str(target) + "'", "'" + modes + "'" ] + constants))
 
         output = subprocess.check_output(['yap', "-L", RPF_PROLOG , '--', DATAFILE, str(maxl), str(target), modes ] + constants )
 

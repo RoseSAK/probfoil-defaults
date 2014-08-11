@@ -59,6 +59,7 @@ def parse_args(args) :
     p.add_argument('--ppmode', choices=['none', 'rr'], default='none')
     p.add_argument('-S', '--seed', type=int, default=None, help='Random seed')
     p.add_argument('--rpf', action='store_true', help='Enable relational path finding')
+    p.add_argument('--generate_data', type=str, default=None, help="Generate data and place it in the given file.")
     
     return p.parse_args(args)
 

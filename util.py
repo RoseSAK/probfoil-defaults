@@ -54,7 +54,7 @@ class WorkEnv(object) :
     def __exit__(self, exc_type, value, traceback) :
         if self.__persistent == self.NEVER_KEEP or (self.__persistent == self.KEEP_ON_ERROR and exc_type == None) :
             shutil.rmtree(self.__outdir)
-        elif self.__persistent == self.KEEP_ON_ERROR and exc_type != None :
+        elif self.__persistent == self.KEEP_ON_ERROR and exc_type != None and exc_type != SystemExit :
             # An error occurred
             print('Error occurred: working directory preserved', self.__outdir, file=sys.stderr)
         

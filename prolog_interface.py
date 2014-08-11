@@ -428,9 +428,13 @@ class PrologInterface(object) :
                 line = regex.sub('', line)
                 line = line.replace('<-', ':-')
                 return line
-        
+
             with open(self.datafile_det, 'w') as f :
-                print( '\n'.join(map(make_det, self.datafile.toProlog().split('\n') )), file=f)  
+                for line in self.datafile.toProlog().split('\n') :
+                    line = line.strip()
+                    line = make_det(line)
+                    print (line, file=f)
+
     
     def query_goals( self, goals ) :
     
@@ -911,7 +915,7 @@ class DataFile(object) :
 
         self._read()
         
-    def toProlog(self) :
+    def toProlog(self, linefilter=None) :
         pass
         
     def _read(self) :
@@ -941,8 +945,9 @@ class PrologDataFile(DataFile) :
     def values(self, predicate, arity) :
         return None
         
-    def toProlog(self) :
-        return '\n'.join(self._pl_data)
+    def toProlog(self, linefilter=None) :
+        if not linefilter : linefilter = lambda x : True
+        return '\n'.join(filter(linefilter,self._pl_data))
 
     def _read(self) :
         with open(self._filename) as datafile :
@@ -966,7 +971,7 @@ class ARFFDataFile(DataFile) :
         self.dimension = self.value_matrix.shape[1]
         
         
-    def toProlog(self) :
+    def toProlog(self, linefilter=None) :
         return '\n'.join(self._pl_data)
         
     def base(self, predicate, arity) :

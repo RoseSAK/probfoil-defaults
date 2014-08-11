@@ -60,7 +60,8 @@ class LearningProblem(object) :
         self.CLASS_BALANCE = class_balance
         self.RANDOM_SEED = seed
         self.RPF = rpf
-        
+        self.GENERATE_DATA = other_args.get('generate_data', False)
+                
     def calculateScore(self, rule, debug=False) :
         raise NotImplementedError('calculateScore')
 
