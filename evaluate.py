@@ -22,7 +22,20 @@ def arff_to_pl(filename_in, file_out) :
         file_out.write(line_out)    
 
 
+def batch( lst, n ) :
+    lst = list(lst)
+    if n == 0 :
+        yield lst
+    else :
+        pos = 0
+        while pos < len(lst) :
+            pos_next = pos + n
+            yield lst[pos:pos_next]
+            pos = pos_next
+
 def main( probfoil_output_file, test_file ) :
+
+    BATCH_SIZE = 50
 
     if 'PROBLOGPATH' in os.environ :
         PROBLOGPATH = os.environ['PROBLOGPATH']
@@ -39,7 +52,7 @@ def main( probfoil_output_file, test_file ) :
     from problog import ProbLogEngine
     from utils import Timer, Logger, WorkEnv
     
-    engine = ProbLogEngine.create(['-d', 'c2d'])
+    engine = ProbLogEngine.create([])
     
     with WorkEnv(None,Logger(), persistent=WorkEnv.NEVER_KEEP) as env :
         
@@ -65,19 +78,24 @@ def main( probfoil_output_file, test_file ) :
                     
         result_correct = engine.execute(file_in, env)
         
-        with open(file_in, 'w') as f_out :
-            if test_file.endswith('.arff') :
-                arff_to_pl(test_file, f_out)
-            else :
-                with open(test_file) as f_in :
-                    print( f_in.read(), file=f_out )
-            with open(probfoil_output_file) as f_in :
-                print (f_in.read(), file=f_out)
+        NUM_BATCHES = len(result_correct) // BATCH_SIZE if BATCH_SIZE else 1
+        
+        result_predict = {}
+        for batch_num, examples in enumerate(batch(result_correct, BATCH_SIZE)) :
+            print ('Evaluating batch %s of %s...' % (batch_num+1, NUM_BATCHES), file=sys.stderr)
+            with open(file_in, 'w') as f_out :
+                if test_file.endswith('.arff') :
+                    arff_to_pl(test_file, f_out)
+                else :
+                    with open(test_file) as f_in :
+                        print( f_in.read(), file=f_out )
+                with open(probfoil_output_file) as f_in :
+                    print (f_in.read(), file=f_out)
             
-            for x in result_correct :
-                print ('query(pf_eval_%s).' % x, file=f_out )
+                for x in examples :
+                    print ('query(pf_eval_%s).' % x, file=f_out )
             
-        result_predict = engine.execute(file_in, env)
+            result_predict.update(engine.execute(file_in, env))
         
         result_all = {}
         result_all.update(result_correct)
