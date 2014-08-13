@@ -39,7 +39,7 @@ def main( probfoil_output_file, test_file ) :
     from problog import ProbLogEngine
     from utils import Timer, Logger, WorkEnv
     
-    engine = ProbLogEngine.create([])
+    engine = ProbLogEngine.create(['-d', 'c2d'])
     
     with WorkEnv(None,Logger(), persistent=WorkEnv.NEVER_KEEP) as env :
         
