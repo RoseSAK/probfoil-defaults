@@ -17,32 +17,40 @@ This code has the following dependencies:
 
 This implementation support two input formats:
 
-* ProbLog
+     - ProbLog
+     - ARFF
+
+ProbLog
+-----------
 
 The algorithm uses ProbLog's data format, that is Prolog files augmented with probabilities.
 
 For example,
 
-0.8::father(john, mary).
-0.7::father(john, billy).
+```
+    0.8::father(john, mary).
+    0.7::father(john, billy).
 
-mother(mary, tom).
-mother(an, jenny).
+    mother(mary, tom).
+    mother(an, jenny).
 
-parent(X,Y) :- mother(X,Y).
-parent(X,Y) :- father(X,Y).
+    parent(X,Y) :- mother(X,Y).
+    parent(X,Y) :- father(X,Y).
 
-0.8::grandfather(john, tom).
+    0.8::grandfather(john, tom).
+```
 
 Additionally, the input file should contain type information for all predicates to be used in the learning algorithm.
 For example,
 
+```
 base(father(person,person)).
 base(mother(person,person)).
 base(parent(person,person)).
 base(grandfather(person,person)).
-
-* ARFF
+```
+ARFF
+--------
 
 For propositional data, Weka's ARFF format can (should) be used.
 For this case the algorithm uses optimized evaluation which significantly improves performance.
@@ -53,7 +61,9 @@ For this case the algorithm uses optimized evaluation which significantly improv
 To run the algorithm, run 'main.py'.
 For example, to learn the 'grandfather' relation you can use.
 
+```
     ./main.py family.pl grandfather/2 father/+- mother/+-
+```
 
 where 
     - family.pl is the data file
@@ -64,7 +74,9 @@ where
 
 With the previous setting, the parent/2 predicate is not used.
 We can enable it by using        
+```
     ./main.py family.pl grandfather/2 father/+- mother/+- parent/+-
+```
     
 These declarations can also be added directly to the data file by adding a line
 
@@ -78,14 +90,16 @@ The algorithm writes out an extensive log file in XML.
 4. NOTES
 ========
 
-- Using CTRL-C
+Using CTRL-C
+-------------------
 
 During clause search you can press CTRL-C to stop the current search for best clause.
 This will output the best clause found so far and continue with the next phase.
 
 If you want to stop the algorithm entirely, you can press CTRL-C repeatedly.
 
-- Terminal corruption
+Terminal corruption
+--------------------------
 
 Pressing CTRL-C while Yap is running may corrupt your terminal (i.e. input echo-ing will be off).
 Type 'reset' on the terminal to reset it. 
