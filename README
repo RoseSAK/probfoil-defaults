@@ -8,8 +8,8 @@ Currently, this algorithm will only work on Linux x86_64.
 
 This code has the following dependencies:
 
-    - YAP Prolog (with tabling)
-    - Python 2
+* YAP Prolog (with tabling)
+* Python 2
     
 
 2. DATA FORMAT
@@ -17,8 +17,8 @@ This code has the following dependencies:
 
 This implementation support two input formats:
 
-     - ProbLog
-     - ARFF
+* ProbLog
+* ARFF
 
 ProbLog
 -----------
@@ -27,17 +27,19 @@ The algorithm uses ProbLog's data format, that is Prolog files augmented with pr
 
 For example,
 
+
 ```
-    0.8::father(john, mary).
-    0.7::father(john, billy).
+#! prolog
+0.8::father(john, mary).
+0.7::father(john, billy).
 
-    mother(mary, tom).
-    mother(an, jenny).
+mother(mary, tom).
+mother(an, jenny).
 
-    parent(X,Y) :- mother(X,Y).
-    parent(X,Y) :- father(X,Y).
+ parent(X,Y) :- mother(X,Y).
+ parent(X,Y) :- father(X,Y).
 
-    0.8::grandfather(john, tom).
+ 0.8::grandfather(john, tom).
 ```
 
 Additionally, the input file should contain type information for all predicates to be used in the learning algorithm.
