@@ -28,8 +28,10 @@ The algorithm uses ProbLog's data format, that is Prolog files augmented with pr
 For example,
 
 
+
+
 ```
-#! prolog
+#!prolog
 0.8::father(john, mary).
 0.7::father(john, billy).
 
