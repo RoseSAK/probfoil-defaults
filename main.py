@@ -137,7 +137,7 @@ def main(arguments) :
         #     with Log('error') : pass
         #     raise e
 
-        with Log('grounding_stats', **vars(p.grounding.stats())) : pass
+#        with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         
         # print('##################################################################')
         # print('#########################     RESULT     #########################')
@@ -158,7 +158,7 @@ def main(arguments) :
         
         result = postprocess(result, ppmode=args.ppmode, verbose=args.verbose)
             
-        with Log('grounding_stats', **vars(p.grounding.stats())) : pass
+        #with Log('grounding_stats', **vars(p.grounding.stats())) : pass
         
        print('##################################################################')
        print('#########################     RESULT     #########################')
