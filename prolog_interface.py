@@ -15,33 +15,12 @@
 
 from __future__ import print_function
 
-import os
-import sys
-
 from util import Timer
 
-from problog.logic import Term, Var, Constant
+from problog.logic import Term, Var, Constant, And, Clause
 from problog import get_evaluatable
-from problog.program import PrologString
 from problog.engine import DefaultEngine
 from problog.program import PrologFile
-
-
-def bin_path(relative):
-    return os.path.join(os.path.split(os.path.abspath(__file__))[0], relative)
-
-
-sys.path.append(bin_path('problog/'))
-
-
-def lit2term(lit):
-    args = []
-    for arg in lit.arguments:
-        if 'A' <= arg[0] <= 'Z':
-            args.append(Var(arg))
-        else:
-            args.append(Term(arg))
-    return Term(lit.functor, *args)
 
 
 class PrologInterface(object):
@@ -54,22 +33,41 @@ class PrologInterface(object):
         print ('reset()')
 
     def enqueue(self, rule):
-        parsed_rule = PrologString('q_' + str(rule))
+
+        rule_head = Term('pf_rule', Var('_'), *rule.target.args)
+        rule_body = And.from_list(rule.literals)
+
+        nonground_query = False
 
         with Timer(category="evaluate"):
             db = self.datafile.compiled.extend()
-            for clause in parsed_rule:
-                clause.head = Term('pf_rule', Var('_'), *clause.head.args)
-                db += clause
+            db += Clause(rule_head, rule_body)
 
-            queries = [Term('pf_rule', Constant(exid), *example) for exid, example in rule.enum_examples()]
+            if nonground_query:
+                queries = [Term('pf_rule', Constant(0), *([None] * rule.target.arity))]
+            else:
+                queries = [Term('pf_rule', Constant(exid), *example) for exid, example in rule.enum_examples()]
 
-            gp = DefaultEngine().ground_all(db, queries=queries)
+            engine = DefaultEngine()
+            gp = engine.ground_all(db, queries=queries)
             results = get_evaluatable().create_from(gp).evaluate()
 
             rule.initScorePredict()
-            for k, v in results.items():
-                rule.setScorePredict(int(k.args[0]), v)
+            if nonground_query:
+                result_db = engine.prepare([])
+                for k, v in results.items():
+                    result_db += Term('pf_result', *(k.args[1:] + (Constant(v),)))
+
+                for ex_id, example in rule.enum_examples():
+                    score = engine.query(result_db, Term('pf_result', *(example + (None,))))
+                    if score:
+                        score = score[0][-1]
+                        rule.setScorePredict(ex_id, score)
+                    else:
+                        rule.setScorePredict(ex_id, 0.0)
+            else:
+                for k, v in results.items():
+                    rule.setScorePredict(int(k.args[0]), v)
 
     def process_queue(self):
         pass
@@ -88,9 +86,7 @@ class PrologInterface(object):
         result = [0.0] * len(examples)
         engine = DefaultEngine()
 
-        target_term = lit2term(target)
-        queries = [target_term.with_args(*ex) for ex in examples]
-
+        queries = [target.with_args(*ex) for ex in examples]
         ground_program = engine.ground_all(self.datafile.compiled, queries=queries)
         results = get_evaluatable().create_from(ground_program).evaluate()
 

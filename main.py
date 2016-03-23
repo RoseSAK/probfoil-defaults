@@ -22,9 +22,12 @@ import sys, time
 from util import Log, WorkEnv, Timer
 import os
 
-from language import Literal, Language, RootRule
+from language import Language, RootRule
 from prolog_interface import PrologInterface, DataFile
 from learn import ProbFOIL2, ProbFOIL1
+
+from problog.logic import Term, Var, Constant
+
 
 def parse_args(args) :
     
@@ -64,126 +67,120 @@ def parse_args(args) :
     
     return p.parse_args(args)
 
-def main(arguments) :
-    
+
+def main(arguments):
+
     args = parse_args(arguments)
         
     parameters = vars(args)
     
-    memlimit = int(args.memlimit * (1 << 30))
-
-    with open(args.log, 'w') as Log.LOG_FILE :
-     with WorkEnv(verbose=args.verbose,memlimit=memlimit, SPLIT_EXAMPLES=args.separate_examples, USE_C2D=args.c2d) as env :    # Set up a temporary working directory
-
-      # if args.input.endswith('.arff') :
-      #     pl_file = env.tmp_path(os.path.splitext(os.path.split( args.input )[1])[0] + '.pl')
-      #     arff_to_pl( args.input, pl_file )
-      #     args.input = pl_file
-      inputfile = DataFile.load(args.input, target_index=args.classatt)
+    with open(args.log, 'w') as Log.LOG_FILE:
+        # Set up a temporary working directory
+        with WorkEnv(verbose=args.verbose) as env:
+            # Load input file
+            inputfile = DataFile.load(args.input, target_index=args.classatt)
     
-      if args.target == None :
-          args.target = inputfile.target
-          args.modes = inputfile.modes
-      if args.target == None :
-          print( 'No target specified.')
-          sys.exit(1)
-                        
-      target_pred, target_arity = args.target.split('/')
-      target_arity = int(target_arity)
-      letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-      target_args = [] 
-      for x in range(0, target_arity) :
-         target_args.append(letters[x])
-      target = Literal(target_pred, target_args)
+            if args.target is None:
+                args.target = inputfile.target
+                args.modes = inputfile.modes
+            if args.target is None:
+                print('No target specified.')
+                sys.exit(1)
 
-      modes = list(map(lambda x : Literal(*x.split('/')), args.modes))
-      
-      learn_time = time.time()  
+            target_pred, target_arity = args.target.split('/')
+            target_arity = int(target_arity)
+            letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            target_args = []
+            for x in range(0, target_arity):
+                target_args.append(Var(letters[x]))
+            target = Term(target_pred, *target_args)
 
-      with Log('log', **parameters) :
-       with Timer(category='') :    
-        p = PrologInterface(env)
-        
-        p.loadData(inputfile)
-        
-        init_time1 = time.time()
-        
-        with Timer(category='init_language') :
-            l = Language()
-            for mode in modes :
-                l.setArgumentModes( mode )
-            l.addTarget( target_pred, target_arity )
-            l.initialize(p)  # ==> read language specification + values from p        
+            modes = list(map(lambda x: Term(x.split('/')[0], *(map(Term, x.split('/')[1]))), args.modes))
 
-        with Timer(category='init_learner') :
-            if args.probfoil == '2' :
-                lp = ProbFOIL2(l, p, **parameters)
-            else :
-                lp = ProbFOIL1(l, p, **parameters)
-        
-            if args.verbose : print('Initializing root rule...')
-            with Log('initialize', _timer=True) :
-                r0 = RootRule(target, lp)
-                r0.initialize()
-            
-        if args.verbose > 4 :
-            print ('Targets:', ', '.join(map(lambda x : '%.5f' % x, r0.score_correct) ) )
-        
-        if args.verbose: print('Start learning...')
-        #try :
-        result = lp.learn(r0)
-        # except Exception as e :
-        #     with Log('grounding_stats', **vars(p.grounding.stats())) : pass
-        #     with Log('error') : pass
-        #     raise e
+            learn_time = time.time()
 
-#        with Log('grounding_stats', **vars(p.grounding.stats())) : pass
-        
-        # print('##################################################################')
-        # print('#########################     RESULT     #########################')
-        # print('##################################################################')
-        # if result.getTheory() :
-        #     print('\n'.join(result.getTheory()))
-        # else :
-        #     print('%s :- fail.' % result.target )
-        # print('#########################     SCORES     #########################')
-        # print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
-        #        
-        # if args.use_recall :
-        #     print('RECALL                       :', result.globalScore)
-        # else :
-        #     print('ACCURACY                     :', result.globalScore)
-       
+            with Log('log', **parameters):
+                with Timer(category=''):
+                    p = PrologInterface(env)
+                    p.loadData(inputfile)
 
-        
-        result = postprocess(result, ppmode=args.ppmode, verbose=args.verbose)
-            
-        #with Log('grounding_stats', **vars(p.grounding.stats())) : pass
-        
-       print('##################################################################')
-       print('#########################     RESULT     #########################')
-       print('##################################################################')
-       if result.getTheory() :
-           print('\n'.join(result.getTheory()))
-       else :
-           print('%s :- fail.' % result.target )
-       print('#########################     SCORES     #########################')
-       print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
+                with Timer(category='init_language'):
+                    l = Language()
+                    for mode in modes:
+                        l.setArgumentModes(mode)
+                    l.addTarget(target_pred, target_arity)
+                    l.initialize(p)  # ==> read language specification + values from p
+
+                with Timer(category='init_learner') :
+                    if args.probfoil == '2':
+                        lp = ProbFOIL2(l, p, **parameters)
+                    else:
+                        lp = ProbFOIL1(l, p, **parameters)
+
+                    if args.verbose:
+                        print('Initializing root rule...')
+                    with Log('initialize', _timer=True):
+                        r0 = RootRule(target, lp)
+                        r0.initialize()
+
+                if args.verbose > 4:
+                    print ('Targets:', ', '.join(map(lambda x : '%.5f' % x, r0.score_correct)))
+
+                if args.verbose: print('Start learning...')
+                #try :
+                result = lp.learn(r0)
+                # except Exception as e :
+                #     with Log('grounding_stats', **vars(p.grounding.stats())) : pass
+                #     with Log('error') : pass
+                #     raise e
+
+        #        with Log('grounding_stats', **vars(p.grounding.stats())) : pass
+
+                # print('##################################################################')
+                # print('#########################     RESULT     #########################')
+                # print('##################################################################')
+                # if result.getTheory() :
+                #     print('\n'.join(result.getTheory()))
+                # else :
+                #     print('%s :- fail.' % result.target )
+                # print('#########################     SCORES     #########################')
+                # print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
+                #
+                # if args.use_recall :
+                #     print('RECALL                       :', result.globalScore)
+                # else :
+                #     print('ACCURACY                     :', result.globalScore)
+
+
+
+                result = postprocess(result, ppmode=args.ppmode, verbose=args.verbose)
+
+                #with Log('grounding_stats', **vars(p.grounding.stats())) : pass
+
+        print('##################################################################')
+        print('#########################     RESULT     #########################')
+        print('##################################################################')
+        if result.getTheory() :
+            print('\n'.join(result.getTheory()))
+        else :
+            print('%s :- fail.' % result.target )
+        print('#########################     SCORES     #########################')
+        print('PREDICTIONS (TP, TN, FP, FN) :', result.score)
        
-       if args.use_recall :
-           print('RECALL                       :', result.globalScore)
-       else :
-           print('ACCURACY                     :', result.globalScore)
+        if args.use_recall :
+            print('RECALL                       :', result.globalScore)
+        else :
+            print('ACCURACY                     :', result.globalScore)
        
-       print('#########################     TIMING     #########################')
-       learn_time = time.time() - learn_time
+        print('#########################     TIMING     #########################')
+        learn_time = time.time() - learn_time
        
-       print(Timer.showTimers())        
-       print('total',' => ', learn_time, 's', sep='')
-       with Log('timers', total=learn_time, **Timer.TIMERS) : pass
+        print(Timer.showTimers())
+        print('total',' => ', learn_time, 's', sep='')
+        with Log('timers', total=learn_time, **Timer.TIMERS) : pass
        
-       with open(args.output, 'w') as f_out :
-           write_evaluator_model(f_out, result, args.input)
+        with open(args.output, 'w') as f_out :
+            write_evaluator_model(f_out, result, args.input)
 
 def is_rr(rule) :
   lits = rule.literals

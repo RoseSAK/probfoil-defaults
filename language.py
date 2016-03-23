@@ -16,29 +16,30 @@
 from __future__ import print_function
 
 from functools import total_ordering
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 from itertools import product
-import math
-import time
 import sys
 from util import Log, Timer
 
 import numpy as np
 
+from problog.logic import Term, is_variable, Var
+
+
 @total_ordering
-class Rule(object) :
+class Rule(object):
     
     ids = 0
     
-    def __init__(self, parent) :
+    def __init__(self, parent):
         self.parent = parent
         self.literal = None
         self.__score = None
         self.__score_predict = None
         self.__identifier = Rule.ids
-        if parent :
+        if parent:
             self.__length = len(parent) + 1
-        else :
+        else:
             self.__length = 1
         Rule.ids += 1
         
@@ -142,7 +143,7 @@ class Rule(object) :
         return self.__identifier # id(self)
     
     def _get_typed_variables(self) :
-        return self.target.getTypedVariables(self.language)
+        return self.language.getTypedVariables(self.target)
         
     def _get_variables(self) :
         return set(map(lambda x : x[0], self.typed_variables))
@@ -378,7 +379,7 @@ class RuleBody(Rule) :
         
         old_vars = parent.typed_variables
             
-        current_vars = set(literal.getTypedVariables(self.language))
+        current_vars = set(self.language.getTypedVariables(literal))
         self._all_vars = old_vars | current_vars
         self._new_vars = current_vars - old_vars
         self._body_vars = parent._body_vars | current_vars
@@ -403,7 +404,7 @@ class RuleHead(Rule) :
         super(RuleHead,self).__init__(None)
         self.__previous = previous.consolidate()
         
-        current_vars = set(self.target.variables)
+        current_vars = set(self.target.variables())
         self._all_vars = current_vars
         self._new_vars = set([])
         self._body_vars = set([])
@@ -481,9 +482,8 @@ class RootRule(Rule) :
 
         # 3) Populate list of examples
         #   => carthesian product of values
-        
-        if examples == None :
-            self.__examples = self.language.getArgumentValues( self.target )
+        if examples is None:
+            self.__examples = self.language.getArgumentValues(self.target)
         else :
             self.__examples = examples
         
@@ -574,7 +574,7 @@ class RootRule(Rule) :
             
                 print (self.knowledge.datafile.toProlog( line_filter ), file=f)
                 for ex, sc in zip(self.__examples, self.__score_correct) :
-                    print ('%s::%s.' % ( sc, self.target.withArgs(ex) ), file=f)
+                    print ('%s::%s.' % ( sc, self.target.with_args(*ex) ), file=f)
             
             # Stop here
             sys.exit(0)
@@ -593,80 +593,6 @@ class RootRule(Rule) :
         
     def __str__(self) :
         return str(self.target) + ' :- fail.'
-
-@total_ordering
-class Literal(object) :
-    
-    def __init__(self, functor, arguments, is_negated=False) :
-        self.functor = functor
-        self.arguments = arguments
-        self.is_negated = is_negated
-        
-    def withArgs(self, args) :
-        return Literal(self.functor, args, self.is_negated)
-        
-    def withAssign(self, assign) :
-        return Literal( self.functor, [ assign.get(arg,arg) for arg in self.arguments ], self.is_negated)
-        
-    def _is_var(self, arg) :
-        return arg[0] in '_ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        
-    def _get_variables(self) :
-        return set(filter(self._is_var,self.arguments))
-        
-    def getTypedVariables(self, language) :
-        types = language.getArgumentTypes(self)
-        result = []
-        for vn, vt in zip(self.arguments, types) :
-            if self._is_var(vn) :
-                result.append( (vn, vt) )
-        return set(result)
-        
-    variables = property( _get_variables )  
-    arity = property (lambda s : len(s.arguments) )
-    key = property( lambda s : ( s.functor, s.arity ) )
-    
-    def __repr__(self) :
-        r = self.functor
-        if self.arguments :
-            r += '(' + ','.join(map(str,self.arguments)) + ')'
-        else :
-            r += ''
-        if self.is_negated :
-            return 'not(%s)'  % r
-        else :
-            return r
-            
-    def __neg__(self) :
-        return Literal(self.functor, self.arguments, not self.is_negated)
-            
-    def __abs__(self) :
-        if self.is_negated :
-            return -self
-        else :
-            return self
-            
-    def __hash__(self) :
-        return hash(str(self))
-            
-    def __eq__(self, other) :
-        if other == None :
-            return False
-        else :
-            return self.functor == other.functor and self.arguments == other.arguments and self.is_negated == other.is_negated
-    
-    def __lt__(self, other) :
-        if other == None :
-            return False
-        else :
-            return (self.functor, self.arguments) < (other.functor, other.arguments)
-            
-    @classmethod
-    def parse(self, s) :
-        s = s[:-1]
-        functor, args = s.split('(')
-        args = args.split(',')
-        return Literal(functor, args)
 
 from itertools import chain
 class MultiLiteral(object) :
@@ -716,22 +642,22 @@ class Language(object) :
         
     modes = property( lambda s : s.__modes )
         
-    def initialize(self, knowledge) :
+    def initialize(self, knowledge):
         predicates = list(self.__modes) + self.__targets
-        for predicate, arity in predicates :
+        for predicate, arity in predicates:
             # Load types
-            types = knowledge.base( predicate, arity )
-            if len(types) == 1 :
+            types = knowledge.base(predicate, arity)
+            if len(types) == 1:
                 types = types[0]
-                self.setArgumentTypes( Literal( predicate, types ) )
-            elif len(types) > 1 :
-                raise Exception("Multiple 'base' declarations for predicate '%s/%s'!" % (predicate,arity))
+                self.setArgumentTypes(Term(predicate, *types))
+            elif len(types) > 1:
+                raise Exception("Multiple 'base' declarations for predicate '%s/%s'!" % (predicate, arity))
             else :
-                self.setArgumentTypes( Literal( predicate, ['id'] * arity ) )
-                print ("Missing 'base' declaration for predicate '%s/%s'!" % (predicate,arity), file=sys.stderr)
+                self.setArgumentTypes(Term(predicate, *([Term('id')] * arity)))
+                print ("Missing 'base' declaration for predicate '%s/%s'!" % (predicate, arity), file=sys.stderr)
             
-            values = list(zip(*knowledge.values( predicate, arity )))
-            for tp, vals in zip(types,values) :
+            values = list(zip(*knowledge.values(predicate, arity)))
+            for tp, vals in zip(types, values):
                 self.__values[tp] |= set(vals)
         
     def addTarget(self, predicate, arity) :
@@ -741,29 +667,42 @@ class Language(object) :
         self.__values[typename].add(value)
         
     def setArgumentTypes(self, literal) :
-        self.__types[ literal.key ] = literal.arguments
+        self.__types[(literal.functor, literal.arity)] = literal.args
         
     def setArgumentModes(self, literal) :
-        self.__modes[ literal.key ] = literal.arguments
+        self.__modes[(literal.functor, literal.arity)] = literal.args
         
     def getArgumentTypes(self, literal=None, key=None) :
-        if literal : key = literal.key
+        if literal:
+            key = (literal.functor, literal.arity)
         return self.__types.get(key,[])
             
     def getArgumentModes(self, literal=None, key=None) :
-        if literal : key = literal.key
+        if literal:
+            key = (literal.functor, literal.arity)
         return self.__modes.get(key,[])
                 
-    def getTypeValues(self, typename) :
-        return self.__values.get(typename,[])
+    def getTypeValues(self, typename):
+        return self.__values.get(typename, [])
         
-    def getArgumentValues(self, literal) :
+    def getArgumentValues(self, literal):
         types = self.getArgumentTypes(literal)
         return list( product( *[ self.getTypeValues(t) for t in types ] ) )
+
+    def getTypedVariables(self, literal):
+        types = self.getArgumentTypes(literal)
+        result = []
+        for vn, vt in zip(literal.args, types) :
+            if is_variable(vn) or vn.is_var():
+                result.append((vn, vt))
+        return set(result)
+
+
+
         
     def newVar(self) :
         self.__varcount += 1
-        return 'Var_' + str(self.__varcount)
+        return Var('Var_' + str(self.__varcount))
         
     def relationsByConstant(self, constant ) :
         kb = self.learning_problem.knowledge
@@ -774,19 +713,15 @@ class Language(object) :
         varnames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         
         goals = []
-        for pred_id in self.__modes :
-            if pred_id[1] < 2 : continue
-            index = [ i for i,x in enumerate(self.getArgumentTypes(key = pred_id)) if x == vt ]
-            for i in index :
-                vars = [ varnames[j] for j in range(0, pred_id[1]) ]
+        for pred_id in self.__modes:
+            if pred_id[1] < 2:
+                continue
+            index = [i for i, x in enumerate(self.getArgumentTypes(key=pred_id)) if x == vt]
+            for i in index:
+                vars = [varnames[j] for j in range(0, pred_id[1])]
                 args = vars[:]
                 args[i] = c
-                goals.append( Literal( pred_id[0], args ) )
-                
-#                 for r in kb.query( Literal( pred_id[0], args ), vars ) :
-#                     r[i] = c
-#                     res.append(Literal( pred_id[0], r) )
-
+                goals.append(Term(pred_id[0], *args))
         return ( map( Literal.parse, kb.query_goals(goals) ) )
 
 #        print (res)
@@ -866,34 +801,35 @@ class Language(object) :
             existing_variables[vartype].append( varname ) 
             existing_variables_set.add(varname)
     
-        if use_vars != None :
-            use_vars = set(use_vars) # set( [ varname for varname, vartype in use_vars ] )
+        if use_vars is not None:
+            use_vars = set(use_vars)  # set( [ varname for varname, vartype in use_vars ] )
     
-        for pred_id in self.__modes :
+        for pred_id in self.__modes:
             pred_name = pred_id[0]
-            arg_info = list(zip(self.getArgumentTypes(key = pred_id), self.getArgumentModes(key = pred_id)))
-            for args in self._build_refine(existing_variables, True, arg_info, use_vars) :
-                new_lit = Literal(pred_name, args)
-                if new_lit.variables & existing_variables_set :
+            arg_info = list(zip(self.getArgumentTypes(key=pred_id), self.getArgumentModes(key=pred_id)))
+            for args in self._build_refine(existing_variables, True, arg_info, use_vars):
+                new_lit = Term(pred_name, *args)
+                if new_lit.variables() & existing_variables_set:
                     yield new_lit
         
-            if not self.learning_problem.NO_NEGATION :
-                for args in self._build_refine(existing_variables, False, arg_info, use_vars) :
-                    new_lit = Literal(pred_name, args, True)                
-                    if new_lit.variables & existing_variables_set :
+            if not self.learning_problem.NO_NEGATION:
+                for args in self._build_refine(existing_variables, False, arg_info, use_vars):
+                    new_lit = -Term(pred_name, *args)
+                    if new_lit.variables() & existing_variables_set:
                         yield new_lit
     
-    def _build_refine_one(self, existing_variables, positive, arg_type, arg_mode) :
-        if arg_mode in ['+','-'] :
+    def _build_refine_one(self, existing_variables, positive, arg_type, arg_mode):
+        arg_mode = str(arg_mode)
+        if arg_mode in '+-':
             for var in existing_variables[arg_type] :
                 yield var
-        if arg_mode == '-' and positive and not self.learning_problem.RPF :
+        if arg_mode == '-' and positive and not self.learning_problem.RPF:
             yield '#'
-        if arg_mode == 'c' :
-            if positive :
-                for val in self.kb.types[arg_type] :
+        if arg_mode == 'c':
+            if positive:
+                for val in self.kb.types[arg_type]:
                     yield val
-            else :
+            else:
                 yield '_'
     
     def _build_refine(self, existing_variables, positive, arg_info, use_vars) :
@@ -904,7 +840,7 @@ class Language(object) :
                 else :
                     use_vars1 = use_vars 
                 for argN in self._build_refine(existing_variables, positive, arg_info[1:], use_vars1) :
-                    if arg0 == '#' :
+                    if arg0 == '#':
                         yield [self.newVar()] + argN
                     else :
                         yield [arg0] + argN
@@ -962,7 +898,7 @@ class RPF(object) :
             # 3) Construct target 
             args = ['_'] * rule.target.arity
             args[ position ] = constant
-            target = rule.target.withArgs( args )
+            target = rule.target.with_args(*args)
             varargs = rule.target.arguments[:]
             v1 = varargs.pop( position )
             varargs = [v1] + varargs
