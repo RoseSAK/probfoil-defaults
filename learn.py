@@ -17,7 +17,7 @@ from __future__ import print_function
 
 import math
 from util import Log, Beam, Timer
-from language import RuleHead
+from rule import RuleHead
 import time
 
 # Helper function for transforming significance p-value into ChiSquare decision value.

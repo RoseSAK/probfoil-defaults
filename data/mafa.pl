@@ -1,30 +1,11 @@
-
 base(parent(person,person)).
-modes(parent('-','-')).
 base(male(person)).
-modes(male('+')). 
 base(female(person)).
-modes(female('+')).
-
-learn(mother(person,person)).
 base(mother(person,person)).
-%modes(mother(-,-)).
-
-learn(grandmother(person,person)).
 base(grandmother(person,person)).
-
-learn(father(person,person)).
 base(father(person,person)).
-%modes(father(-,-)).
-
-% learn(male_ancestor(person,person)).
 base(male_ancestor(person,person)).
-% modes(male_ancestor(-,-)).
-% 
-% learn(female_ancestor(person,person)).
 base(female_ancestor(person,person)).
-% modes(female_ancestor(-,-)).
-
 
 father(bart, stijn).
 father(bart, pieter).

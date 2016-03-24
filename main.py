@@ -22,7 +22,8 @@ import sys, time
 from util import Log, WorkEnv, Timer
 import os
 
-from language import Language, RootRule
+from language import Language
+from rule import RootRule
 from prolog_interface import PrologInterface, DataFile
 from learn import ProbFOIL2, ProbFOIL1
 
