@@ -40,7 +40,7 @@ To use:
 ```
 #!bash
 
-    probfoil data.pl
+probfoil data.pl
 
 ```
 
@@ -80,7 +80,7 @@ Negative examples can be specified by adding zero-probability facts, e.g.:
 ```
 #!prolog
 
-    0.0::grandmother(john, mary).
+0.0::grandmother(john, mary).
 
 ```
 
@@ -91,7 +91,7 @@ To enable this behavior, you can specify the fact
 ```
 #!prolog
 
-    example_mode(auto).
+example_mode(auto).
 
 ```
 
@@ -101,26 +101,27 @@ To enable this behavior, you can specify the fact
 ```
 #!prolog
 
+% Modes
+mode(male(+)).
+mode(parent(+,+)).
+mode(parent(+,-)).
+mode(parent(-,+)).
 
-    % Modes
-    mode(male(+)).
-    mode(parent(+,+)).
-    mode(parent(+,-)).
-    mode(parent(-,+)).
+% Type definitions
+base(parent(person,person)).
+base(male(person)).
+base(female(person)).
+base(mother(person,person)).
+base(grandmother(person,person)).
+base(father(person,person)).
+base(male_ancestor(person,person)).
+base(female_ancestor(person,person)).
 
-    % Type definitions
-    base(parent(person,person)).
-    base(male(person)).
-    base(female(person)).
-    base(mother(person,person)).
-    base(grandmother(person,person)).
-    base(father(person,person)).
-    base(male_ancestor(person,person)).
-    base(female_ancestor(person,person)).
+% Target
+learn(grandmother/2).
 
-    % Target
-    learn(grandmother/2).
-
-    % How to generate negative examples
-    example_mode(auto).
+% How to generate negative examples
+example_mode(auto).
 ```
+
+Further examples can be found in the directory `examples`.
