@@ -1,4 +1,7 @@
 
+from problog.logic import Term, Var, Clause, And
+
+
 class Rule(object):
     """Generic class for rules."""
 
@@ -44,11 +47,14 @@ class FOILRuleB(Rule):
     :param literal: last literal of the body
     :type literal: Term | None
     """
-    def __init__(self, parent, literal, previous):
+    def __init__(self, parent, literal, target, previous, correct):
         Rule.__init__(self)
         self.parent = parent
         self.literal = literal
+        self.target = target
         self.previous = previous
+        self.correct = correct
+        self.rule_prob = None
 
     def get_literals(self):
         """Get literals in the rule.
@@ -74,7 +80,7 @@ class FOILRuleB(Rule):
         :return: new rule
         :rtype: FOILRuleB
         """
-        return FOILRuleB(self, literal, self.previous)
+        return FOILRuleB(self, literal, self.target, self.previous, self.correct)
 
     def to_clauses(self, functor=None):
         """Transform rule into ProbLog clauses
@@ -90,16 +96,32 @@ class FOILRuleB(Rule):
             previous = []
 
         literals = self.get_literals()
-        head = literals[0]
+        head = literals[0].with_probability(self.get_rule_probability())
         body = And.from_list(literals[1:])
 
         if functor is not None:
             head = Term(functor, *head.args)
         return previous + [Clause(head, body)]
 
+    def set_rule_probability(self, probability=None):
+        rule = self
+        while rule.parent:
+            rule = rule.parent
+        rule.rule_prob = probability
+
+    def get_rule_probability(self):
+        rule = self
+        while rule.parent:
+            rule = rule.parent
+        return rule.rule_prob
+
     def __str__(self):
         literals = self.get_literals()
-        return '%s :- %s' % (literals[0], ', '.join(map(str, literals[1:])))
+        head = literals[0].with_probability(self.get_rule_probability())
+        if len(literals) == 1:
+            return '%s :- fail.' % (head,)
+        else:
+            return '%s :- %s' % (head, ', '.join(map(str, literals[1:])))
 
 
 class FOILRule(FOILRuleB):
@@ -111,10 +133,10 @@ class FOILRule(FOILRuleB):
     :type previous: FOILRuleB
     """
 
-    def __init__(self, target, previous=None):
-        FOILRuleB.__init__(self, None, None, previous)
-        self.target = target
-        self.previous = previous
+    def __init__(self, target=None, previous=None, correct=None):
+        if target is None and previous is not None:
+            target = previous.target
+        FOILRuleB.__init__(self, None, None, target, previous, correct)
 
     def get_literals(self):
         """Get literals in the rule.
@@ -131,16 +153,6 @@ class FOILRule(FOILRuleB):
         :rtype: Term
         """
         return None
-
-    def __and__(self, literal):
-        """Add a literal to the body of the rule.
-
-        :param literal: literal to add
-        :type literal: Term
-        :return: new rule
-        :rtype: FOILRuleB
-        """
-        return FOILRuleB(self, literal, self.previous)
 
     def __str__(self):
         return '%s' % self.target

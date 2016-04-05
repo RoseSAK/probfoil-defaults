@@ -1,3 +1,9 @@
+
+from problog.engine import DefaultEngine
+from problog.logic import Term
+from problog import get_evaluatable
+
+
 class DataFile(object):
     """Represents a data file. This is a wrapper around a ProbLog file that offers direct
     querying and evaluation functionality.
@@ -6,8 +12,11 @@ class DataFile(object):
     :type source: LogicProgram
     """
 
-    def __init__(self, source):
-        self._database = DefaultEngine().prepare(source)
+    def __init__(self, *sources):
+        self._database = DefaultEngine().prepare(sources[0])
+        for source in sources[1:]:
+            for clause in source:
+                self._database += clause
 
     def query(self, functor, arity=None, arguments=None):
         """Perform a query on the data.
@@ -40,11 +49,15 @@ class DataFile(object):
         :return: ground program
         :rtype: LogicFormula
         """
-        db = self._database.extend()
-        target = None
-        for clause in rule.to_clauses(functor):
-            target = clause.head
-            db += clause
+        if rule is None:
+            db = self._database
+            target = Term(functor)
+        else:
+            db = self._database.extend()
+            target = None
+            for clause in rule.to_clauses(functor):
+                target = clause.head
+                db += clause
 
         if arguments is not None:
             queries = [target.with_args(*args) for args in arguments]
