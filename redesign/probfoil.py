@@ -298,8 +298,10 @@ def argparser():
     parser.add_argument('files', nargs='+')
     parser.add_argument('-1', '--det-rules', action='store_true', dest='probfoil1',
                         help='learn deterministic rules')
-    parser.add_argument('-m', help='parameter m for m-estimate', type=float, default=argparse.SUPPRESS)
-    parser.add_argument('-v', action='count', dest='verbose', default=None)
+    parser.add_argument('-m', help='parameter m for m-estimate', type=float,
+                        default=argparse.SUPPRESS)
+    parser.add_argument('-v', action='count', dest='verbose', default=None,
+                        help='increase verbosity (repeat for more)')
     return parser
 
 if __name__ == '__main__':
