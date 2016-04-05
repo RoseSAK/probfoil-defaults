@@ -12,10 +12,10 @@ from logging import getLogger
 
 from itertools import product
 
-import sys
+import time
 import argparse
 
-from score import rates, accuracy, m_estimate, precision, recall
+from score import rates, accuracy, m_estimate, precision, recall, m_estimate_future
 
 
 class LearnEntail(object):
@@ -108,6 +108,9 @@ class ProbFOIL(LearnEntail):
         getLogger(self._logger).info('Negative weight (N): %d' %
                                      (len(self._scores_correct) - sum(self._scores_correct)))
 
+        self.interrupted = False
+        self._stats_evaluations = 0
+
     def best_rule(self, current):
         """Find the best rule to extend the current rule set.
 
@@ -121,23 +124,38 @@ class ProbFOIL(LearnEntail):
         current_rule.processed = False
 
         best_rule = current_rule
-        candidates = CandidateBeam(self._beamsize)
-        candidates.push(current_rule)
-        while candidates:
-            next_candidates = CandidateBeam(self._beamsize)
+        self.interrupted = False
+        try:
+            candidates = CandidateBeam(self._beamsize)
+            candidates.push(current_rule)
+            iteration = 1
             while candidates:
-                current_rule = candidates.pop()
-                for ref in self.language.refine(current_rule):
-                    rule = current_rule & ref
-                    rule.scores = self._compute_scores_predict(rule)
-                    rule.score = self._compute_rule_score(rule)
-                    rule.processed = False
-                    getLogger(self._logger).debug('%s %s %s' % (rule, rule.score, rates(rule)))
-                    if rule.score > current_rule.score:
-                        next_candidates.push(rule)
-                    if rule.score > best_rule.score:
-                        best_rule = rule
-            candidates = next_candidates
+                next_candidates = CandidateBeam(self._beamsize)
+                getLogger(self._logger).debug('Candidates for iteration %s:' % iteration)
+                iteration += 1
+                getLogger(self._logger).debug(candidates)
+                while candidates:
+                    current_rule = candidates.pop()
+                    for ref in self.language.refine(current_rule):
+                        rule = current_rule & ref
+                        rule.scores = self._compute_scores_predict(rule)
+                        self._stats_evaluations += 1
+                        rule.score = self._compute_rule_score(rule)
+                        rule.score_future = self._compute_rule_future_score(rule)
+                        rule.processed = False
+
+                        if rule.score_future <= best_rule.score:
+                            getLogger(self._logger).log(9, '%s %s %s %s [REJECT]' % (rule, rule.score, rates(rule), rule.score_future))
+                        else:
+                            next_candidates.push(rule)
+                            getLogger(self._logger).log(9, '%s %s %s %s [ACCEPT]' % (rule, rule.score, rates(rule), rule.score_future))
+
+                        if rule.score > best_rule.score:
+                            best_rule = rule
+                candidates = next_candidates
+        except KeyboardInterrupt:
+            self.interrupted = True
+            getLogger(self._logger).info('LEARNING INTERRUPTED BY USER')
         self._select_rule(best_rule)
         return best_rule
 
@@ -154,14 +172,22 @@ class ProbFOIL(LearnEntail):
                 current_score = new_score
             else:
                 break
+            if self.interrupted:
+                break
 
         return hypothesis
 
     def _compute_rule_score(self, rule):
         return m_estimate(rule, self._m_estimate)
 
+    def _compute_rule_future_score(self, rule):
+        return m_estimate_future(rule, self._m_estimate)
+
     def _select_rule(self, rule):
         pass
+
+    def statistics(self):
+        return [('Rule evaluations', self._stats_evaluations)]
 
 
 class ProbFOIL2(ProbFOIL):
@@ -186,7 +212,10 @@ class ProbFOIL2(ProbFOIL):
             s = u - l
             rule.scores[i] = l + x * s
 
-    def _compute_rule_score(self, rule):
+    def _compute_rule_future_score(self, rule):
+        return self._compute_rule_score(rule, future=True)
+
+    def _compute_rule_score(self, rule, future=False):
         if rule.previous is None:
             scores_previous = [0.0] * len(rule.scores)
         else:
@@ -232,7 +261,10 @@ class ProbFOIL2(ProbFOIL):
 
         max_x = 1.0
         tp_x = pl_total + tp_base + tp_prev
-        fp_x = ds_total - pl_total + fp_base + fp_prev
+        if future:
+            fp_x = fp_prev
+        else:
+            fp_x = ds_total - pl_total + fp_base + fp_prev
         score_x = comp_m_estimate(tp_x, fp_x)
         max_score = score_x
 
@@ -247,7 +279,11 @@ class ProbFOIL2(ProbFOIL):
                     # There is a change in y-value.
                     x = prev_y  # set current value of x
                     tp_x = pl_running + x * (ds_total - ds_running) + x * tp_base + tp_prev
-                    fp_x = x * ds_running - pl_running + x * fp_base + fp_prev
+                    if future:
+                        fp_x = fp_prev
+                    else:
+                        fp_x = x * ds_running - pl_running + x * fp_base + fp_prev
+
                     score_x = comp_m_estimate(tp_x, fp_x)
 
                     if max_score is None or score_x > max_score:
@@ -275,11 +311,17 @@ def main(args):
         learn_class = ProbFOIL
     else:
         learn_class = ProbFOIL2
-    learn = learn_class(data, symmetry_breaking=False, beam_size=1, logger=logger, **vars(args))
+
+    time_start = time.time()
+    learn = learn_class(data, logger=logger, **vars(args))
+    time_total = time.time() - time_start
 
     hypothesis = learn.learn()
 
-    print ('================= FINAL THEORY =================')
+    if learn.interrupted:
+        print('================ PARTIAL THEORY ================')
+    else:
+        print('================= FINAL THEORY =================')
     rule = hypothesis
     rules = [rule]
     while rule.previous:
@@ -288,10 +330,13 @@ def main(args):
     for rule in reversed(rules):
         print (rule)
     print ('==================== SCORES ====================')
-    print ('Accuracy:\t', accuracy(hypothesis))
-    print ('Precision:\t', precision(hypothesis))
-    print ('Recall:\t', recall(hypothesis))
-
+    print ('            Accuracy:\t', accuracy(hypothesis))
+    print ('           Precision:\t', precision(hypothesis))
+    print ('              Recall:\t', recall(hypothesis))
+    print ('================== STATISTICS ==================')
+    for name, value in learn.statistics():
+        print ('%20s:\t%s' % (name, value))
+    print ('          Total time:\t%.4fs' % time_total)
 
 def argparser():
     parser = argparse.ArgumentParser()
@@ -300,8 +345,12 @@ def argparser():
                         help='learn deterministic rules')
     parser.add_argument('-m', help='parameter m for m-estimate', type=float,
                         default=argparse.SUPPRESS)
+    parser.add_argument('-b', '--beam-size', type=int, default=5,
+                        help='size of beam for beam search')
     parser.add_argument('-v', action='count', dest='verbose', default=None,
                         help='increase verbosity (repeat for more)')
+    parser.add_argument('--symmetry-breaking', action='store_true',
+                        help='avoid symmetries in refinement operator')
     return parser
 
 if __name__ == '__main__':

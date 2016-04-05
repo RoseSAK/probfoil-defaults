@@ -29,6 +29,9 @@ class BestCandidate(CandidateSet):
         else:
             raise IndexError('Candidate set is empty!')
 
+    def peek(self):
+        return self.candidate
+
     def __bool__(self):
         return not self.candidate is None
 

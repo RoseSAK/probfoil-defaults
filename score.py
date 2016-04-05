@@ -20,7 +20,30 @@ def rates(rule):
 
 
 def m_estimate(rule, m=1):
+    """Compute the m-estimate of the rule.
+
+    :param rule: rule to score
+    :param m: m parameter for m-estimate
+    :return: value of m-estimate
+    """
     tp, fp, tn, fn = rates(rule)
+    p = tp + fn
+    n = tn + fp
+    return (tp + (m * p / (p + n))) / (tp + fp + m)
+
+
+def m_estimate_future(rule, m=1):
+    """Compute the m-estimate for the optimal extension of this rule.
+
+    The optimal extension has the same TP-rate and zero FP-rate.
+
+    :param rule: rule to score
+    :param m: m parameter for m-estimate
+    :return: value of m-estimate assuming an optimal extension
+    """
+
+    tp, fp, tn, fn = rates(rule)
+    fp = 0.0
     p = tp + fn
     n = tn + fp
     return (tp + (m * p / (p + n))) / (tp + fp + m)

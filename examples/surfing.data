@@ -1,12 +1,12 @@
 
 base(windok(day)).
-% mode(windok(+)).
+mode(windok(+)).
 
 base(pop(day)).
 mode(pop(+)).
 
 base(sunshine(day)).
-% mode(sunshine(+)).
+mode(sunshine(+)).
 
 base(surfing(day)).
 learn(surfing/1).
