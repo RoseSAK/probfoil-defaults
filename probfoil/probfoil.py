@@ -1,96 +1,19 @@
 from __future__ import print_function
 
 from problog.program import PrologFile
-from problog.logic import Term, Var
 from data import DataFile
 from language import TypeModeLanguage
-from problog.util import init_logger, Timer
+from problog.util import init_logger
 from rule import FOILRule
-from learn import CandidateBeam
+from learn import CandidateBeam, LearnEntail
 
 from logging import getLogger
 
-from itertools import product
-
 import time
 import argparse
+import sys
 
 from score import rates, accuracy, m_estimate, precision, recall, m_estimate_future
-
-
-class LearnEntail(object):
-
-    def __init__(self, data, language, logger=None):
-        self._language = language
-        self._target = None
-        self._examples = None
-        self._logger = logger
-
-        self._data = data
-        self._scores_correct = None
-
-    @property
-    def target(self):
-        """The target predicate of the learning problem."""
-        return self._target
-
-    @property
-    def examples(self):
-        """The examples (tuple of target arguments) of the learning problem."""
-        return self._examples
-
-    @property
-    def language(self):
-        """Language specification of the learning problem."""
-        return self._language
-
-    def load(self, data):
-        """Load the settings from a data file.
-
-        Initializes language, target and examples.
-
-        :param data: data file
-        :type data: DataFile
-        """
-        self.language.load(data)  # for types and modes
-
-        target = data.query('learn', 1)[0]
-        target_functor, target_arity = target[0].args
-        target_arguments = [Var(chr(65 + i)) for i in range(0, int(target_arity))]
-        self._target = Term(str(target_functor), *target_arguments)
-
-        # Find examples:
-        #  if example_mode is closed, we will only use examples that are defined in the data
-        #      this includes facts labeled with probability 0.0 (i.e. negative example)
-        #  otherwise, the examples will consist of all combinations of values appearing in the data
-        #      (taking into account type information)
-        example_mode = data.query(Term('example_mode'), 1)
-        if example_mode and str(example_mode[0][0]) == 'auto':
-            types = self.language.get_argument_types(self._target.functor, self._target.arity)
-            values = [self.language.get_type_values(t) for t in types]
-            self._examples = list(product(*values))
-        else:
-            self._examples = [r for r in data.query(self._target.functor, self._target.arity)]
-
-        with Timer('Computing scores', logger=self._logger):
-            self._scores_correct = self._compute_scores_correct()
-
-    def _compute_scores_correct(self):
-        """Computes the score for each example."""
-        result = self._data.evaluate(rule=None, functor=self.target.functor, arguments=self.examples)
-
-        scores_correct = []
-        for example in self.examples:
-            scores_correct.append(result.get(Term(self.target.functor, *example), 0.0))
-        return scores_correct
-
-    def _compute_scores_predict(self, rule):
-        functor = 'eval_rule'
-        result = self._data.evaluate(rule, functor=functor, arguments=self.examples)
-        scores_predict = []
-        for example in self.examples:
-            scores_predict.append(result.get(Term(functor, *example), 0.0))
-        return scores_predict
 
 
 class ProbFOIL(LearnEntail):
@@ -307,7 +230,8 @@ class ProbFOIL2(ProbFOIL):
         return max_score
 
 
-def main(args):
+def main(argv=sys.argv[1:]):
+    args = argparser().parse_args(argv)
 
     logger = 'probfoil'
 
@@ -363,6 +287,6 @@ def argparser():
     return parser
 
 if __name__ == '__main__':
-    main(argparser().parse_args())
+    main()
 
 
