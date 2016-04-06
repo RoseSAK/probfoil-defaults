@@ -55,6 +55,7 @@ class FOILRuleB(Rule):
         self.previous = previous
         self.correct = correct
         self.rule_prob = None
+        self.score = None
 
     def get_literals(self):
         """Get literals in the rule.
@@ -122,6 +123,15 @@ class FOILRuleB(Rule):
             return '%s :- fail.' % (head,)
         else:
             return '%s :- %s' % (head, ', '.join(map(str, literals[1:])))
+
+    def is_equivalent(self, other):
+        if self.score != other.score:
+            return False
+        literals1 = sorted(self.get_literals())
+        literals2 = sorted(self.get_literals())
+
+        return literals1 == literals2
+
 
 
 class FOILRule(FOILRuleB):

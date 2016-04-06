@@ -115,7 +115,10 @@ class TypeModeLanguage(BaseLanguage):
                     if self._symmetry_breaking:
                         generated.add(t)
                     t = t.apply(TypeModeLanguage.ReplaceNew(varcount))
-                    t.refine_state = generated.copy()
+                    if self._symmetry_breaking:
+                        t.refine_state = generated.copy()
+                    else:
+                        t.refine_state = generated | {t, -t}
                     yield t
 
         # 2) a negative refinement
@@ -142,7 +145,10 @@ class TypeModeLanguage(BaseLanguage):
                     if self._symmetry_breaking:
                         generated.add(t)
                     t = t.apply(TypeModeLanguage.ReplaceNew(varcount))
-                    t.refine_state = generated.copy()
+                    if self._symmetry_breaking:
+                        t.refine_state = generated.copy()
+                    else:
+                        t.refine_state = generated | {t, -t}
                     yield t
 
     def get_type_values(self, typename):

@@ -29,9 +29,6 @@ class BestCandidate(CandidateSet):
         else:
             raise IndexError('Candidate set is empty!')
 
-    def peek(self):
-        return self.candidate
-
     def __bool__(self):
         return not self.candidate is None
 
@@ -53,15 +50,29 @@ class CandidateBeam(CandidateSet):
         for i, x in enumerate(self._candidates):
             if x.score < candidate.score:
                 self._candidates.insert(i, candidate)
-                return
+                return False
+            elif x.is_equivalent(candidate):
+                raise ValueError('duplicate')
         self._candidates.append(candidate)
+        return True
 
     def push(self, candidate):
+        """Adds a candidate to the beam.
+
+        :param candidate: candidate to add
+        :return: True if candidate was accepted, False otherwise
+        """
         if candidate.score > self._bottom_score():
             #  We should add it to the beam.
-            self._insert(candidate)
-            if len(self._candidates) > self._size:
-                self._candidates.pop(-1)
+            try:
+                is_last = self._insert(candidate)
+                if len(self._candidates) > self._size:
+                    self._candidates.pop(-1)
+                    return not is_last
+            except ValueError:
+                return False
+            return True
+        return False
 
     def pop(self):
         return self._candidates.pop(0)
@@ -76,5 +87,5 @@ class CandidateBeam(CandidateSet):
         s = '==================================\n'
         for candidate in self._candidates:
             s += str(candidate) + ' ' + str(candidate.score) + '\n'
-        s += '==================================\n'
+        s += '=================================='
         return s

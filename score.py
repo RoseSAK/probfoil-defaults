@@ -43,9 +43,9 @@ def m_estimate_future(rule, m=1):
     """
 
     tp, fp, tn, fn = rates(rule)
-    fp = 0.0
     p = tp + fn
     n = tn + fp
+    fp = 0.0
     return (tp + (m * p / (p + n))) / (tp + fp + m)
 
 

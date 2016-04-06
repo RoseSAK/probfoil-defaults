@@ -122,6 +122,7 @@ class ProbFOIL(LearnEntail):
         current_rule.scores = [0.0] * len(self._scores_correct)
         current_rule.score = self._compute_rule_score(current_rule)
         current_rule.processed = False
+        current_rule.avoid_literals = set()
 
         best_rule = current_rule
         self.interrupted = False
@@ -136,19 +137,27 @@ class ProbFOIL(LearnEntail):
                 getLogger(self._logger).debug(candidates)
                 while candidates:
                     current_rule = candidates.pop()
+                    current_rule_literal_avoid = current_rule.avoid_literals
+
                     for ref in self.language.refine(current_rule):
+                        if ref in current_rule_literal_avoid:
+                            continue
                         rule = current_rule & ref
                         rule.scores = self._compute_scores_predict(rule)
                         self._stats_evaluations += 1
                         rule.score = self._compute_rule_score(rule)
                         rule.score_future = self._compute_rule_future_score(rule)
                         rule.processed = False
+                        rule.avoid_literals = current_rule_literal_avoid
 
                         if rule.score_future <= best_rule.score:
-                            getLogger(self._logger).log(9, '%s %s %s %s [REJECT]' % (rule, rule.score, rates(rule), rule.score_future))
+                            getLogger(self._logger).log(8, '%s %s %s %s [REJECT potential]' % (rule, rule.score, rates(rule), rule.score_future))
+                            current_rule_literal_avoid.add(rule.get_literal())
                         else:
-                            next_candidates.push(rule)
-                            getLogger(self._logger).log(9, '%s %s %s %s [ACCEPT]' % (rule, rule.score, rates(rule), rule.score_future))
+                            if next_candidates.push(rule):
+                                getLogger(self._logger).log(9, '%s %s %s %s [ACCEPT]' % (rule, rule.score, rates(rule), rule.score_future))
+                            else:
+                                getLogger(self._logger).log(8, '%s %s %s %s [REJECT beam]' % (rule, rule.score, rates(rule), rule.score_future))
 
                         if rule.score > best_rule.score:
                             best_rule = rule
