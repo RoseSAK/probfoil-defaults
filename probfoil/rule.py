@@ -1,6 +1,6 @@
-
+from __future__ import print_function
 from problog.logic import Term, Var, Clause, And
-
+from problog.engine_builtin import StructSort
 
 class Rule(object):
     """Generic class for rules."""
@@ -96,9 +96,18 @@ class FOILRuleB(Rule):
         else:
             previous = []
 
+        inequalities = []
+
+        object_identity = True
+        if object_identity:
+            variables = list(self.get_variables())
+            for i, v1 in enumerate(variables):
+                for v2 in variables[i + 1:]:
+                    inequalities.append(Term('\=', v1, v2))
+
         literals = self.get_literals()
         head = literals[0].with_probability(self.get_rule_probability())
-        body = And.from_list(literals[1:])
+        body = And.from_list(literals[1:] + inequalities)
 
         if functor is not None:
             head = Term(functor, *head.args)
@@ -120,18 +129,24 @@ class FOILRuleB(Rule):
         literals = self.get_literals()
         head = literals[0].with_probability(self.get_rule_probability())
         if len(literals) == 1:
-            return '%s :- fail.' % (head,)
+            return '%s :- true.' % (head,)
         else:
             return '%s :- %s' % (head, ', '.join(map(str, literals[1:])))
 
     def is_equivalent(self, other):
-        if self.score != other.score:
+        if abs(self.score - other.score) > 1e-8:
             return False
-        literals1 = sorted(self.get_literals())
-        literals2 = sorted(self.get_literals())
+        literals1 = sorted(self.get_literals(), key=StructSort)
+        literals2 = sorted(other.get_literals(), key=StructSort)
 
-        return literals1 == literals2
+        result = literals1 == literals2
+        return result
 
+    def __len__(self):
+        if self.parent:
+            return len(self.parent) + 1
+        else:
+            return 1
 
 
 class FOILRule(FOILRuleB):
@@ -165,4 +180,4 @@ class FOILRule(FOILRuleB):
         return None
 
     def __str__(self):
-        return '%s :- fail' % self.target
+        return '%s :- true' % self.target

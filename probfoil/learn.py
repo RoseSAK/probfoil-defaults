@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from problog.logic import Var, Term
 from itertools import product
 from problog.util import Timer
@@ -54,6 +56,16 @@ class LearnEntail(object):
             types = self.language.get_argument_types(self._target.functor, self._target.arity)
             values = [self.language.get_type_values(t) for t in types]
             self._examples = list(product(*values))
+        elif example_mode and str(example_mode[0][0]) == 'balance':
+            # Balancing based on count only
+            pos_examples = [r for r in data.query(self._target.functor, self._target.arity)]
+            pos_count = len(pos_examples)
+            types = self.language.get_argument_types(self._target.functor, self._target.arity)
+            values = [self.language.get_type_values(t) for t in types]
+            from random import shuffle
+            neg_examples = list(product(*values))
+            shuffle(neg_examples)
+            self._examples = pos_examples + neg_examples[:pos_count]
         else:
             self._examples = [r for r in data.query(self._target.functor, self._target.arity)]
 
@@ -127,11 +139,11 @@ class CandidateBeam(CandidateSet):
 
     def _insert(self, candidate):
         for i, x in enumerate(self._candidates):
-            if x.score < candidate.score:
+            if x.is_equivalent(candidate):
+                raise ValueError('duplicate')
+            elif x.score < candidate.score:
                 self._candidates.insert(i, candidate)
                 return False
-            elif x.is_equivalent(candidate):
-                raise ValueError('duplicate')
         self._candidates.append(candidate)
         return True
 

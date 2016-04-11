@@ -4,6 +4,7 @@ Module name
 
 from __future__ import print_function
 
+import math
 
 def rates(rule):
     tp = 0.0
@@ -66,3 +67,61 @@ def recall(rule):
     tp, fp, tn, fn = rates(rule)
     return tp / (tp + fn)
 
+
+def chi2_cdf(x):
+    return math.erf(math.sqrt(x / 2))
+
+
+def pvalue2chisquare(s, low=0.0, high=100.0, precision=1e-8):
+    """Helper function for transforming significance p-value into ChiSquare decision value."""
+    v = (low + high) / 2
+    r = chi2_cdf(v)
+    if -precision < r - s < precision:
+        return v
+    elif r > s:
+        return pvalue2chisquare(s, low, v)
+    else:
+        return pvalue2chisquare(s, v, high)
+
+
+def significance(rule, calc_max=False):
+    """Compute the significance of a rule (chi-square distributed)."""
+
+    c_tp, c_fp, c_tn, c_fn = rates(rule)
+
+    pos = c_tp + c_fn
+    neg = c_fp + c_tn
+
+    if rule.previous:
+        p_tp, p_fp, p_tn, p_fn = rates(rule.previous)
+    else:
+        p_tp, p_fp, p_tn, p_fn = 0.0, 0.0, neg, pos
+
+    if calc_max:
+        s_tp_max = c_tp     # TODO
+        s_tp = s_tp_max - p_tp
+        s_fp = 0
+    else:
+        s_tp = c_tp - p_tp
+        s_fp = c_fp - p_fp
+
+    s_pos = c_tp + c_fn
+    s_neg = c_fp + c_tn
+    s_all = s_pos + s_neg
+
+    c = s_tp + s_fp     # max: c = s_tp
+    if c == 0:
+        return 0
+
+    f_pos_c = s_tp / c     # max: f_pos_c = 1
+    f_neg_c = 1 - f_pos_c  # max: f_neg_c == 0
+
+    f_pos = s_pos / s_all
+    f_neg = s_neg / s_all
+
+    pos_log = math.log(f_pos_c / f_pos) if f_pos_c > 0 else 0  # max: pos_log = -log(sP / sM)
+    neg_log = math.log(f_neg_c / f_neg) if f_neg_c > 0 else 0  # max: neg_log = 0
+
+    l = 2 * c * (f_pos_c * pos_log + f_neg_c * neg_log)  # max: 2 * sTP * -log(sP/sM)
+
+    return l

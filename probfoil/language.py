@@ -114,12 +114,12 @@ class TypeModeLanguage(BaseLanguage):
                 if t not in generated:
                     if self._symmetry_breaking:
                         generated.add(t)
-                    t = t.apply(TypeModeLanguage.ReplaceNew(varcount))
+                    t_i = t.apply(TypeModeLanguage.ReplaceNew(varcount))
                     if self._symmetry_breaking:
-                        t.refine_state = generated.copy()
+                        t_i.refine_state = generated.copy()
                     else:
-                        t.refine_state = generated | {t, -t}
-                    yield t
+                        t_i.refine_state = generated | {t, -t, t_i, -t_i}
+                    yield t_i
 
         # 2) a negative refinement
         for functor, modestr in self._modes:
@@ -144,12 +144,12 @@ class TypeModeLanguage(BaseLanguage):
                 if t not in generated:
                     if self._symmetry_breaking:
                         generated.add(t)
-                    t = t.apply(TypeModeLanguage.ReplaceNew(varcount))
+                    t_i = t.apply(TypeModeLanguage.ReplaceNew(varcount))
                     if self._symmetry_breaking:
-                        t.refine_state = generated.copy()
+                        t_i.refine_state = generated.copy()
                     else:
-                        t.refine_state = generated | {t, -t}
-                    yield t
+                        t_i.refine_state = generated | {t, -t, t_i, -t_i}
+                    yield t_i
 
     def get_type_values(self, typename):
         """Get all values that occur in the data for a given type.
