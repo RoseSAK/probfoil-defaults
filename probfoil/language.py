@@ -36,6 +36,7 @@ class TypeModeLanguage(BaseLanguage):
         self._modes = []    # list[tuple] : list of functor, modestr pairs
 
         self._symmetry_breaking = symmetry_breaking
+        self._allow_negation = True
 
     def add_types(self, functor, argtypes):
         """Add type information for a predicate.
@@ -115,6 +116,7 @@ class TypeModeLanguage(BaseLanguage):
                     if self._symmetry_breaking:
                         generated.add(t)
                     t_i = t.apply(TypeModeLanguage.ReplaceNew(varcount))
+                    t_i.prototype = t
                     if self._symmetry_breaking:
                         t_i.refine_state = generated.copy()
                     else:
@@ -122,34 +124,36 @@ class TypeModeLanguage(BaseLanguage):
                     yield t_i
 
         # 2) a negative refinement
-        for functor, modestr in self._modes:
-            if '-' in modestr:
-                # No new variables allowed for negative literals
-                continue
-            arguments = []
-            arity = len(modestr)
-            types = self.get_argument_types(functor, arity)
-            for argmode, argtype in zip(modestr, types):
-                if argmode == '+':
-                    # All possible variables of the given type
-                    arguments.append(variables.get(argtype, []))
-                elif argmode == 'c':
-                    # Add a constant
-                    arguments.append(self.get_type_values(argtype))
-                    pass
-                else:
-                    raise ValueError("Unknown mode specifier '%s'" % argmode)
-            for args in product(*arguments):
-                t = -Term(functor, *args)
-                if t not in generated:
-                    if self._symmetry_breaking:
-                        generated.add(t)
-                    t_i = t.apply(TypeModeLanguage.ReplaceNew(varcount))
-                    if self._symmetry_breaking:
-                        t_i.refine_state = generated.copy()
+        if self._allow_negation:
+            for functor, modestr in self._modes:
+                if '-' in modestr:
+                    # No new variables allowed for negative literals
+                    continue
+                arguments = []
+                arity = len(modestr)
+                types = self.get_argument_types(functor, arity)
+                for argmode, argtype in zip(modestr, types):
+                    if argmode == '+':
+                        # All possible variables of the given type
+                        arguments.append(variables.get(argtype, []))
+                    elif argmode == 'c':
+                        # Add a constant
+                        arguments.append(self.get_type_values(argtype))
+                        pass
                     else:
-                        t_i.refine_state = generated | {t, -t, t_i, -t_i}
-                    yield t_i
+                        raise ValueError("Unknown mode specifier '%s'" % argmode)
+                for args in product(*arguments):
+                    t = -Term(functor, *args)
+                    if t not in generated:
+                        if self._symmetry_breaking:
+                            generated.add(t)
+                        t_i = t.apply(TypeModeLanguage.ReplaceNew(varcount))
+                        t_i.prototype = t
+                        if self._symmetry_breaking:
+                            t_i.refine_state = generated.copy()
+                        else:
+                            t_i.refine_state = generated | {t, -t, t_i, -t_i}
+                        yield t_i
 
     def get_type_values(self, typename):
         """Get all values that occur in the data for a given type.
@@ -210,6 +214,11 @@ class TypeModeLanguage(BaseLanguage):
             arg_values = zip(*data.query(*predicate))
             for a, t in zip(arg_values, types):
                 self.add_values(t, *a)
+
+        if data.query('negation_off', 0):
+            self._allow_negation = False
+        else:
+            self._allow_negation = True
 
     class ReplaceNew(object):
         """Helper class for replacing new variables (indicated by name '#') by unique variables.

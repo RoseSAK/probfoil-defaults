@@ -1,4 +1,4 @@
-learn(p/2).
+% learn(p/2).
 % learn(q/1).
 
 mode(a(+)).

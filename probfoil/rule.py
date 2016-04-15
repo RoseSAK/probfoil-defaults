@@ -98,7 +98,7 @@ class FOILRuleB(Rule):
 
         inequalities = []
 
-        object_identity = True
+        object_identity = False
         if object_identity:
             variables = list(self.get_variables())
             for i, v1 in enumerate(variables):
@@ -124,6 +124,12 @@ class FOILRuleB(Rule):
         while rule.parent:
             rule = rule.parent
         return rule.rule_prob
+
+    def has_new_variables(self):
+        if not self.parent:
+            return self.target.variables() - self.parent.get_variables()
+        else:
+            return self.get_literal().variables() - self.parent.get_variables()
 
     def __str__(self):
         literals = self.get_literals()

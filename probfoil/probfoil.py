@@ -1,9 +1,15 @@
+"""Implementation of the Prob2FOIL algorithm.
+
+
+"""
+
 from __future__ import print_function
 
 from problog.program import PrologFile
 from data import DataFile
 from language import TypeModeLanguage
 from problog.util import init_logger
+from problog.logic import Term
 from rule import FOILRule
 from learn import CandidateBeam, LearnEntail
 
@@ -12,6 +18,7 @@ from logging import getLogger
 import time
 import argparse
 import sys
+import random
 
 from score import rates, accuracy, m_estimate, precision, recall, m_estimate_future, significance, pvalue2chisquare
 
@@ -19,7 +26,7 @@ from score import rates, accuracy, m_estimate, precision, recall, m_estimate_fut
 class ProbFOIL(LearnEntail):
 
     def __init__(self, data, beam_size=5, logger='probfoil', m=1, l=None, p=None, **kwargs):
-        LearnEntail.__init__(self, data, TypeModeLanguage(**kwargs), logger=logger)
+        LearnEntail.__init__(self, data, TypeModeLanguage(**kwargs), logger=logger, **kwargs)
 
         self._beamsize = beam_size
         self._m_estimate = m
@@ -49,7 +56,10 @@ class ProbFOIL(LearnEntail):
         current_rule = FOILRule(target=self.target, previous=current, correct=self._scores_correct)
         current_rule.scores = [1.0] * len(self._scores_correct)
         current_rule.score = self._compute_rule_score(current_rule)
+        c_tp, c_fp, c_tn, c_fn = rates(current_rule)
+        current_rule.score_cmp = (current_rule.score, c_tp)
         current_rule.processed = False
+        current_rule.probation = False
         current_rule.avoid_literals = set()
         if current:
             prev_tp = rates(current)[0]
@@ -66,42 +76,73 @@ class ProbFOIL(LearnEntail):
             while candidates:
                 next_candidates = CandidateBeam(self._beamsize)
 
+                getLogger(self._logger).debug('Best rule so far: %s [%s]' % (best_rule, best_rule.score))
                 getLogger(self._logger).debug('Candidates for iteration %s:' % iteration)
-                iteration += 1
                 getLogger(self._logger).debug(candidates)
+                iteration += 1
                 while candidates:
                     current_rule = candidates.pop()
-                    current_rule_literal_avoid = current_rule.avoid_literals
-
+                    current_rule_literal_avoid = set(current_rule.avoid_literals)
+                    getLogger(self._logger).log(8, 'TO AVOID: %s => %s' % (current_rule, current_rule.avoid_literals))
+                    c_tp, c_fp, c_tn, c_fn = rates(current_rule)
                     if self._max_length and len(current_rule) >= self._max_length:
                         pass
                     else:
                         for ref in self.language.refine(current_rule):
-                            if ref in current_rule_literal_avoid:
+                            if ref in current_rule.avoid_literals:  # or ref.prototype in current_rule.avoid_literals:
+                                getLogger(self._logger).log(8, 'SKIPPED literal %s for rule %s' % (ref, current_rule))
                                 continue
                             rule = current_rule & ref
                             getLogger(self._logger).log(7, 'EVALUATING RULE %s' % rule)
                             rule.scores = self._compute_scores_predict(rule)
                             self._stats_evaluations += 1
                             rule.score = self._compute_rule_score(rule)
+                            r_tp, r_fp, r_tn, r_fn = rates(rule)
+                            rule.score_cmp = (rule.score, r_tp)
                             rule.score_future = self._compute_rule_future_score(rule)
                             rule.processed = False
                             rule.avoid_literals = current_rule_literal_avoid
 
-                            r_tp, r_fp, r_tn, r_fn = rates(rule)
                             if prev_tp > r_tp - 1e-8:       # new rule has no tp improvement over previous
                                 getLogger(self._logger).log(8, '%s %s %s %s [REJECT coverage] %s' % (rule, rule.score, rates(rule), rule.score_future, prev_tp))
-                            elif rule.score_future < best_rule.score:
+                                # remove this literal for all sibling rules
+                                current_rule_literal_avoid.add(ref)
+                                current_rule_literal_avoid.add(ref.prototype)
+                            elif rule.score_future <= best_rule.score:
                                 getLogger(self._logger).log(8, '%s %s %s %s [REJECT potential] %s' % (rule, rule.score, rates(rule), rule.score_future, best_rule.score))
-                                current_rule_literal_avoid.add(rule.get_literal())
+                                # remove this literal for all sibling rules
+                                current_rule_literal_avoid.add(ref)
+                                current_rule_literal_avoid.add(ref.prototype)
+                            elif r_fp > c_fp - 1e-8:  # and not rule.has_new_variables():
+                                # no fp eliminated and no new variables
+                                getLogger(self._logger).log(8, '%s %s %s %s [REJECT noimprov] %s' % (rule, rule.score, rates(rule), rule.score_future, best_rule.score))
+                                # remove this literal for all sibling rules
+                                # current_rule_literal_avoid.add(ref)
+                                # current_rule_literal_avoid.add(ref.prototype)
+                            elif r_fp > c_fp - 1e-8 and current_rule.probation:
+                                getLogger(self._logger).log(8, '%s %s %s %s [REJECT probation] %s' % (rule, rule.score, rates(rule), rule.score_future, best_rule.score))
+                            elif r_fp < 1e-8:
+                                # This rule can not be improved by adding a literal.
+                                # We reject it for future exploration,
+                                #  but we do consider it for best rule.
+                                getLogger(self._logger).log(9, '%s %s %s %s [REJECT* fp] %s' % (rule, rule.score, rates(rule), rule.score_future, prev_tp))
+                                if rule.score_cmp > best_rule.score_cmp:
+                                    getLogger(self._logger).log(9, 'BETTER RULE %s %s > %s' % (rule, rule.score_cmp, best_rule.score_cmp))
+                                    best_rule = rule
                             else:
+                                if r_fp > c_fp - 1e-8:
+                                    rule.probation = True
+                                else:
+                                    rule.probation = False
                                 if next_candidates.push(rule):
                                     getLogger(self._logger).log(9, '%s %s %s %s [ACCEPT]' % (rule, rule.score, rates(rule), rule.score_future))
                                 else:
                                     getLogger(self._logger).log(8, '%s %s %s %s [REJECT beam]' % (rule, rule.score, rates(rule), rule.score_future))
 
-                                if rule.score > best_rule.score:
+                                if rule.score_cmp > best_rule.score_cmp:
+                                    getLogger(self._logger).log(9, 'BETTER RULE %s %s > %s' % (rule, rule.score_cmp, best_rule.score_cmp))
                                     best_rule = rule
+                    # getLogger(self._logger).log(8, 'SKIP ON NEXT %s => %s' % (current_rule, current_rule_literal_avoid))
                 candidates = next_candidates
         except KeyboardInterrupt:
             self.interrupted = True
@@ -113,9 +154,18 @@ class ProbFOIL(LearnEntail):
         self._select_rule(best_rule)
         return best_rule
 
+    def initial_hypothesis(self):
+        initial = FOILRule(self.target, correct=self._scores_correct)
+        initial = initial & Term('fail')
+        initial.scores = [0.0] * len(self._scores_correct)
+        initial.score = self._compute_rule_score(initial)
+        initial.avoid_literals = set()
+        return initial
+
     def learn(self):
-        hypothesis = None
+        hypothesis = self.initial_hypothesis()
         current_score = 0.0
+
 
         while True:
             next_hypothesis = self.best_rule(hypothesis)
@@ -195,20 +245,25 @@ class ProbFOIL2(ProbFOIL):
 
         def eval_x(x, data, future=False):
             pos = 0.0
-            all = len(data)
+            all = 0.0
             tp = 0.0
             fp = 0.0
+            tp_p = 0.0
+            fp_p = 0.0
             for p, l, u in data:
                 pr = l + x * (u - l)
                 tp += min(p, pr)
                 fp += max(0, pr - p)
-                pos += 0.0
+                tp_p += min(p, l)
+                fp_p += max(0, l - p)
+                pos += p
+                all += 1
 
             if future:
-                fp = 0.0
+                fp = fp_p
             m = self._m_estimate
-            mpnp = m * (pos / all)
-            score = (tp + mpnp) / (tp + fp + m)
+            mpnp = m * ((pos - tp_p) / (all - tp_p - fp_p))
+            score = (tp - tp_p + mpnp) / (tp + fp - tp_p - fp_p + m)
             return tp, fp, score
 
         tp_x, fp_x, score_x = eval_x(1.0, data, future)
@@ -243,6 +298,9 @@ class ProbFOIL2(ProbFOIL):
             rule.max_x = max_x
             rule.max_tp = max_tp
             rule.max_fp = max_fp
+
+        if max_x < 1e-8:
+            return 0.0
 
         return max_score
 
@@ -360,9 +418,22 @@ class ProbFOIL2(ProbFOIL):
 def main(argv=sys.argv[1:]):
     args = argparser().parse_args(argv)
 
+    if args.seed:
+        seed = args.seed
+    else:
+        seed = str(random.random())
+    random.seed(seed)
+
     logger = 'probfoil'
 
-    log = init_logger(verbose=args.verbose, name=logger)
+    if args.log is None:
+        logfile = None
+    else:
+        logfile = open(args.log, 'w')
+
+    log = init_logger(verbose=args.verbose, name=logger, out=logfile)
+
+    log.info('Random seed: %s' % seed)
 
     # Load input files
     data = DataFile(*(PrologFile(source) for source in args.files))
@@ -378,6 +449,10 @@ def main(argv=sys.argv[1:]):
     hypothesis = learn.learn()
     time_total = time.time() - time_start
 
+    print ('================ SETTINGS ================')
+    for kv in vars(args).items():
+        print('%20s:\t%s' % kv)
+
     if learn.interrupted:
         print('================ PARTIAL THEORY ================')
     else:
@@ -387,8 +462,13 @@ def main(argv=sys.argv[1:]):
     while rule and rule.previous:
         rule = rule.previous
         rules.append(rule)
-    for rule in reversed(rules):
-        print (rule)
+
+    # First rule is failing rule: don't print it if there are other rules.
+    if len(rules) > 1:
+        for rule in reversed(rules[0:-1]):
+            print (rule)
+    else:
+        print (rules[0])
     print ('==================== SCORES ====================')
     print ('            Accuracy:\t', accuracy(hypothesis))
     print ('           Precision:\t', precision(hypothesis))
@@ -397,6 +477,9 @@ def main(argv=sys.argv[1:]):
     for name, value in learn.statistics():
         print ('%20s:\t%s' % (name, value))
     print ('          Total time:\t%.4fs' % time_total)
+
+    if logfile:
+        logfile.close()
 
 
 def argparser():
@@ -416,6 +499,10 @@ def argparser():
                         help='increase verbosity (repeat for more)')
     parser.add_argument('--symmetry-breaking', action='store_true',
                         help='avoid symmetries in refinement operator')
+    parser.add_argument('--target', '-t', type=str,
+                        help='specify predicate/arity to learn (overrides settings file)')
+    parser.add_argument('-s', '--seed', help='random seed', default=None)
+    parser.add_argument('--log', help='write log to file', default=None)
     return parser
 
 if __name__ == '__main__':
