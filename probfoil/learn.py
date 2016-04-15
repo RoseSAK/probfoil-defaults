@@ -123,6 +123,11 @@ class LearnEntail(object):
         examples = [self.examples[i] for i in to_eval]
         # print (len(set_zero), len(set_one))
 
+        # message = '\n'.join(map(str, rule.to_clauses(functor))) + '\n'
+        # for ex in examples:
+        #     message += str(Term('query', Term(functor, *ex))) + '.\n'
+        # print (message)
+
         # Call ProbLog
         result = self._data.evaluate(rule, functor=functor, arguments=examples)
 

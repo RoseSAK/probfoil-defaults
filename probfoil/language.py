@@ -37,6 +37,7 @@ class TypeModeLanguage(BaseLanguage):
 
         self._symmetry_breaking = symmetry_breaking
         self._allow_negation = True
+        self._allow_recursion = False
 
     def add_types(self, functor, argtypes):
         """Add type information for a predicate.
@@ -88,6 +89,8 @@ class TypeModeLanguage(BaseLanguage):
         variables = self.get_variable_types(*rule.get_literals())
 
         if rule.get_literal():
+            if rule.get_literal().functor == '_recursive':
+                return  # can't extend after recursive
             generated = rule.get_literal().refine_state
         else:
             generated = set()
@@ -155,6 +158,25 @@ class TypeModeLanguage(BaseLanguage):
                             t_i.refine_state = generated | {t, -t, t_i, -t_i}
                         yield t_i
 
+        # 3) recursive
+        if self._allow_recursion and rule.previous.previous:  # recursion in the first rule makes no sense
+            types = self.get_argument_types(rule.target.functor, rule.target.arity)
+
+            arguments = []
+            for argtype in types:
+                arguments.append(variables.get(argtype, []))
+
+            for args in product(*arguments):
+                t = Term('_recursive', *args)
+                t.prototype = t
+                if self._symmetry_breaking:
+                    generated.add(t)
+                if self._symmetry_breaking:
+                    t.refine_state = generated.copy()
+                else:
+                    t.refine_state = generated | {t}
+                yield t
+
     def get_type_values(self, typename):
         """Get all values that occur in the data for a given type.
 
@@ -189,6 +211,11 @@ class TypeModeLanguage(BaseLanguage):
         for lit in literals:
             if lit.is_negated():
                 lit = -lit
+
+            if lit.functor == '_recursive':
+                # Don't need to process this, variables will occur somewhere else
+                #  because _recursive has mode + on all arguments.
+                continue
             types = self.get_argument_types(lit.functor, lit.arity)
             for arg, argtype in zip(lit.args, types):
                 if is_variable(arg) or arg.is_var():
@@ -215,10 +242,11 @@ class TypeModeLanguage(BaseLanguage):
             for a, t in zip(arg_values, types):
                 self.add_values(t, *a)
 
-        if data.query('negation_off', 0):
-            self._allow_negation = False
-        else:
-            self._allow_negation = True
+        for optname, optvalue in data.query('option', 2):
+            if str(optname) == 'negation' and str(optvalue) == 'off':
+                self._allow_negation = False
+            elif str(optname) == 'recursion' and str(optvalue) == 'on':
+                self._allow_recursion = True
 
     class ReplaceNew(object):
         """Helper class for replacing new variables (indicated by name '#') by unique variables.

@@ -142,7 +142,6 @@ class ProbFOIL(LearnEntail):
                                 if rule.score_cmp > best_rule.score_cmp:
                                     getLogger(self._logger).log(9, 'BETTER RULE %s %s > %s' % (rule, rule.score_cmp, best_rule.score_cmp))
                                     best_rule = rule
-                    # getLogger(self._logger).log(8, 'SKIP ON NEXT %s => %s' % (current_rule, current_rule_literal_avoid))
                 candidates = next_candidates
         except KeyboardInterrupt:
             self.interrupted = True
@@ -166,7 +165,6 @@ class ProbFOIL(LearnEntail):
         hypothesis = self.initial_hypothesis()
         current_score = 0.0
 
-
         while True:
             next_hypothesis = self.best_rule(hypothesis)
             new_score = accuracy(next_hypothesis)
@@ -182,6 +180,8 @@ class ProbFOIL(LearnEntail):
                 break
             if self.interrupted:
                 break
+            if hypothesis.get_literal() and hypothesis.get_literal().functor == '_recursive':
+                break   # can't extend after recursive
 
         return hypothesis
 
@@ -458,14 +458,11 @@ def main(argv=sys.argv[1:]):
     else:
         print('================= FINAL THEORY =================')
     rule = hypothesis
-    rules = [rule]
-    while rule and rule.previous:
-        rule = rule.previous
-        rules.append(rule)
+    rules = rule.to_clauses(rule.target.functor)
 
     # First rule is failing rule: don't print it if there are other rules.
     if len(rules) > 1:
-        for rule in reversed(rules[0:-1]):
+        for rule in rules[1:]:
             print (rule)
     else:
         print (rules[0])

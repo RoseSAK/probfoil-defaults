@@ -106,6 +106,15 @@ class FOILRuleB(Rule):
                     inequalities.append(Term('\=', v1, v2))
 
         literals = self.get_literals()
+
+        def rename_recursive(lit, functor):
+            if lit.functor == '_recursive':
+                return Term(functor, *lit.args)
+            else:
+                return lit
+
+        literals = [rename_recursive(lit, functor) for lit in literals]
+
         head = literals[0].with_probability(self.get_rule_probability())
         body = And.from_list(literals[1:] + inequalities)
 
