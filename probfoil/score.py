@@ -50,6 +50,47 @@ def m_estimate_future(rule, m=1):
     return (tp + (m * p / (p + n))) / (tp + fp + m)
 
 
+def m_estimate_relative(rule, m=1):
+    """Compute the m-estimate of the rule relative to the previous ruleset.
+
+    :param rule: rule to score
+    :param m: m parameter for m-estimate
+    :return: value of m-estimate
+    """
+
+    if rule.previous:
+        tp_p, fp_p, tn_p, fn_p = rates(rule.previous)
+    else:
+        tp_p, fp_p, tn_p, fn_p = 0.0, 0.0, 0.0, 0.0   # last two are irrelevant
+
+    tp, fp, tn, fn = rates(rule)
+    p = tp + fn - tp_p
+    n = tn + fp - fp_p
+    return (tp - tp_p + (m * p / (p + n))) / (tp + fp - tp_p - fp_p + m)
+
+
+def m_estimate_future_relative(rule, m=1):
+    """Compute the m-estimate for the optimal extension of this rule relative to the previous ruleset.
+
+    The optimal extension has the same TP-rate and zero FP-rate.
+
+    :param rule: rule to score
+    :param m: m parameter for m-estimate
+    :return: value of m-estimate assuming an optimal extension
+    """
+
+    if rule.previous:
+        tp_p, fp_p, tn_p, fn_p = rates(rule.previous)
+    else:
+        tp_p, fp_p, tn_p, fn_p = 0.0, 0.0, 0.0, 0.0  # last two are irrelevant
+
+    tp, fp, tn, fn = rates(rule)
+    p = tp + fn - tp_p
+    n = tn + fp - fp_p
+    fp = fp_p
+    return (tp - tp_p + (m * p / (p + n))) / (tp + fp - tp_p - fp_p + m)
+
+
 def accuracy(rule):
     tp, fp, tn, fn = rates(rule)
     return (tp + tn) / (tp + fp + tn + fn)

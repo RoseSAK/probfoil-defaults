@@ -20,7 +20,7 @@ import argparse
 import sys
 import random
 
-from score import rates, accuracy, m_estimate, precision, recall, m_estimate_future, significance, pvalue2chisquare
+from score import rates, accuracy, m_estimate_relative, precision, recall, m_estimate_future_relative, significance, pvalue2chisquare
 
 
 class ProbFOIL(LearnEntail):
@@ -186,10 +186,10 @@ class ProbFOIL(LearnEntail):
         return hypothesis
 
     def _compute_rule_score(self, rule):
-        return m_estimate(rule, self._m_estimate)
+        return m_estimate_relative(rule, self._m_estimate)
 
     def _compute_rule_future_score(self, rule):
-        return m_estimate_future(rule, self._m_estimate)
+        return m_estimate_future_relative(rule, self._m_estimate)
 
     def _select_rule(self, rule):
         pass
