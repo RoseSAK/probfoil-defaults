@@ -1,5 +1,5 @@
 from __future__ import print_function
-from problog.logic import Term, Var, Clause, And
+from problog.logic import Term, Var, Clause, And, Constant
 from problog.engine_builtin import StructSort
 
 class Rule(object):
@@ -115,11 +115,14 @@ class FOILRuleB(Rule):
 
         literals = [rename_recursive(lit, functor) for lit in literals]
 
-        head = literals[0].with_probability(self.get_rule_probability())
+        prob = self.get_rule_probability()
+        if prob is not None:
+            prob = Constant(prob)
+        head = literals[0].with_probability(prob)
         body = And.from_list(literals[1:] + inequalities)
 
         if functor is not None:
-            head = Term(functor, *head.args)
+            head = Term(functor, *head.args, p=prob)
         return previous + [Clause(head, body)]
 
     def set_rule_probability(self, probability=None):
