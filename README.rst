@@ -4,10 +4,10 @@ ProbFOIL v2.1
 ProbFOIL is a probabilistic extension of FOIL that is capable of learning probabilistic rules from
 probabilistic data.
 
-ProbFOIL 2.1 is a redesign of the Prob2FOIL algorithm that was introduced in [this paper](https://lirias.kuleuven.be/handle/123456789/499989).
+ProbFOIL 2.1 is a redesign of the Prob2FOIL algorithm that was introduced in https://lirias.kuleuven.be/handle/123456789/499989.
 It works on top of ProbLog 2.1.
 
-If you are looking for the version used in the paper, you should check out the tag `paper_version`.
+If you are looking for the version used in the paper, you should check out the tag ``paper_version``.
 
 Installation
 ------------
