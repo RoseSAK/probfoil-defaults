@@ -6,12 +6,12 @@
 from __future__ import print_function
 
 from problog.program import PrologFile
-from data import DataFile
-from language import TypeModeLanguage
+from .data import DataFile
+from .language import TypeModeLanguage
 from problog.util import init_logger
 from problog.logic import Term
-from rule import FOILRule
-from learn import CandidateBeam, LearnEntail
+from .rule import FOILRule
+from .learn import CandidateBeam, LearnEntail
 
 from logging import getLogger
 
@@ -20,7 +20,7 @@ import argparse
 import sys
 import random
 
-from score import rates, accuracy, m_estimate_relative, precision, recall, m_estimate_future_relative, significance, pvalue2chisquare
+from .score import rates, accuracy, m_estimate_relative, precision, recall, m_estimate_future_relative, significance, pvalue2chisquare
 
 
 class ProbFOIL(LearnEntail):
@@ -262,7 +262,10 @@ class ProbFOIL2(ProbFOIL):
             if future:
                 fp = fp_p
             m = self._m_estimate
-            mpnp = m * ((pos - tp_p) / (all - tp_p - fp_p))
+            if pos - tp_p == 0 and all - tp_p - fp_p == 0:
+                mpnp = 1
+            else:
+                mpnp = m * ((pos - tp_p) / (all - tp_p - fp_p))
             score = (tp - tp_p + mpnp) / (tp + fp - tp_p - fp_p + m)
             return tp, fp, score
 
@@ -502,7 +505,6 @@ def argparser():
     parser.add_argument('--log', help='write log to file', default=None)
     return parser
 
+
 if __name__ == '__main__':
     main()
-
-
