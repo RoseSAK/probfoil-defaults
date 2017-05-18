@@ -1,6 +1,7 @@
 from __future__ import print_function
 from problog.logic import Term, Var, Clause, And, Constant
 from problog.engine_builtin import StructSort
+from problog.util import OrderedSet
 
 class Rule(object):
     """Generic class for rules."""
@@ -22,7 +23,7 @@ class Rule(object):
         :return: all variables in that occur in the rule
         :rtype: set[Var]
         """
-        variables = set()
+        variables = OrderedSet()
         for lit in self.get_literals():
             variables |= lit.variables()
         return variables
