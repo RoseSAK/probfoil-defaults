@@ -69,7 +69,7 @@ class FOILRuleB(Rule):
     def get_literal(self):
         """Get most recently added body literal.
 
-        :return: None (the body is empty for this type of rule)
+        :return: None (the body is empty for this type of rule) - but this doesn't return none?
         :rtype: Term
         """
         return self.literal
@@ -84,7 +84,7 @@ class FOILRuleB(Rule):
         """
         return FOILRuleB(self, literal, self.target, self.previous, self.correct)
 
-    def to_clauses(self, functor=None):
+    def to_clauses(self, functor=None): # quite complex function
         """Transform rule into ProbLog clauses
 
         :param functor: override rule functor (set to None to keep original)
@@ -167,7 +167,7 @@ class FOILRuleB(Rule):
         else:
             return 1
 
-
+# use for getting head literal to construct abnormality predicate
 class FOILRule(FOILRuleB):
     """Represents the head of a FOILRule.
 

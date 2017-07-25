@@ -9,9 +9,10 @@ from problog.program import PrologFile
 from .data import DataFile
 from .language import TypeModeLanguage
 from problog.util import init_logger
-from problog.logic import Term
+from problog.logic import Term, Clause
 from .rule import FOILRule
 from .learn import CandidateBeam, LearnEntail
+from .defaults import construct_ab_pred
 
 from logging import getLogger
 
@@ -23,13 +24,13 @@ import random
 from .score import rates, accuracy, m_estimate_relative, precision, recall, m_estimate_future_relative, significance, pvalue2chisquare
 
 
-class ProbFOIL(LearnEntail):
+class ProbFOIL(LearnEntail): # sub-class of LearnEntail in learn.py
 
     def __init__(self, data, beam_size=5, logger='probfoil', m=1, l=None, p=None, **kwargs):
         LearnEntail.__init__(self, data, TypeModeLanguage(**kwargs), logger=logger, **kwargs)
 
         self._beamsize = beam_size
-        self._m_estimate = m
+        self._m_estimate = m # not sure what the m parameter does
         if p is None:
             self._min_significance = None
         else:
@@ -53,10 +54,10 @@ class ProbFOIL(LearnEntail):
         :return:
         """
 
-        current_rule = FOILRule(target=self.target, previous=current, correct=self._scores_correct)
+        current_rule = FOILRule(target=self.target, previous=current, correct=self._scores_correct) # look at FOILrule class
         current_rule.scores = [1.0] * len(self._scores_correct)
         current_rule.score = self._compute_rule_score(current_rule)
-        c_tp, c_fp, c_tn, c_fn = rates(current_rule)
+        c_tp, c_fp, c_tn, c_fn = rates(current_rule) # rates function?
         current_rule.score_cmp = (current_rule.score, c_tp)
         current_rule.processed = False
         current_rule.probation = False
@@ -198,7 +199,8 @@ class ProbFOIL(LearnEntail):
         return [('Rule evaluations', self._stats_evaluations)]
 
 
-class ProbFOIL2(ProbFOIL):
+class ProbFOIL2(ProbFOIL): # sub-class of ProbFOIL - is this just
+# the new version built on top of the old one?
 
     def __init__(self, *args, **kwargs):
         ProbFOIL.__init__(self, *args, **kwargs)
@@ -444,13 +446,24 @@ def main(argv=sys.argv[1:]):
     if args.probfoil1:
         learn_class = ProbFOIL
     else:
-        learn_class = ProbFOIL2
+        learn_class = ProbFOIL2 # this seems to be the default learn_class
 
-    time_start = time.time()
+    time_start = time.time() # record start time
     learn = learn_class(data, logger=logger, **vars(args))
 
-    hypothesis = learn.learn()
-    time_total = time.time() - time_start
+    hypothesis = learn.learn() # run learn function from learn_class
+
+    print(learn._examples) # just returns numbers 
+
+    # call function from defaults.py
+    construct_ab_pred(hypothesis)
+
+    # if I want to implement my algorithm in stages, then the second stage should
+    # be implemented here, but before time_total is calculated
+    # unless I want a time for the first stage, and a time for the second stage
+    # and a total time?
+    # print('HERE')
+    time_total = time.time() - time_start # get time taken
 
     print ('================ SETTINGS ================')
     for kv in vars(args).items():
@@ -460,17 +473,17 @@ def main(argv=sys.argv[1:]):
         print('================ PARTIAL THEORY ================')
     else:
         print('================= FINAL THEORY =================')
-    rule = hypothesis
-    rules = rule.to_clauses(rule.target.functor)
+    rule = hypothesis # find out what hypothesis is
+    rules = rule.to_clauses(rule.target.functor) # convert rules to clause form
 
     # First rule is failing rule: don't print it if there are other rules.
     if len(rules) > 1:
         for rule in rules[1:]:
-            print (rule)
+            print (rule) # print each rule
     else:
         print (rules[0])
     print ('==================== SCORES ====================')
-    print ('            Accuracy:\t', accuracy(hypothesis))
+    print ('            Accuracy:\t', accuracy(hypothesis)) # compute accuracy
     print ('           Precision:\t', precision(hypothesis))
     print ('              Recall:\t', recall(hypothesis))
     print ('================== STATISTICS ==================')
