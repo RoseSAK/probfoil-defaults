@@ -1,0 +1,57 @@
+v[DEBUG] Output level: DEBUG
+[INFO] Random seed: 0.956988224816
+[INFO] Computing scores: 0.0230s
+[INFO] Number of examples (M): 7
+[INFO] Positive weight (P): 4.0000
+[INFO] Negative weight (N): 3.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.571428571429]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.571428571429
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.857142857143]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.65306122449
+[DEBUG] flies(A) :- \+penguin(A) 0.65306122449
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.857142857143]
+[DEBUG] Candidates for iteration 3:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A) 0.761904761905
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- robin(A) 0.714285714286
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- eagle(A) [0.7]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.48
+[DEBUG] flies(A) :- \+penguin(A) 0.48
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- eagle(A) [0.7]
+[DEBUG] Candidates for iteration 3:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A) 0.6
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- eagle(A) 0.857142857143
+[DEBUG] Best rule so far: flies(A) :- true [0.25]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.25
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- blackbird(A) [0.625]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.3125
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- blackbird(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- true 1.0

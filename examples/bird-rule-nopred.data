@@ -1,0 +1,27 @@
+% bird(1).
+penguin(1).
+0.0::flies(1).
+
+% bird(2).
+blackbird(2).
+flies(2).
+
+% bird(3).
+eagle(3).
+flies(3).
+
+% bird(4).
+robin(4).
+flies(4).
+
+% bird(5).
+robin(5).
+flies(5).
+
+dog(6).
+0.0::flies(6).
+
+bird(x):-robin(x).
+bird(x):-blackbird(x).
+bird(x):-eagle(x).
+bird(x):-penguin(x).

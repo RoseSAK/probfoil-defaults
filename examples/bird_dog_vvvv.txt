@@ -1,0 +1,68 @@
+[LVL8] Output level: 8
+[INFO] Random seed: 0.033592352848
+[INFO] Computing scores: 0.0320s
+[INFO] Number of examples (M): 6
+[INFO] Positive weight (P): 4.0000
+[INFO] Negative weight (N): 2.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.666666666667]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.666666666667
+[DEBUG] ==================================
+[LVL8] TO AVOID: flies(A) :- true => set([])
+[LVL9] flies(A) :- bird(A) 0.777777777778 (4.0, 1.0, 1.0, 0.0) 0.933333333333 [ACCEPT]
+[LVL9] BETTER RULE flies(A) :- bird(A) (0.7777777777777778, 4.0) > (0.6666666666666667, 4.0)
+[LVL8] flies(A) :- penguin(A) 0.0 (0.0, 1.0, 1.0, 4.0) 0.666666666667 [REJECT coverage] 0.0
+[LVL9] flies(A) :- eagle(A) 0.833333333333 (1.0, 0.0, 2.0, 3.0) 0.833333333333 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- eagle(A) (0.8333333333333333, 1.0) > (0.7777777777777778, 4.0)
+[LVL9] flies(A) :- robin(A) 0.888888888889 (2.0, 0.0, 2.0, 2.0) 0.888888888889 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- robin(A) (0.8888888888888888, 2.0) > (0.8333333333333333, 1.0)
+[LVL8] flies(A) :- blackbird(A) 0.833333333333 (1.0, 0.0, 2.0, 3.0) 0.833333333333 [REJECT potential] 0.888888888889
+[LVL8] flies(A) :- \+bird(A) 0.0 (0.0, 1.0, 1.0, 4.0) 0.666666666667 [REJECT coverage] 0.0
+[LVL9] flies(A) :- \+penguin(A) 0.777777777778 (4.0, 1.0, 1.0, 0.0) 0.933333333333 [ACCEPT]
+[LVL8] flies(A) :- \+eagle(A) 0.0 (3.0, 2.0, 0.0, 1.0) 0.916666666667 [REJECT noimprov] 0.888888888889
+[LVL8] flies(A) :- \+robin(A) 0.0 (2.0, 2.0, 0.0, 2.0) 0.888888888889 [REJECT potential] 0.888888888889
+[LVL8] flies(A) :- \+blackbird(A) 0.0 (3.0, 2.0, 0.0, 1.0) 0.916666666667 [REJECT noimprov] 0.888888888889
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.888888888889]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.777777777778
+[DEBUG] flies(A) :- \+penguin(A) 0.777777777778
+[DEBUG] ==================================
+[LVL8] TO AVOID: flies(A) :- bird(A) => set([blackbird(A), \+robin(A), \+bird(A), penguin(A)])
+[LVL8] SKIPPED literal penguin(A) for rule flies(A) :- bird(A)
+[LVL8] flies(A) :- bird(A), eagle(A) 0.833333333333 (1.0, 0.0, 2.0, 3.0) 0.833333333333 [REJECT potential] 0.888888888889
+[LVL8] flies(A) :- bird(A), robin(A) 0.888888888889 (2.0, 0.0, 2.0, 2.0) 0.888888888889 [REJECT potential] 0.888888888889
+[LVL8] SKIPPED literal blackbird(A) for rule flies(A) :- bird(A)
+[LVL9] flies(A) :- bird(A), \+penguin(A) 0.933333333333 (4.0, 0.0, 2.0, 0.0) 0.933333333333 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- bird(A), \+penguin(A) (0.9333333333333333, 4.0) > (0.8888888888888888, 2.0)
+[LVL8] flies(A) :- bird(A), \+eagle(A) 0.733333333333 (3.0, 1.0, 1.0, 1.0) 0.916666666667 [REJECT potential] 0.933333333333
+[LVL8] SKIPPED literal \+robin(A) for rule flies(A) :- bird(A)
+[LVL8] flies(A) :- bird(A), \+blackbird(A) 0.733333333333 (3.0, 1.0, 1.0, 1.0) 0.916666666667 [REJECT potential] 0.933333333333
+[LVL8] TO AVOID: flies(A) :- \+penguin(A) => set([blackbird(A), \+robin(A), \+bird(A), penguin(A)])
+[LVL8] flies(A) :- \+penguin(A), bird(A) 0.933333333333 (4.0, 0.0, 2.0, 0.0) 0.933333333333 [REJECT potential] 0.933333333333
+[LVL8] flies(A) :- \+penguin(A), eagle(A) 0.833333333333 (1.0, 0.0, 2.0, 3.0) 0.833333333333 [REJECT potential] 0.933333333333
+[LVL8] flies(A) :- \+penguin(A), robin(A) 0.888888888889 (2.0, 0.0, 2.0, 2.0) 0.888888888889 [REJECT potential] 0.933333333333
+[LVL8] SKIPPED literal blackbird(A) for rule flies(A) :- \+penguin(A)
+[LVL8] SKIPPED literal \+bird(A) for rule flies(A) :- \+penguin(A)
+[LVL8] flies(A) :- \+penguin(A), \+eagle(A) 0.733333333333 (3.0, 1.0, 1.0, 1.0) 0.916666666667 [REJECT potential] 0.933333333333
+[LVL8] SKIPPED literal \+robin(A) for rule flies(A) :- \+penguin(A)
+[LVL8] flies(A) :- \+penguin(A), \+blackbird(A) 0.733333333333 (3.0, 1.0, 1.0, 1.0) 0.916666666667 [REJECT potential] 0.933333333333
+[INFO] RULE LEARNED: flies(A) :- bird(A), \+penguin(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[LVL8] TO AVOID: flies(A) :- true => set([])
+[LVL8] flies(A) :- bird(A) 0.0 (4.0, 1.0, 1.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- penguin(A) 0.0 (4.0, 1.0, 1.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- eagle(A) 0.0 (4.0, 0.0, 2.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- robin(A) 0.0 (4.0, 0.0, 2.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- blackbird(A) 0.0 (4.0, 0.0, 2.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- \+bird(A) 0.0 (4.0, 1.0, 1.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- \+penguin(A) 0.0 (4.0, 1.0, 1.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- \+eagle(A) 0.0 (4.0, 2.0, 0.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- \+robin(A) 0.0 (4.0, 2.0, 0.0, 0.0) 0.0 [REJECT coverage] 4.0
+[LVL8] flies(A) :- \+blackbird(A) 0.0 (4.0, 2.0, 0.0, 0.0) 0.0 [REJECT coverage] 4.0
+[INFO] RULE LEARNED: flies(A) :- true 1.0

@@ -1,0 +1,13 @@
+% Data
+
+bird(1).
+flies(1).
+
+bird(2).
+flies(2).
+
+bird(3).
+flies(3).
+
+bird(4).
+0.0::flies(4).

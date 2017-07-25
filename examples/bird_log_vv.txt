@@ -1,0 +1,50 @@
+[LVL9] Output level: 9
+[INFO] Random seed: 0.437190468967
+[INFO] Computing scores: 0.0340s
+[INFO] Number of examples (M): 6
+[INFO] Positive weight (P): 4.0000
+[INFO] Negative weight (N): 2.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.666666666667]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.666666666667
+[DEBUG] ==================================
+[LVL9] flies(A) :- eagle(A) 0.833333333333 (1.0, 0.0, 2.0, 3.0) 0.833333333333 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- eagle(A) (0.8333333333333333, 1.0) > (0.6666666666666667, 4.0)
+[LVL9] flies(A) :- robin(A) 0.888888888889 (2.0, 0.0, 2.0, 2.0) 0.888888888889 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- robin(A) (0.8888888888888888, 2.0) > (0.8333333333333333, 1.0)
+[LVL9] flies(A) :- \+penguin(A) 0.777777777778 (4.0, 1.0, 1.0, 0.0) 0.933333333333 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.888888888889]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- \+penguin(A) 0.777777777778
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- robin(A) 0.666666666667
+[DEBUG] Best rule so far: flies(A) :- true [0.5]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.5
+[DEBUG] ==================================
+[LVL9] flies(A) :- eagle(A) 0.75 (3.0, 0.0, 2.0, 1.0) 0.75 [REJECT* fp] 2.0
+[LVL9] BETTER RULE flies(A) :- eagle(A) (0.75, 3.0) > (0.5, 4.0)
+[LVL9] flies(A) :- \+penguin(A) 0.625 (4.0, 1.0, 1.0, 0.0) 0.833333333333 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- eagle(A) [0.75]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- \+penguin(A) 0.625
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- eagle(A) 0.833333333333
+[DEBUG] Best rule so far: flies(A) :- true [0.333333333333]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.333333333333
+[DEBUG] ==================================
+[LVL9] flies(A) :- blackbird(A) 0.666666666667 (4.0, 0.0, 2.0, 0.0) 0.666666666667 [REJECT* fp] 3.0
+[LVL9] BETTER RULE flies(A) :- blackbird(A) (0.6666666666666666, 4.0) > (0.3333333333333333, 4.0)
+[INFO] RULE LEARNED: flies(A) :- blackbird(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- true 1.0

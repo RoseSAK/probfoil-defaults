@@ -1,0 +1,10 @@
+[INFO] Output level: INFO
+[INFO] Random seed: 0.708560146108
+[INFO] Computing scores: 0.0380s
+[INFO] Number of examples (M): 6
+[INFO] Positive weight (P): 4.0000
+[INFO] Negative weight (N): 2.0000
+[INFO] RULE LEARNED: flies(A) :- robin(A) 0.666666666667
+[INFO] RULE LEARNED: flies(A) :- eagle(A) 0.833333333333
+[INFO] RULE LEARNED: flies(A) :- blackbird(A) 1.0
+[INFO] RULE LEARNED: flies(A) :- true 1.0
