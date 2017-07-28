@@ -1,7 +1,7 @@
 bird(1).
 penguin(1).
 0.0::flies(1).
-%ab_bird(1).
+ab_bird(1).
 
 bird(2).
 blackbird(2).
@@ -25,12 +25,12 @@ dog(6).
 bird(7).
 dodo(7).
 0.0::flies(7).
-%ab_bird(7).
+ab_bird(7).
 
 bird(8).
 ostrich(8).
 0.0::flies(8).
-%ab_bird(8).
+ab_bird(8).
 
 bird(x):-robin(x).
 bird(x):-blackbird(x).

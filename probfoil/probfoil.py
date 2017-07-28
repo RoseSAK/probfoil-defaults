@@ -462,13 +462,18 @@ def main(argv=sys.argv[1:]):
 
     # call function from defaults.py
     #print(type(learn))
-    construct_ab_pred(hypothesis, learn)
+    construct_ab_pred(hypothesis, learn, args.files)
+    # think I need to reload data files
+
+    data = DataFile(*(PrologFile(source) for source in args.files))
+    learn = learn_class(data, logger=logger, **vars(args))
+    hypothesis = learn.learn() # re-run learning using new data
 
     # if I want to implement my algorithm in stages, then the second stage should
     # be implemented here, but before time_total is calculated
     # unless I want a time for the first stage, and a time for the second stage
     # and a total time?
-    # print('HERE')
+
     time_total = time.time() - time_start # get time taken
 
     print ('================ SETTINGS ================')
