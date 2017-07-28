@@ -4,8 +4,10 @@ mode(penguin(+)).
 mode(eagle(+)).
 mode(robin(+)).
 mode(blackbird(+)).
+mode(dodo(+)).
 mode(dog(+)).
-%mode(ab_bird(+)).
+mode(ostrich(+)).
+mode(ab_bird(+)).
 
 % Type definitions
 base(bird(x)).
@@ -14,8 +16,10 @@ base(flies(x)).
 base(blackbird(x)).
 base(robin(x)).
 base(eagle(x)).
+base(dodo(x)).
 base(dog(x)).
-%base(ab_bird(x)).
+base(ostrich(x)).
+base(ab_bird(x)).
 
 % Target
 learn(flies/1).

@@ -21,10 +21,11 @@ import time
 import argparse
 import sys
 import random
+import traceback
 
 from .score import rates, accuracy, m_estimate_relative, precision, recall, m_estimate_future_relative, significance, pvalue2chisquare
 
-def construct_ab_pred(rules):
+def construct_ab_pred(rules, examples):
     """
     Take the head of a rule and construct a new abnormality predicate from it
     which covers exceptions to the category
@@ -39,36 +40,39 @@ def construct_ab_pred(rules):
 
     try:
         clauses = rules.to_clauses()
-        #print(clauses)
         preds = {}
         ab_preds = {}
         for clause in clauses:
+            neg_preds = []
+            ab_pred_examples = []
             pred = clause.body
-            #print(pred)
-            #print(type(pred))
             if isinstance (pred, And): # check if body is conjunction
                 pred = pred.to_list()  # turn into list of disjuncts
-                for term in pred:
-                    if term.is_negated() == True: # check for negated terms
-                        pred.remove(term)
-                pred = pred[0]
+                neg_preds = [str(p)[2:] for p in pred if p.is_negated()==True]
+                #print(neg_preds)
+
+                if neg_preds: # would be good to get arity automatically
+                    ab_pred_examples = [examples._data.query(Term(r[:-3]), 1) for r in neg_preds]
+
+                pred = pred[0] # change to deal with two preds
+
             if str(pred) == ('fail' or 'true'): # skip fail/true antecedents
                 pass
+
             else:
                 preds[clause] = pred
                 ab_pred = 'ab_' + str(pred) # create name for abnormal predicate
-                #print(ab_pred)
                 ab_preds[clause] = ab_pred
-            print(ab_preds)
+            print(ab_pred_examples)
+        print(ab_preds)
     except:
-        print ("Something went wrong")
+        traceback.print_exc()
+        #print ("Something went wrong")
 
     # return ab_preds
-    
+
     # need to construct the different domains of ab_pred
     # This is the hard part
-    # for every example which pred applies to
-    #
 
 def extend_ab_pred(rule, ab_pred):
     """

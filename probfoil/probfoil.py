@@ -453,10 +453,16 @@ def main(argv=sys.argv[1:]):
 
     hypothesis = learn.learn() # run learn function from learn_class
 
-    print(learn._examples) # just returns numbers 
+    #print(learn._data.query(Term('penguin'), 1)) # just returns numbers
+    #print(learn._data.query(Term('dodo'), 1))
+    #print(learn._data.query(Term('ostrich'), 1))
+    #thing = learn._data
+    #pos = [r for r in thing.query(thing._target.functor, thing._target.arity)]
+    #print(pos)
 
     # call function from defaults.py
-    construct_ab_pred(hypothesis)
+    #print(type(learn))
+    construct_ab_pred(hypothesis, learn)
 
     # if I want to implement my algorithm in stages, then the second stage should
     # be implemented here, but before time_total is calculated

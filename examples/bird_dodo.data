@@ -22,16 +22,22 @@ dog(6).
 0.0::flies(6).
 
 bird(7).
-dodo(7).
+dragon(7).
 0.0::flies(7).
+
+bird(8).
+ostrich(8).
+0.0::flies(8).
+
+bird(9).
+sparrow(9).
+0.0::flies(9).
 
 bird(x):-robin(x).
 bird(x):-blackbird(x).
 bird(x):-eagle(x).
 bird(x):-penguin(x).
-bird(x):-dodo(x).
-
-% Rules returned
-% flies(A) :- robin(A)
-% flies(A) :- eagle(A)
-% flies(A) :- blackbird(A)
+bird(x):-dragon(x).
+0.0::bird(x):-dog(x).
+bird(x):-ostrich(x).
+bird(x):-sparrow(x).
