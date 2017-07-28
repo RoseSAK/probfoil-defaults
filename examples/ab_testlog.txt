@@ -1,0 +1,78 @@
+[DEBUG] Output level: DEBUG
+[INFO] Random seed: 0.041146602153
+[INFO] Computing scores: 0.0310s
+[INFO] Number of examples (M): 9
+[INFO] Positive weight (P): 4.0000
+[INFO] Negative weight (N): 5.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.444444444444]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.444444444444
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.814814814815]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.493827160494
+[DEBUG] flies(A) :- \+penguin(A) 0.493827160494
+[DEBUG] flies(A) :- \+dragon(A) 0.493827160494
+[DEBUG] flies(A) :- \+dog(A) 0.493827160494
+[DEBUG] flies(A) :- \+ostrich(A) 0.493827160494
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.814814814815]
+[DEBUG] Candidates for iteration 3:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A) 0.555555555556
+[DEBUG] flies(A) :- bird(A), \+dragon(A) 0.555555555556
+[DEBUG] flies(A) :- bird(A), \+ostrich(A) 0.555555555556
+[DEBUG] flies(A) :- bird(A), \+sparrow(A) 0.555555555556
+[DEBUG] flies(A) :- \+penguin(A), \+dragon(A) 0.555555555556
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.814814814815]
+[DEBUG] Candidates for iteration 4:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+dragon(A) 0.634920634921
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+ostrich(A) 0.634920634921
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+sparrow(A) 0.634920634921
+[DEBUG] flies(A) :- bird(A), \+dragon(A), \+ostrich(A) 0.634920634921
+[DEBUG] flies(A) :- bird(A), \+dragon(A), \+sparrow(A) 0.634920634921
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.814814814815]
+[DEBUG] Candidates for iteration 5:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+dragon(A), \+ostrich(A) 0.740740740741
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+dragon(A), \+sparrow(A) 0.740740740741
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+ostrich(A), \+sparrow(A) 0.740740740741
+[DEBUG] flies(A) :- bird(A), \+dragon(A), \+ostrich(A), \+sparrow(A) 0.740740740741
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- bird(A), \+penguin(A), \+dragon(A), \+ostrich(A), \+sparrow(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- true 1.0
+[INFO] Computing scores: 0.0220s
+[INFO] Number of examples (M): 9
+[INFO] Positive weight (P): 4.0000
+[INFO] Negative weight (N): 5.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.444444444444]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.444444444444
+[DEBUG] ==================================
+[DEBUG] Best rule so far: flies(A) :- robin(A) [0.814814814815]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- \+ab_bird(A) 0.740740740741
+[DEBUG] flies(A) :- bird(A) 0.493827160494
+[DEBUG] flies(A) :- \+penguin(A) 0.493827160494
+[DEBUG] flies(A) :- \+dragon(A) 0.493827160494
+[DEBUG] flies(A) :- \+dog(A) 0.493827160494
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- \+ab_bird(A), bird(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- true 1.0

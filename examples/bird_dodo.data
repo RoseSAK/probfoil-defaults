@@ -41,7 +41,3 @@ bird(x):-dragon(x).
 0.0::bird(x):-dog(x).
 bird(x):-ostrich(x).
 bird(x):-sparrow(x).
-ab_bird(1).
-ab_bird(7).
-ab_bird(8).
-ab_bird(9).

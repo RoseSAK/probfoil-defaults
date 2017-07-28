@@ -451,30 +451,20 @@ def main(argv=sys.argv[1:]):
     time_start = time.time() # record start time
     learn = learn_class(data, logger=logger, **vars(args))
 
-    hypothesis = learn.learn() # run learn function from learn_class
+    hypothesis_one = learn.learn() # run learn function from learn_class
 
-    #print(learn._data.query(Term('penguin'), 1)) # just returns numbers
-    #print(learn._data.query(Term('dodo'), 1))
-    #print(learn._data.query(Term('ostrich'), 1))
-    #thing = learn._data
-    #pos = [r for r in thing.query(thing._target.functor, thing._target.arity)]
-    #print(pos)
+    time_one = time.time() - time_start # time for first stage
 
     # call function from defaults.py
-    #print(type(learn))
-    construct_ab_pred(hypothesis, learn, args.files)
-    # think I need to reload data files
+    construct_ab_pred(hypothesis_one, learn, args.files)
 
+    # reload data files and re-learn rules with new data
     data = DataFile(*(PrologFile(source) for source in args.files))
     learn = learn_class(data, logger=logger, **vars(args))
-    hypothesis = learn.learn() # re-run learning using new data
-
-    # if I want to implement my algorithm in stages, then the second stage should
-    # be implemented here, but before time_total is calculated
-    # unless I want a time for the first stage, and a time for the second stage
-    # and a total time?
+    hypothesis_two = learn.learn()
 
     time_total = time.time() - time_start # get time taken
+    time_two = time_total - time_one # time for second stage
 
     print ('================ SETTINGS ================')
     for kv in vars(args).items():
@@ -483,8 +473,8 @@ def main(argv=sys.argv[1:]):
     if learn.interrupted:
         print('================ PARTIAL THEORY ================')
     else:
-        print('================= FINAL THEORY =================')
-    rule = hypothesis # find out what hypothesis is
+        print('================= INTERMEDIATE THEORY =================')
+    rule = hypothesis_one
     rules = rule.to_clauses(rule.target.functor) # convert rules to clause form
 
     # First rule is failing rule: don't print it if there are other rules.
@@ -493,14 +483,26 @@ def main(argv=sys.argv[1:]):
             print (rule) # print each rule
     else:
         print (rules[0])
+
+    print('================= FINAL THEORY =================')
+    rule = hypothesis_two
+    rules = rule.to_clauses(rule.target.functor) # convert rules to clause form
+
+    if len(rules) > 1:
+        for rule in rules[1:]:
+            print (rule)
+    else:
+        print (rules[0])
     print ('==================== SCORES ====================')
-    print ('            Accuracy:\t', accuracy(hypothesis)) # compute accuracy
-    print ('           Precision:\t', precision(hypothesis))
-    print ('              Recall:\t', recall(hypothesis))
+    print ('            Accuracy:\t', accuracy(hypothesis_two)) # compute accuracy
+    print ('           Precision:\t', precision(hypothesis_two))
+    print ('              Recall:\t', recall(hypothesis_two))
     print ('================== STATISTICS ==================')
     for name, value in learn.statistics():
         print ('%20s:\t%s' % (name, value))
-    print ('          Total time:\t%.4fs' % time_total)
+    print ('      Stage one time:\t%.4fs' % time_one)
+    print ('      Stage two time:\t%.4fs' % time_two)
+    print ('      Total time:\t%.4fs' % time_total)
 
     if logfile:
         logfile.close()
