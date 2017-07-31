@@ -51,14 +51,14 @@ def construct_ab_pred(rules, examples, datafiles):
             neg_preds = []
             neg_pred_examples = []
             pred = clause.body
-            
+
             if str(pred) == ('fail' or 'true'): # skip fail/true antecedents
                 pass
             else:
                 if isinstance (pred, And): # check if body is conjunction
                     pred = pred.to_list()  # turn into list of disjuncts
                     neg_preds = [str(p)[2:] for p in pred if p.is_negated()==True]
-                    pos_preds = [p for p in pred if p.is_negated()==False]
+                    pos_preds = [p for p in pred if p.is_negated()==False] 
                     pred = pos_preds[0] # change to deal with two preds
                     if neg_preds: # would be good to get arity automatically
                         neg_pred_examples = [examples._data.query(Term(r[:-3]), 1) for r in neg_preds]

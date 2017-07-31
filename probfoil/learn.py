@@ -78,7 +78,7 @@ class LearnEntail(object):
         elif example_mode and str(example_mode[0][0]) == 'balance':
             # Balancing based on count only
             pos_examples = [r for r in data.query(self._target.functor, self._target.arity)]
-            pos_count = len(pos_examples)
+            pos_count = len(pos_examples) # get no. of positive examples
             types = self.language.get_argument_types(self._target.functor, self._target.arity)
             values = [self.language.get_type_values(t) for t in types]
             from random import shuffle
