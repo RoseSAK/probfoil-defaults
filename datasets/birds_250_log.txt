@@ -1,0 +1,131 @@
+[LVL9] Output level: 9
+[INFO] Random seed: 0.515630311965
+[INFO] Computing scores: 0.2860s
+[INFO] Number of examples (M): 250
+[INFO] Positive weight (P): 200.0000
+[INFO] Negative weight (N): 50.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.8]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.8
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A) 0.888495575221 (200.0, 25.0, 25.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] BETTER RULE flies(A) :- bird(A) (0.888495575221239, 200.0) > (0.8, 200.0)
+[LVL9] flies(A) :- blackbird(A) 0.995744680851 (46.0, 0.0, 50.0, 154.0) 0.995744680851 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- blackbird(A) (0.9957446808510638, 46.0) > (0.888495575221239, 200.0)
+[LVL9] flies(A) :- thrush(A) 0.995833333333 (47.0, 0.0, 50.0, 153.0) 0.995833333333 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- thrush(A) (0.9958333333333332, 47.0) > (0.9957446808510638, 46.0)
+[LVL9] flies(A) :- \+cat(A) 0.843697478992 (200.0, 37.0, 13.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+dog(A) 0.82633744856 (200.0, 42.0, 8.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+rabbit(A) 0.812955465587 (200.0, 46.0, 4.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+penguin(A) 0.833195020747 (200.0, 40.0, 10.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+kiwi(A) 0.82633744856 (200.0, 42.0, 8.0, 0.0) 0.999004975124 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- thrush(A) [0.995833333333]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.888495575221
+[DEBUG] flies(A) :- \+cat(A) 0.843697478992
+[DEBUG] flies(A) :- \+penguin(A) 0.833195020747
+[DEBUG] flies(A) :- \+dog(A) 0.82633744856
+[DEBUG] flies(A) :- \+kiwi(A) 0.82633744856
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A), \+penguin(A) 0.92962962963 (200.0, 15.0, 35.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+dodo(A) 0.904504504505 (200.0, 21.0, 29.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+ostrich(A) 0.900448430493 (200.0, 22.0, 28.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+kiwi(A) 0.921100917431 (200.0, 17.0, 33.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+cat(A), bird(A) 0.888495575221 (200.0, 25.0, 25.0, 0.0) 0.999004975124 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- thrush(A) [0.995833333333]
+[DEBUG] Candidates for iteration 3:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A) 0.92962962963
+[DEBUG] flies(A) :- bird(A), \+kiwi(A) 0.921100917431
+[DEBUG] flies(A) :- bird(A), \+dodo(A) 0.904504504505
+[DEBUG] flies(A) :- bird(A), \+ostrich(A) 0.900448430493
+[DEBUG] flies(A) :- \+cat(A), bird(A) 0.888495575221
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A), \+penguin(A), \+dodo(A) 0.947169811321 (200.0, 11.0, 39.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+penguin(A), \+ostrich(A) 0.942723004695 (200.0, 12.0, 38.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+penguin(A), \+kiwi(A) 0.965384615385 (200.0, 7.0, 43.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+kiwi(A), \+dodo(A) 0.938317757009 (200.0, 13.0, 37.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+kiwi(A), \+ostrich(A) 0.933953488372 (200.0, 14.0, 36.0, 0.0) 0.999004975124 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- thrush(A) [0.995833333333]
+[DEBUG] Candidates for iteration 4:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+kiwi(A) 0.965384615385
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+dodo(A) 0.947169811321
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+ostrich(A) 0.942723004695
+[DEBUG] flies(A) :- bird(A), \+kiwi(A), \+dodo(A) 0.938317757009
+[DEBUG] flies(A) :- bird(A), \+kiwi(A), \+ostrich(A) 0.933953488372
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A), \+penguin(A), \+kiwi(A), \+dodo(A) 0.98431372549 (200.0, 3.0, 47.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+penguin(A), \+kiwi(A), \+ostrich(A) 0.979512195122 (200.0, 4.0, 46.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+penguin(A), \+dodo(A), \+ostrich(A) 0.960765550239 (200.0, 8.0, 42.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+kiwi(A), \+dodo(A), \+ostrich(A) 0.951658767773 (200.0, 10.0, 40.0, 0.0) 0.999004975124 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- thrush(A) [0.995833333333]
+[DEBUG] Candidates for iteration 5:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+kiwi(A), \+dodo(A) 0.98431372549
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+kiwi(A), \+ostrich(A) 0.979512195122
+[DEBUG] flies(A) :- bird(A), \+penguin(A), \+dodo(A), \+ostrich(A) 0.960765550239
+[DEBUG] flies(A) :- bird(A), \+kiwi(A), \+dodo(A), \+ostrich(A) 0.951658767773
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A), \+penguin(A), \+kiwi(A), \+dodo(A), \+ostrich(A) 0.999004975124 (200.0, 0.0, 50.0, 0.0) 0.999004975124 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- bird(A), \+penguin(A), \+kiwi(A), \+dodo(A), \+ostrich(A) (0.9990049751243781, 200.0) > (0.9958333333333332, 47.0)
+[INFO] RULE LEARNED: flies(A) :- bird(A), \+penguin(A), \+kiwi(A), \+dodo(A), \+ostrich(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- true 1.0
+[INFO] Computing scores: 0.2270s
+[INFO] Number of examples (M): 250
+[INFO] Positive weight (P): 200.0000
+[INFO] Negative weight (N): 50.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.8]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.8
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A) 0.888495575221 (200.0, 25.0, 25.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] BETTER RULE flies(A) :- bird(A) (0.888495575221239, 200.0) > (0.8, 200.0)
+[LVL9] flies(A) :- blackbird(A) 0.995744680851 (46.0, 0.0, 50.0, 154.0) 0.995744680851 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- blackbird(A) (0.9957446808510638, 46.0) > (0.888495575221239, 200.0)
+[LVL9] flies(A) :- thrush(A) 0.995833333333 (47.0, 0.0, 50.0, 153.0) 0.995833333333 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- thrush(A) (0.9958333333333332, 47.0) > (0.9957446808510638, 46.0)
+[LVL9] flies(A) :- \+cat(A) 0.843697478992 (200.0, 37.0, 13.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+dog(A) 0.82633744856 (200.0, 42.0, 8.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+rabbit(A) 0.812955465587 (200.0, 46.0, 4.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+penguin(A) 0.833195020747 (200.0, 40.0, 10.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+kiwi(A) 0.82633744856 (200.0, 42.0, 8.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- \+ab_bird(A) 0.888495575221 (200.0, 25.0, 25.0, 0.0) 0.999004975124 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- thrush(A) [0.995833333333]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.888495575221
+[DEBUG] flies(A) :- \+ab_bird(A) 0.888495575221
+[DEBUG] flies(A) :- \+cat(A) 0.843697478992
+[DEBUG] flies(A) :- \+penguin(A) 0.833195020747
+[DEBUG] flies(A) :- \+dog(A) 0.82633744856
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A), \+penguin(A) 0.92962962963 (200.0, 15.0, 35.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+dodo(A) 0.904504504505 (200.0, 21.0, 29.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+ostrich(A) 0.900448430493 (200.0, 22.0, 28.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+kiwi(A) 0.921100917431 (200.0, 17.0, 33.0, 0.0) 0.999004975124 [ACCEPT]
+[LVL9] flies(A) :- bird(A), \+ab_bird(A) 0.999004975124 (200.0, 0.0, 50.0, 0.0) 0.999004975124 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- bird(A), \+ab_bird(A) (0.9990049751243781, 200.0) > (0.9958333333333332, 47.0)
+[DEBUG] Best rule so far: flies(A) :- bird(A), \+ab_bird(A) [0.999004975124]
+[DEBUG] Candidates for iteration 3:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A), \+penguin(A) 0.92962962963
+[DEBUG] flies(A) :- bird(A), \+kiwi(A) 0.921100917431
+[DEBUG] flies(A) :- bird(A), \+dodo(A) 0.904504504505
+[DEBUG] flies(A) :- bird(A), \+ostrich(A) 0.900448430493
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- bird(A), \+ab_bird(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- true 1.0
