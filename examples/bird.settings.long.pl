@@ -7,7 +7,6 @@ mode(blackbird(+)).
 mode(dragon(+)).
 mode(dog(+)).
 mode(ostrich(+)).
-%mode(ab_bird(+)).
 mode(sparrow(+)).
 
 % Type definitions
@@ -20,7 +19,6 @@ base(eagle(x)).
 base(dragon(x)).
 base(dog(x)).
 base(ostrich(x)).
-%base(ab_bird(x)).
 base(sparrow(x)).
 
 % Target

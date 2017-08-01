@@ -1,6 +1,5 @@
 """
-Automatically generate large datasets containing exceptions to general categorical
-claims
+Automatically generate large datasets containing common exceptions
 
 """
 from __future__ import print_function
@@ -24,32 +23,24 @@ args = parser.parse_args()
 #data_file.close()
 
 birdlist = ['blackbird', 'sparrow', 'thrush', 'robin', 'eagle']
-oddbirds = ['penguin', 'dodo', 'ostrich', 'kiwi']
-nonbirds = ['cat', 'dog', 'rabbit']
-types = ['bird']+birdlist+nonbirds+oddbirds
+types = ['bird', 'penguin']+birdlist
 
 num = args.size+1
 exceptions = int(round(num/10))+1
-others = int(round(num/10))
 
 with open(args.datafile, 'w+') as w:
     for i in range(1, exceptions):
         w.write('bird(%d).\n' % i)
-        w.write('%s(%d).\n' % (random.choice(oddbirds),i))
+        w.write('penguin(%d).\n' % i)
         w.write('0.0::flies(%d).\n\n' % i)
-    for i in range(exceptions, num-others):
+    for i in range(exceptions, num):
         w.write('bird(%d).\n' % i)
         w.write('%s(%d).\n' % (random.choice(birdlist), i))
         w.write('flies(%d).\n\n' % i )
-    for i in range(num-others, num):
-        w.write('0.0::bird(%d).\n' % i)
-        w.write('%s(%d).\n' % (random.choice(nonbirds), i))
-        w.write('0.0::flies(%d).\n\n' % i )
 
 with open(args.settings, 'w+') as w:
+    w.write('learn(flies/1).\n')
+    w.write('example_mode(closed).\n\n')
     for t in types:
         w.write('mode(%s(+)).\n' % t)
         w.write('base(%s(x)).\n\n' % t)
-    w.write('base(flies(x)).\n')
-    w.write('learn(flies/1).\n')
-    w.write('example_mode(closed).\n\n')

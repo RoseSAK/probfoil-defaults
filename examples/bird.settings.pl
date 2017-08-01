@@ -4,7 +4,8 @@ mode(penguin(+)).
 mode(eagle(+)).
 mode(robin(+)).
 mode(blackbird(+)).
-mode(dog(+)).
+mode(thrush(+)).
+%mode(dog(+)).
 
 
 % Type definitions

@@ -58,14 +58,17 @@ def construct_ab_pred(rules, examples, datafiles):
                 if isinstance (pred, And): # check if body is conjunction
                     pred = pred.to_list()  # turn into list of disjuncts
                     neg_preds = [str(p)[2:] for p in pred if p.is_negated()==True]
-                    pos_preds = [p for p in pred if p.is_negated()==False] 
+                    pos_preds = [p for p in pred if p.is_negated()==False]
                     pred = pos_preds[0] # change to deal with two preds
                     if neg_preds: # would be good to get arity automatically
                         neg_pred_examples = [examples._data.query(Term(r[:-3]), 1) for r in neg_preds]
+                        #print(neg_pred_examples)
                     preds[clause] = pred
                     ab_pred = 'ab_' + str(pred)[:-3] # create name for abnormal predicate
                     ab_preds[clause] = ab_pred
-                    objects = [i[0][0] for i in neg_pred_examples]
+                    #objects = [i[0][0] for i in neg_pred_examples] # get abnormal instances
+                    objects = [i[0] for li in neg_pred_examples for i in li]
+                    #print(objects)
                     ab_pred_examples = [ab_pred+'(%s)' % i for i in objects] # create ab_pred data
                     ab_pred_mode = 'mode(%s(+)).' % ab_pred
                     ab_pred_type = 'base(%s(x)).' % ab_pred
