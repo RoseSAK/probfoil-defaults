@@ -1,6 +1,7 @@
 bird(1).
 penguin(1).
 0.0::flies(1).
+ab_bird(1).
 
 bird(2).
 blackbird(2).
@@ -18,14 +19,28 @@ bird(5).
 robin(5).
 flies(5).
 
+0.0::bird(6).
 dog(6).
 0.0::flies(6).
 
+bird(7).
+ostrich(7).
+0.0::flies(7).
+ab_bird(7).
+
+bird(8).
+dodo(8).
+0.0::flies(8).
+ab_bird(8).
+
+0.0::bird(x):-dog(x).
 bird(x):-robin(x).
 bird(x):-blackbird(x).
 bird(x):-eagle(x).
 bird(x):-penguin(x).
-%ab_bird(x):-penguin(x).
+ab_bird(x):-penguin(x).
+ab_bird(x):-ostrich(x).
+ab_bird(x):-dodo(x).
 
 % Rules returned
 % flies(A) :- bird(A), \+penguin(A)
