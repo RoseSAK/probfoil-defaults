@@ -1,33 +1,33 @@
 bird(1).
-ostrich(1).
+kiwi(1).
 0.0::flies(1).
 
 bird(2).
-kiwi(2).
+dodo(2).
 0.0::flies(2).
 
 bird(3).
-dodo(3).
+ostrich(3).
 0.0::flies(3).
 
 bird(4).
-ostrich(4).
+dodo(4).
 0.0::flies(4).
 
 bird(5).
-kiwi(5).
+penguin(5).
 0.0::flies(5).
 
 bird(6).
-ostrich(6).
+kiwi(6).
 0.0::flies(6).
 
 bird(7).
-ostrich(7).
+penguin(7).
 0.0::flies(7).
 
 bird(8).
-dodo(8).
+ostrich(8).
 0.0::flies(8).
 
 bird(9).
@@ -39,39 +39,39 @@ penguin(10).
 0.0::flies(10).
 
 bird(11).
-ostrich(11).
+penguin(11).
 0.0::flies(11).
 
 bird(12).
-ostrich(12).
+dodo(12).
 0.0::flies(12).
 
 bird(13).
-dodo(13).
+penguin(13).
 0.0::flies(13).
 
 bird(14).
-penguin(14).
+ostrich(14).
 0.0::flies(14).
 
 bird(15).
-dodo(15).
+penguin(15).
 0.0::flies(15).
 
 bird(16).
-penguin(16).
+kiwi(16).
 0.0::flies(16).
 
 bird(17).
-kiwi(17).
+ostrich(17).
 0.0::flies(17).
 
 bird(18).
-penguin(18).
+dodo(18).
 0.0::flies(18).
 
 bird(19).
-penguin(19).
+ostrich(19).
 0.0::flies(19).
 
 bird(20).
@@ -79,35 +79,35 @@ dodo(20).
 0.0::flies(20).
 
 bird(21).
-kiwi(21).
+ostrich(21).
 0.0::flies(21).
 
 bird(22).
-ostrich(22).
+penguin(22).
 0.0::flies(22).
 
 bird(23).
-penguin(23).
+ostrich(23).
 0.0::flies(23).
 
 bird(24).
-penguin(24).
+ostrich(24).
 0.0::flies(24).
 
 bird(25).
-kiwi(25).
+penguin(25).
 0.0::flies(25).
 
 bird(26).
-dodo(26).
+kiwi(26).
 0.0::flies(26).
 
 bird(27).
-penguin(27).
+dodo(27).
 0.0::flies(27).
 
 bird(28).
-penguin(28).
+kiwi(28).
 0.0::flies(28).
 
 bird(29).
@@ -115,55 +115,55 @@ dodo(29).
 0.0::flies(29).
 
 bird(30).
-penguin(30).
+dodo(30).
 0.0::flies(30).
 
 bird(31).
-dodo(31).
+kiwi(31).
 0.0::flies(31).
 
 bird(32).
-penguin(32).
+kiwi(32).
 0.0::flies(32).
 
 bird(33).
-penguin(33).
+ostrich(33).
 0.0::flies(33).
 
 bird(34).
-ostrich(34).
+kiwi(34).
 0.0::flies(34).
 
 bird(35).
-dodo(35).
+penguin(35).
 0.0::flies(35).
 
 bird(36).
-ostrich(36).
+dodo(36).
 0.0::flies(36).
 
 bird(37).
-dodo(37).
+penguin(37).
 0.0::flies(37).
 
 bird(38).
-penguin(38).
+kiwi(38).
 0.0::flies(38).
 
 bird(39).
-kiwi(39).
+penguin(39).
 0.0::flies(39).
 
 bird(40).
-penguin(40).
+ostrich(40).
 0.0::flies(40).
 
 bird(41).
-ostrich(41).
+dodo(41).
 0.0::flies(41).
 
 bird(42).
-ostrich(42).
+penguin(42).
 0.0::flies(42).
 
 bird(43).
@@ -171,83 +171,83 @@ ostrich(43).
 0.0::flies(43).
 
 bird(44).
-penguin(44).
+ostrich(44).
 0.0::flies(44).
 
 bird(45).
-penguin(45).
+kiwi(45).
 0.0::flies(45).
 
 bird(46).
-penguin(46).
+ostrich(46).
 0.0::flies(46).
 
 bird(47).
-dodo(47).
+kiwi(47).
 0.0::flies(47).
 
 bird(48).
-ostrich(48).
+penguin(48).
 0.0::flies(48).
 
 bird(49).
-dodo(49).
+penguin(49).
 0.0::flies(49).
 
 bird(50).
-dodo(50).
+penguin(50).
 0.0::flies(50).
 
 bird(51).
-eagle(51).
-flies(51).
+penguin(51).
+0.0::flies(51).
 
 bird(52).
-sparrow(52).
-flies(52).
+kiwi(52).
+0.0::flies(52).
 
 bird(53).
-robin(53).
-flies(53).
+kiwi(53).
+0.0::flies(53).
 
 bird(54).
-thrush(54).
-flies(54).
+ostrich(54).
+0.0::flies(54).
 
 bird(55).
-blackbird(55).
-flies(55).
+kiwi(55).
+0.0::flies(55).
 
 bird(56).
-blackbird(56).
-flies(56).
+dodo(56).
+0.0::flies(56).
 
 bird(57).
-robin(57).
-flies(57).
+kiwi(57).
+0.0::flies(57).
 
 bird(58).
-robin(58).
-flies(58).
+kiwi(58).
+0.0::flies(58).
 
 bird(59).
-robin(59).
-flies(59).
+ostrich(59).
+0.0::flies(59).
 
 bird(60).
-robin(60).
-flies(60).
+ostrich(60).
+0.0::flies(60).
 
 bird(61).
-thrush(61).
+sparrow(61).
 flies(61).
 
 bird(62).
-thrush(62).
+sparrow(62).
 flies(62).
 
 bird(63).
-blackbird(63).
+robin(63).
 flies(63).
 
 bird(64).
@@ -255,47 +255,47 @@ eagle(64).
 flies(64).
 
 bird(65).
-blackbird(65).
+sparrow(65).
 flies(65).
 
 bird(66).
-sparrow(66).
+eagle(66).
 flies(66).
 
 bird(67).
-robin(67).
+sparrow(67).
 flies(67).
 
 bird(68).
-robin(68).
+blackbird(68).
 flies(68).
 
 bird(69).
-thrush(69).
+blackbird(69).
 flies(69).
 
 bird(70).
-thrush(70).
+sparrow(70).
 flies(70).
 
 bird(71).
-sparrow(71).
+robin(71).
 flies(71).
 
 bird(72).
-sparrow(72).
+eagle(72).
 flies(72).
 
 bird(73).
-thrush(73).
+eagle(73).
 flies(73).
 
 bird(74).
-blackbird(74).
+eagle(74).
 flies(74).
 
 bird(75).
-robin(75).
+eagle(75).
 flies(75).
 
 bird(76).
@@ -303,35 +303,35 @@ robin(76).
 flies(76).
 
 bird(77).
-eagle(77).
+robin(77).
 flies(77).
 
 bird(78).
-robin(78).
+sparrow(78).
 flies(78).
 
 bird(79).
-thrush(79).
+blackbird(79).
 flies(79).
 
 bird(80).
-blackbird(80).
+sparrow(80).
 flies(80).
 
 bird(81).
-thrush(81).
+robin(81).
 flies(81).
 
 bird(82).
-thrush(82).
+robin(82).
 flies(82).
 
 bird(83).
-sparrow(83).
+thrush(83).
 flies(83).
 
 bird(84).
-robin(84).
+sparrow(84).
 flies(84).
 
 bird(85).
@@ -339,7 +339,7 @@ robin(85).
 flies(85).
 
 bird(86).
-robin(86).
+blackbird(86).
 flies(86).
 
 bird(87).
@@ -347,39 +347,39 @@ thrush(87).
 flies(87).
 
 bird(88).
-thrush(88).
+blackbird(88).
 flies(88).
 
 bird(89).
-thrush(89).
+robin(89).
 flies(89).
 
 bird(90).
-sparrow(90).
+robin(90).
 flies(90).
 
 bird(91).
-eagle(91).
+robin(91).
 flies(91).
 
 bird(92).
-eagle(92).
+thrush(92).
 flies(92).
 
 bird(93).
-blackbird(93).
+sparrow(93).
 flies(93).
 
 bird(94).
-blackbird(94).
+robin(94).
 flies(94).
 
 bird(95).
-thrush(95).
+robin(95).
 flies(95).
 
 bird(96).
-eagle(96).
+blackbird(96).
 flies(96).
 
 bird(97).
@@ -387,27 +387,27 @@ sparrow(97).
 flies(97).
 
 bird(98).
-blackbird(98).
+thrush(98).
 flies(98).
 
 bird(99).
-eagle(99).
+blackbird(99).
 flies(99).
 
 bird(100).
-blackbird(100).
+sparrow(100).
 flies(100).
 
 bird(101).
-blackbird(101).
+thrush(101).
 flies(101).
 
 bird(102).
-thrush(102).
+eagle(102).
 flies(102).
 
 bird(103).
-blackbird(103).
+sparrow(103).
 flies(103).
 
 bird(104).
@@ -415,15 +415,15 @@ robin(104).
 flies(104).
 
 bird(105).
-blackbird(105).
+sparrow(105).
 flies(105).
 
 bird(106).
-eagle(106).
+sparrow(106).
 flies(106).
 
 bird(107).
-blackbird(107).
+sparrow(107).
 flies(107).
 
 bird(108).
@@ -431,35 +431,35 @@ sparrow(108).
 flies(108).
 
 bird(109).
-thrush(109).
+sparrow(109).
 flies(109).
 
 bird(110).
-sparrow(110).
+eagle(110).
 flies(110).
 
 bird(111).
-robin(111).
+sparrow(111).
 flies(111).
 
 bird(112).
-sparrow(112).
+blackbird(112).
 flies(112).
 
 bird(113).
-sparrow(113).
+eagle(113).
 flies(113).
 
 bird(114).
-sparrow(114).
+blackbird(114).
 flies(114).
 
 bird(115).
-eagle(115).
+robin(115).
 flies(115).
 
 bird(116).
-sparrow(116).
+thrush(116).
 flies(116).
 
 bird(117).
@@ -467,51 +467,51 @@ eagle(117).
 flies(117).
 
 bird(118).
-eagle(118).
+sparrow(118).
 flies(118).
 
 bird(119).
-thrush(119).
+eagle(119).
 flies(119).
 
 bird(120).
-eagle(120).
+blackbird(120).
 flies(120).
 
 bird(121).
-robin(121).
+sparrow(121).
 flies(121).
 
 bird(122).
-blackbird(122).
+robin(122).
 flies(122).
 
 bird(123).
-blackbird(123).
+robin(123).
 flies(123).
 
 bird(124).
-eagle(124).
+thrush(124).
 flies(124).
 
 bird(125).
-eagle(125).
+robin(125).
 flies(125).
 
 bird(126).
-eagle(126).
+sparrow(126).
 flies(126).
 
 bird(127).
-thrush(127).
+sparrow(127).
 flies(127).
 
 bird(128).
-sparrow(128).
+thrush(128).
 flies(128).
 
 bird(129).
-eagle(129).
+thrush(129).
 flies(129).
 
 bird(130).
@@ -519,7 +519,7 @@ robin(130).
 flies(130).
 
 bird(131).
-robin(131).
+eagle(131).
 flies(131).
 
 bird(132).
@@ -531,35 +531,35 @@ sparrow(133).
 flies(133).
 
 bird(134).
-thrush(134).
+blackbird(134).
 flies(134).
 
 bird(135).
-thrush(135).
+blackbird(135).
 flies(135).
 
 bird(136).
-sparrow(136).
+thrush(136).
 flies(136).
 
 bird(137).
-blackbird(137).
+robin(137).
 flies(137).
 
 bird(138).
-eagle(138).
+sparrow(138).
 flies(138).
 
 bird(139).
-eagle(139).
+blackbird(139).
 flies(139).
 
 bird(140).
-robin(140).
+blackbird(140).
 flies(140).
 
 bird(141).
-blackbird(141).
+robin(141).
 flies(141).
 
 bird(142).
@@ -567,27 +567,27 @@ sparrow(142).
 flies(142).
 
 bird(143).
-sparrow(143).
+robin(143).
 flies(143).
 
 bird(144).
-blackbird(144).
+robin(144).
 flies(144).
 
 bird(145).
-blackbird(145).
+thrush(145).
 flies(145).
 
 bird(146).
-thrush(146).
+blackbird(146).
 flies(146).
 
 bird(147).
-blackbird(147).
+sparrow(147).
 flies(147).
 
 bird(148).
-blackbird(148).
+thrush(148).
 flies(148).
 
 bird(149).
@@ -595,27 +595,27 @@ robin(149).
 flies(149).
 
 bird(150).
-blackbird(150).
+robin(150).
 flies(150).
 
 bird(151).
-eagle(151).
+robin(151).
 flies(151).
 
 bird(152).
-blackbird(152).
+eagle(152).
 flies(152).
 
 bird(153).
-eagle(153).
+thrush(153).
 flies(153).
 
 bird(154).
-eagle(154).
+blackbird(154).
 flies(154).
 
 bird(155).
-eagle(155).
+sparrow(155).
 flies(155).
 
 bird(156).
@@ -635,11 +635,11 @@ robin(159).
 flies(159).
 
 bird(160).
-sparrow(160).
+blackbird(160).
 flies(160).
 
 bird(161).
-sparrow(161).
+eagle(161).
 flies(161).
 
 bird(162).
@@ -647,11 +647,11 @@ thrush(162).
 flies(162).
 
 bird(163).
-sparrow(163).
+robin(163).
 flies(163).
 
 bird(164).
-eagle(164).
+sparrow(164).
 flies(164).
 
 bird(165).
@@ -659,11 +659,11 @@ eagle(165).
 flies(165).
 
 bird(166).
-robin(166).
+eagle(166).
 flies(166).
 
 bird(167).
-blackbird(167).
+sparrow(167).
 flies(167).
 
 bird(168).
@@ -671,59 +671,59 @@ robin(168).
 flies(168).
 
 bird(169).
-eagle(169).
+robin(169).
 flies(169).
 
 bird(170).
-blackbird(170).
+eagle(170).
 flies(170).
 
 bird(171).
-eagle(171).
+thrush(171).
 flies(171).
 
 bird(172).
-thrush(172).
+robin(172).
 flies(172).
 
 bird(173).
-sparrow(173).
+blackbird(173).
 flies(173).
 
 bird(174).
-sparrow(174).
+blackbird(174).
 flies(174).
 
 bird(175).
-robin(175).
+thrush(175).
 flies(175).
 
 bird(176).
-thrush(176).
+sparrow(176).
 flies(176).
 
 bird(177).
-robin(177).
+blackbird(177).
 flies(177).
 
 bird(178).
-robin(178).
+thrush(178).
 flies(178).
 
 bird(179).
-blackbird(179).
+eagle(179).
 flies(179).
 
 bird(180).
-blackbird(180).
+eagle(180).
 flies(180).
 
 bird(181).
-robin(181).
+thrush(181).
 flies(181).
 
 bird(182).
-eagle(182).
+sparrow(182).
 flies(182).
 
 bird(183).
@@ -735,7 +735,7 @@ blackbird(184).
 flies(184).
 
 bird(185).
-sparrow(185).
+thrush(185).
 flies(185).
 
 bird(186).
@@ -743,27 +743,27 @@ robin(186).
 flies(186).
 
 bird(187).
-thrush(187).
+sparrow(187).
 flies(187).
 
 bird(188).
-blackbird(188).
+robin(188).
 flies(188).
 
 bird(189).
-thrush(189).
+robin(189).
 flies(189).
 
 bird(190).
-thrush(190).
+eagle(190).
 flies(190).
 
 bird(191).
-blackbird(191).
+eagle(191).
 flies(191).
 
 bird(192).
-sparrow(192).
+eagle(192).
 flies(192).
 
 bird(193).
@@ -771,19 +771,19 @@ thrush(193).
 flies(193).
 
 bird(194).
-eagle(194).
+robin(194).
 flies(194).
 
 bird(195).
-sparrow(195).
+blackbird(195).
 flies(195).
 
 bird(196).
-eagle(196).
+sparrow(196).
 flies(196).
 
 bird(197).
-thrush(197).
+sparrow(197).
 flies(197).
 
 bird(198).
@@ -791,27 +791,27 @@ thrush(198).
 flies(198).
 
 bird(199).
-thrush(199).
+robin(199).
 flies(199).
 
 bird(200).
-thrush(200).
+eagle(200).
 flies(200).
 
 bird(201).
-robin(201).
+eagle(201).
 flies(201).
 
 bird(202).
-thrush(202).
+robin(202).
 flies(202).
 
 bird(203).
-thrush(203).
+blackbird(203).
 flies(203).
 
 bird(204).
-robin(204).
+eagle(204).
 flies(204).
 
 bird(205).
@@ -819,15 +819,15 @@ blackbird(205).
 flies(205).
 
 bird(206).
-blackbird(206).
+thrush(206).
 flies(206).
 
 bird(207).
-thrush(207).
+robin(207).
 flies(207).
 
 bird(208).
-thrush(208).
+sparrow(208).
 flies(208).
 
 bird(209).
@@ -835,7 +835,7 @@ sparrow(209).
 flies(209).
 
 bird(210).
-eagle(210).
+sparrow(210).
 flies(210).
 
 bird(211).
@@ -847,7 +847,7 @@ sparrow(212).
 flies(212).
 
 bird(213).
-eagle(213).
+blackbird(213).
 flies(213).
 
 bird(214).
@@ -855,15 +855,15 @@ thrush(214).
 flies(214).
 
 bird(215).
-blackbird(215).
+thrush(215).
 flies(215).
 
 bird(216).
-robin(216).
+eagle(216).
 flies(216).
 
 bird(217).
-eagle(217).
+robin(217).
 flies(217).
 
 bird(218).
@@ -875,43 +875,43 @@ thrush(219).
 flies(219).
 
 bird(220).
-sparrow(220).
+robin(220).
 flies(220).
 
 bird(221).
-thrush(221).
+eagle(221).
 flies(221).
 
 bird(222).
-thrush(222).
+eagle(222).
 flies(222).
 
 bird(223).
-thrush(223).
+eagle(223).
 flies(223).
 
 bird(224).
-sparrow(224).
+blackbird(224).
 flies(224).
 
 bird(225).
-eagle(225).
+blackbird(225).
 flies(225).
 
 bird(226).
-sparrow(226).
+blackbird(226).
 flies(226).
 
 bird(227).
-robin(227).
+thrush(227).
 flies(227).
 
 bird(228).
-blackbird(228).
+thrush(228).
 flies(228).
 
 bird(229).
-thrush(229).
+sparrow(229).
 flies(229).
 
 bird(230).
@@ -919,23 +919,23 @@ robin(230).
 flies(230).
 
 bird(231).
-eagle(231).
+robin(231).
 flies(231).
 
 bird(232).
-blackbird(232).
+robin(232).
 flies(232).
 
 bird(233).
-sparrow(233).
+thrush(233).
 flies(233).
 
 bird(234).
-sparrow(234).
+blackbird(234).
 flies(234).
 
 bird(235).
-sparrow(235).
+blackbird(235).
 flies(235).
 
 bird(236).
@@ -943,35 +943,35 @@ eagle(236).
 flies(236).
 
 bird(237).
-robin(237).
+thrush(237).
 flies(237).
 
 bird(238).
-sparrow(238).
+eagle(238).
 flies(238).
 
 bird(239).
-robin(239).
+thrush(239).
 flies(239).
 
 bird(240).
-eagle(240).
+robin(240).
 flies(240).
 
 bird(241).
-sparrow(241).
+robin(241).
 flies(241).
 
 bird(242).
-robin(242).
+sparrow(242).
 flies(242).
 
 bird(243).
-eagle(243).
+sparrow(243).
 flies(243).
 
 bird(244).
-robin(244).
+eagle(244).
 flies(244).
 
 bird(245).
@@ -979,7 +979,7 @@ thrush(245).
 flies(245).
 
 bird(246).
-thrush(246).
+sparrow(246).
 flies(246).
 
 bird(247).
@@ -987,11 +987,11 @@ sparrow(247).
 flies(247).
 
 bird(248).
-robin(248).
+eagle(248).
 flies(248).
 
 bird(249).
-sparrow(249).
+robin(249).
 flies(249).
 
 bird(250).
@@ -1003,7 +1003,7 @@ thrush(251).
 flies(251).
 
 bird(252).
-robin(252).
+thrush(252).
 flies(252).
 
 bird(253).
@@ -1011,55 +1011,55 @@ blackbird(253).
 flies(253).
 
 bird(254).
-robin(254).
+blackbird(254).
 flies(254).
 
 bird(255).
-sparrow(255).
+thrush(255).
 flies(255).
 
 bird(256).
-eagle(256).
+sparrow(256).
 flies(256).
 
 bird(257).
-robin(257).
+sparrow(257).
 flies(257).
 
 bird(258).
-blackbird(258).
+robin(258).
 flies(258).
 
 bird(259).
-thrush(259).
+robin(259).
 flies(259).
 
 bird(260).
-blackbird(260).
+sparrow(260).
 flies(260).
 
 bird(261).
-sparrow(261).
+robin(261).
 flies(261).
 
 bird(262).
-sparrow(262).
+thrush(262).
 flies(262).
 
 bird(263).
-sparrow(263).
+eagle(263).
 flies(263).
 
 bird(264).
-eagle(264).
+blackbird(264).
 flies(264).
 
 bird(265).
-eagle(265).
+robin(265).
 flies(265).
 
 bird(266).
-sparrow(266).
+blackbird(266).
 flies(266).
 
 bird(267).
@@ -1067,19 +1067,19 @@ robin(267).
 flies(267).
 
 bird(268).
-eagle(268).
+sparrow(268).
 flies(268).
 
 bird(269).
-robin(269).
+blackbird(269).
 flies(269).
 
 bird(270).
-robin(270).
+sparrow(270).
 flies(270).
 
 bird(271).
-sparrow(271).
+robin(271).
 flies(271).
 
 bird(272).
@@ -1091,43 +1091,43 @@ blackbird(273).
 flies(273).
 
 bird(274).
-blackbird(274).
+eagle(274).
 flies(274).
 
 bird(275).
-eagle(275).
+sparrow(275).
 flies(275).
 
 bird(276).
-thrush(276).
+sparrow(276).
 flies(276).
 
 bird(277).
-robin(277).
+sparrow(277).
 flies(277).
 
 bird(278).
-thrush(278).
+sparrow(278).
 flies(278).
 
 bird(279).
-robin(279).
+blackbird(279).
 flies(279).
 
 bird(280).
-eagle(280).
+blackbird(280).
 flies(280).
 
 bird(281).
-sparrow(281).
+eagle(281).
 flies(281).
 
 bird(282).
-blackbird(282).
+eagle(282).
 flies(282).
 
 bird(283).
-sparrow(283).
+eagle(283).
 flies(283).
 
 bird(284).
@@ -1135,15 +1135,15 @@ eagle(284).
 flies(284).
 
 bird(285).
-robin(285).
+thrush(285).
 flies(285).
 
 bird(286).
-eagle(286).
+sparrow(286).
 flies(286).
 
 bird(287).
-eagle(287).
+robin(287).
 flies(287).
 
 bird(288).
@@ -1151,11 +1151,11 @@ thrush(288).
 flies(288).
 
 bird(289).
-eagle(289).
+robin(289).
 flies(289).
 
 bird(290).
-eagle(290).
+blackbird(290).
 flies(290).
 
 bird(291).
@@ -1163,47 +1163,47 @@ robin(291).
 flies(291).
 
 bird(292).
-thrush(292).
+sparrow(292).
 flies(292).
 
 bird(293).
-blackbird(293).
+sparrow(293).
 flies(293).
 
 bird(294).
-thrush(294).
+robin(294).
 flies(294).
 
 bird(295).
-thrush(295).
+eagle(295).
 flies(295).
 
 bird(296).
-thrush(296).
+blackbird(296).
 flies(296).
 
 bird(297).
-eagle(297).
+thrush(297).
 flies(297).
 
 bird(298).
-blackbird(298).
+robin(298).
 flies(298).
 
 bird(299).
-sparrow(299).
+thrush(299).
 flies(299).
 
 bird(300).
-thrush(300).
+sparrow(300).
 flies(300).
 
 bird(301).
-sparrow(301).
+blackbird(301).
 flies(301).
 
 bird(302).
-robin(302).
+sparrow(302).
 flies(302).
 
 bird(303).
@@ -1219,35 +1219,35 @@ blackbird(305).
 flies(305).
 
 bird(306).
-thrush(306).
+sparrow(306).
 flies(306).
 
 bird(307).
-sparrow(307).
+thrush(307).
 flies(307).
 
 bird(308).
-eagle(308).
+thrush(308).
 flies(308).
 
 bird(309).
-sparrow(309).
+blackbird(309).
 flies(309).
 
 bird(310).
-sparrow(310).
+robin(310).
 flies(310).
 
 bird(311).
-sparrow(311).
+robin(311).
 flies(311).
 
 bird(312).
-eagle(312).
+blackbird(312).
 flies(312).
 
 bird(313).
-robin(313).
+blackbird(313).
 flies(313).
 
 bird(314).
@@ -1255,31 +1255,31 @@ blackbird(314).
 flies(314).
 
 bird(315).
-thrush(315).
+sparrow(315).
 flies(315).
 
 bird(316).
-robin(316).
+thrush(316).
 flies(316).
 
 bird(317).
-eagle(317).
+robin(317).
 flies(317).
 
 bird(318).
-blackbird(318).
+thrush(318).
 flies(318).
 
 bird(319).
-eagle(319).
+sparrow(319).
 flies(319).
 
 bird(320).
-thrush(320).
+blackbird(320).
 flies(320).
 
 bird(321).
-eagle(321).
+robin(321).
 flies(321).
 
 bird(322).
@@ -1287,7 +1287,7 @@ blackbird(322).
 flies(322).
 
 bird(323).
-robin(323).
+thrush(323).
 flies(323).
 
 bird(324).
@@ -1295,23 +1295,23 @@ eagle(324).
 flies(324).
 
 bird(325).
-eagle(325).
+blackbird(325).
 flies(325).
 
 bird(326).
-blackbird(326).
+robin(326).
 flies(326).
 
 bird(327).
-blackbird(327).
+sparrow(327).
 flies(327).
 
 bird(328).
-robin(328).
+sparrow(328).
 flies(328).
 
 bird(329).
-eagle(329).
+blackbird(329).
 flies(329).
 
 bird(330).
@@ -1319,23 +1319,23 @@ blackbird(330).
 flies(330).
 
 bird(331).
-eagle(331).
+sparrow(331).
 flies(331).
 
 bird(332).
-eagle(332).
+thrush(332).
 flies(332).
 
 bird(333).
-sparrow(333).
+robin(333).
 flies(333).
 
 bird(334).
-eagle(334).
+sparrow(334).
 flies(334).
 
 bird(335).
-blackbird(335).
+sparrow(335).
 flies(335).
 
 bird(336).
@@ -1343,19 +1343,19 @@ eagle(336).
 flies(336).
 
 bird(337).
-eagle(337).
+sparrow(337).
 flies(337).
 
 bird(338).
-thrush(338).
+robin(338).
 flies(338).
 
 bird(339).
-robin(339).
+blackbird(339).
 flies(339).
 
 bird(340).
-robin(340).
+sparrow(340).
 flies(340).
 
 bird(341).
@@ -1367,19 +1367,19 @@ sparrow(342).
 flies(342).
 
 bird(343).
-sparrow(343).
+thrush(343).
 flies(343).
 
 bird(344).
-eagle(344).
+sparrow(344).
 flies(344).
 
 bird(345).
-robin(345).
+blackbird(345).
 flies(345).
 
 bird(346).
-eagle(346).
+robin(346).
 flies(346).
 
 bird(347).
@@ -1387,11 +1387,11 @@ robin(347).
 flies(347).
 
 bird(348).
-sparrow(348).
+robin(348).
 flies(348).
 
 bird(349).
-sparrow(349).
+robin(349).
 flies(349).
 
 bird(350).
@@ -1403,23 +1403,23 @@ eagle(351).
 flies(351).
 
 bird(352).
-eagle(352).
+blackbird(352).
 flies(352).
 
 bird(353).
-blackbird(353).
+robin(353).
 flies(353).
 
 bird(354).
-sparrow(354).
+blackbird(354).
 flies(354).
 
 bird(355).
-blackbird(355).
+eagle(355).
 flies(355).
 
 bird(356).
-blackbird(356).
+thrush(356).
 flies(356).
 
 bird(357).
@@ -1427,31 +1427,31 @@ thrush(357).
 flies(357).
 
 bird(358).
-blackbird(358).
+sparrow(358).
 flies(358).
 
 bird(359).
-eagle(359).
+robin(359).
 flies(359).
 
 bird(360).
-robin(360).
+sparrow(360).
 flies(360).
 
 bird(361).
-sparrow(361).
+robin(361).
 flies(361).
 
 bird(362).
-robin(362).
+eagle(362).
 flies(362).
 
 bird(363).
-sparrow(363).
+robin(363).
 flies(363).
 
 bird(364).
-sparrow(364).
+thrush(364).
 flies(364).
 
 bird(365).
@@ -1463,15 +1463,15 @@ robin(366).
 flies(366).
 
 bird(367).
-eagle(367).
+sparrow(367).
 flies(367).
 
 bird(368).
-robin(368).
+thrush(368).
 flies(368).
 
 bird(369).
-blackbird(369).
+sparrow(369).
 flies(369).
 
 bird(370).
@@ -1479,51 +1479,51 @@ blackbird(370).
 flies(370).
 
 bird(371).
-blackbird(371).
+thrush(371).
 flies(371).
 
 bird(372).
-eagle(372).
+sparrow(372).
 flies(372).
 
 bird(373).
-sparrow(373).
+robin(373).
 flies(373).
 
 bird(374).
-blackbird(374).
+thrush(374).
 flies(374).
 
 bird(375).
-blackbird(375).
+thrush(375).
 flies(375).
 
 bird(376).
-robin(376).
+blackbird(376).
 flies(376).
 
 bird(377).
-eagle(377).
+sparrow(377).
 flies(377).
 
 bird(378).
-blackbird(378).
+thrush(378).
 flies(378).
 
 bird(379).
-eagle(379).
+thrush(379).
 flies(379).
 
 bird(380).
-blackbird(380).
+eagle(380).
 flies(380).
 
 bird(381).
-blackbird(381).
+robin(381).
 flies(381).
 
 bird(382).
-blackbird(382).
+thrush(382).
 flies(382).
 
 bird(383).
@@ -1531,19 +1531,19 @@ eagle(383).
 flies(383).
 
 bird(384).
-eagle(384).
+robin(384).
 flies(384).
 
 bird(385).
-blackbird(385).
+sparrow(385).
 flies(385).
 
 bird(386).
-sparrow(386).
+thrush(386).
 flies(386).
 
 bird(387).
-thrush(387).
+robin(387).
 flies(387).
 
 bird(388).
@@ -1551,27 +1551,27 @@ thrush(388).
 flies(388).
 
 bird(389).
-sparrow(389).
+eagle(389).
 flies(389).
 
 bird(390).
-sparrow(390).
+eagle(390).
 flies(390).
 
 bird(391).
-blackbird(391).
+sparrow(391).
 flies(391).
 
 bird(392).
-thrush(392).
+blackbird(392).
 flies(392).
 
 bird(393).
-thrush(393).
+blackbird(393).
 flies(393).
 
 bird(394).
-blackbird(394).
+robin(394).
 flies(394).
 
 bird(395).
@@ -1579,7 +1579,7 @@ sparrow(395).
 flies(395).
 
 bird(396).
-eagle(396).
+thrush(396).
 flies(396).
 
 bird(397).
@@ -1587,31 +1587,31 @@ robin(397).
 flies(397).
 
 bird(398).
-eagle(398).
+sparrow(398).
 flies(398).
 
 bird(399).
-blackbird(399).
+thrush(399).
 flies(399).
 
 bird(400).
-robin(400).
+thrush(400).
 flies(400).
 
 bird(401).
-thrush(401).
+robin(401).
 flies(401).
 
 bird(402).
-eagle(402).
+blackbird(402).
 flies(402).
 
 bird(403).
-thrush(403).
+blackbird(403).
 flies(403).
 
 bird(404).
-robin(404).
+sparrow(404).
 flies(404).
 
 bird(405).
@@ -1619,23 +1619,23 @@ thrush(405).
 flies(405).
 
 bird(406).
-thrush(406).
+blackbird(406).
 flies(406).
 
 bird(407).
-eagle(407).
+robin(407).
 flies(407).
 
 bird(408).
-thrush(408).
+sparrow(408).
 flies(408).
 
 bird(409).
-blackbird(409).
+robin(409).
 flies(409).
 
 bird(410).
-blackbird(410).
+eagle(410).
 flies(410).
 
 bird(411).
@@ -1643,7 +1643,7 @@ eagle(411).
 flies(411).
 
 bird(412).
-blackbird(412).
+thrush(412).
 flies(412).
 
 bird(413).
@@ -1655,11 +1655,11 @@ eagle(414).
 flies(414).
 
 bird(415).
-blackbird(415).
+robin(415).
 flies(415).
 
 bird(416).
-blackbird(416).
+thrush(416).
 flies(416).
 
 bird(417).
@@ -1679,19 +1679,19 @@ eagle(420).
 flies(420).
 
 bird(421).
-eagle(421).
+thrush(421).
 flies(421).
 
 bird(422).
-sparrow(422).
+blackbird(422).
 flies(422).
 
 bird(423).
-thrush(423).
+sparrow(423).
 flies(423).
 
 bird(424).
-robin(424).
+thrush(424).
 flies(424).
 
 bird(425).
@@ -1699,11 +1699,11 @@ thrush(425).
 flies(425).
 
 bird(426).
-robin(426).
+sparrow(426).
 flies(426).
 
 bird(427).
-thrush(427).
+eagle(427).
 flies(427).
 
 bird(428).
@@ -1711,43 +1711,43 @@ blackbird(428).
 flies(428).
 
 bird(429).
-eagle(429).
+thrush(429).
 flies(429).
 
 bird(430).
-sparrow(430).
+thrush(430).
 flies(430).
 
 bird(431).
-eagle(431).
+thrush(431).
 flies(431).
 
 bird(432).
-blackbird(432).
+eagle(432).
 flies(432).
 
 bird(433).
-thrush(433).
+eagle(433).
 flies(433).
 
 bird(434).
-thrush(434).
+blackbird(434).
 flies(434).
 
 bird(435).
-eagle(435).
+robin(435).
 flies(435).
 
 bird(436).
-thrush(436).
+blackbird(436).
 flies(436).
 
 bird(437).
-eagle(437).
+sparrow(437).
 flies(437).
 
 bird(438).
-thrush(438).
+sparrow(438).
 flies(438).
 
 bird(439).
@@ -1755,11 +1755,11 @@ robin(439).
 flies(439).
 
 bird(440).
-eagle(440).
+sparrow(440).
 flies(440).
 
 bird(441).
-thrush(441).
+blackbird(441).
 flies(441).
 
 bird(442).
@@ -1767,7 +1767,7 @@ robin(442).
 flies(442).
 
 bird(443).
-blackbird(443).
+thrush(443).
 flies(443).
 
 bird(444).
@@ -1779,221 +1779,621 @@ eagle(445).
 flies(445).
 
 bird(446).
-eagle(446).
+thrush(446).
 flies(446).
 
 bird(447).
-eagle(447).
+blackbird(447).
 flies(447).
 
 bird(448).
-blackbird(448).
+sparrow(448).
 flies(448).
 
 bird(449).
-sparrow(449).
+thrush(449).
 flies(449).
 
 bird(450).
-blackbird(450).
+thrush(450).
 flies(450).
 
-0.0::bird(451).
-dog(451).
-0.0::flies(451).
+bird(451).
+thrush(451).
+flies(451).
 
-0.0::bird(452).
-rabbit(452).
-0.0::flies(452).
+bird(452).
+thrush(452).
+flies(452).
 
-0.0::bird(453).
-dog(453).
-0.0::flies(453).
+bird(453).
+eagle(453).
+flies(453).
 
-0.0::bird(454).
-cat(454).
-0.0::flies(454).
+bird(454).
+thrush(454).
+flies(454).
 
-0.0::bird(455).
-dog(455).
-0.0::flies(455).
+bird(455).
+robin(455).
+flies(455).
 
-0.0::bird(456).
-rabbit(456).
-0.0::flies(456).
+bird(456).
+robin(456).
+flies(456).
 
-0.0::bird(457).
-cat(457).
-0.0::flies(457).
+bird(457).
+robin(457).
+flies(457).
 
-0.0::bird(458).
-rabbit(458).
-0.0::flies(458).
+bird(458).
+sparrow(458).
+flies(458).
 
-0.0::bird(459).
-rabbit(459).
-0.0::flies(459).
+bird(459).
+eagle(459).
+flies(459).
 
-0.0::bird(460).
-dog(460).
-0.0::flies(460).
+bird(460).
+sparrow(460).
+flies(460).
 
-0.0::bird(461).
-cat(461).
-0.0::flies(461).
+bird(461).
+blackbird(461).
+flies(461).
 
-0.0::bird(462).
-cat(462).
-0.0::flies(462).
+bird(462).
+robin(462).
+flies(462).
 
-0.0::bird(463).
-cat(463).
-0.0::flies(463).
+bird(463).
+robin(463).
+flies(463).
 
-0.0::bird(464).
-cat(464).
-0.0::flies(464).
+bird(464).
+eagle(464).
+flies(464).
 
-0.0::bird(465).
-cat(465).
-0.0::flies(465).
+bird(465).
+sparrow(465).
+flies(465).
 
-0.0::bird(466).
-dog(466).
-0.0::flies(466).
+bird(466).
+blackbird(466).
+flies(466).
 
-0.0::bird(467).
-cat(467).
-0.0::flies(467).
+bird(467).
+robin(467).
+flies(467).
 
-0.0::bird(468).
-cat(468).
-0.0::flies(468).
+bird(468).
+sparrow(468).
+flies(468).
 
-0.0::bird(469).
-rabbit(469).
-0.0::flies(469).
+bird(469).
+robin(469).
+flies(469).
 
-0.0::bird(470).
-rabbit(470).
-0.0::flies(470).
+bird(470).
+blackbird(470).
+flies(470).
 
-0.0::bird(471).
-dog(471).
-0.0::flies(471).
+bird(471).
+thrush(471).
+flies(471).
 
-0.0::bird(472).
-dog(472).
-0.0::flies(472).
+bird(472).
+robin(472).
+flies(472).
 
-0.0::bird(473).
-rabbit(473).
-0.0::flies(473).
+bird(473).
+thrush(473).
+flies(473).
 
-0.0::bird(474).
-dog(474).
-0.0::flies(474).
+bird(474).
+eagle(474).
+flies(474).
 
-0.0::bird(475).
-dog(475).
-0.0::flies(475).
+bird(475).
+eagle(475).
+flies(475).
 
-0.0::bird(476).
-rabbit(476).
-0.0::flies(476).
+bird(476).
+blackbird(476).
+flies(476).
 
-0.0::bird(477).
-cat(477).
-0.0::flies(477).
+bird(477).
+blackbird(477).
+flies(477).
 
-0.0::bird(478).
-cat(478).
-0.0::flies(478).
+bird(478).
+blackbird(478).
+flies(478).
 
-0.0::bird(479).
-rabbit(479).
-0.0::flies(479).
+bird(479).
+eagle(479).
+flies(479).
 
-0.0::bird(480).
-rabbit(480).
-0.0::flies(480).
+bird(480).
+blackbird(480).
+flies(480).
 
-0.0::bird(481).
-rabbit(481).
-0.0::flies(481).
+bird(481).
+sparrow(481).
+flies(481).
 
-0.0::bird(482).
-rabbit(482).
-0.0::flies(482).
+bird(482).
+thrush(482).
+flies(482).
 
-0.0::bird(483).
-cat(483).
-0.0::flies(483).
+bird(483).
+sparrow(483).
+flies(483).
 
-0.0::bird(484).
-rabbit(484).
-0.0::flies(484).
+bird(484).
+blackbird(484).
+flies(484).
 
-0.0::bird(485).
-cat(485).
-0.0::flies(485).
+bird(485).
+sparrow(485).
+flies(485).
 
-0.0::bird(486).
-rabbit(486).
-0.0::flies(486).
+bird(486).
+blackbird(486).
+flies(486).
 
-0.0::bird(487).
-cat(487).
-0.0::flies(487).
+bird(487).
+eagle(487).
+flies(487).
 
-0.0::bird(488).
-cat(488).
-0.0::flies(488).
+bird(488).
+sparrow(488).
+flies(488).
 
-0.0::bird(489).
-dog(489).
-0.0::flies(489).
+bird(489).
+robin(489).
+flies(489).
 
-0.0::bird(490).
-rabbit(490).
-0.0::flies(490).
+bird(490).
+eagle(490).
+flies(490).
 
-0.0::bird(491).
-cat(491).
-0.0::flies(491).
+bird(491).
+eagle(491).
+flies(491).
 
-0.0::bird(492).
-rabbit(492).
-0.0::flies(492).
+bird(492).
+thrush(492).
+flies(492).
 
-0.0::bird(493).
-rabbit(493).
-0.0::flies(493).
+bird(493).
+thrush(493).
+flies(493).
 
-0.0::bird(494).
-rabbit(494).
-0.0::flies(494).
+bird(494).
+eagle(494).
+flies(494).
 
-0.0::bird(495).
-dog(495).
-0.0::flies(495).
+bird(495).
+blackbird(495).
+flies(495).
 
-0.0::bird(496).
-rabbit(496).
-0.0::flies(496).
+bird(496).
+robin(496).
+flies(496).
 
-0.0::bird(497).
-dog(497).
-0.0::flies(497).
+bird(497).
+blackbird(497).
+flies(497).
 
-0.0::bird(498).
-cat(498).
-0.0::flies(498).
+bird(498).
+sparrow(498).
+flies(498).
 
-0.0::bird(499).
-rabbit(499).
-0.0::flies(499).
+bird(499).
+blackbird(499).
+flies(499).
 
-0.0::bird(500).
-dog(500).
-0.0::flies(500).
+bird(500).
+blackbird(500).
+flies(500).
+
+bird(501).
+sparrow(501).
+flies(501).
+
+bird(502).
+blackbird(502).
+flies(502).
+
+bird(503).
+thrush(503).
+flies(503).
+
+bird(504).
+blackbird(504).
+flies(504).
+
+bird(505).
+blackbird(505).
+flies(505).
+
+bird(506).
+robin(506).
+flies(506).
+
+bird(507).
+thrush(507).
+flies(507).
+
+bird(508).
+blackbird(508).
+flies(508).
+
+bird(509).
+sparrow(509).
+flies(509).
+
+bird(510).
+thrush(510).
+flies(510).
+
+bird(511).
+sparrow(511).
+flies(511).
+
+bird(512).
+blackbird(512).
+flies(512).
+
+bird(513).
+blackbird(513).
+flies(513).
+
+bird(514).
+blackbird(514).
+flies(514).
+
+bird(515).
+robin(515).
+flies(515).
+
+bird(516).
+robin(516).
+flies(516).
+
+bird(517).
+thrush(517).
+flies(517).
+
+bird(518).
+robin(518).
+flies(518).
+
+bird(519).
+eagle(519).
+flies(519).
+
+bird(520).
+sparrow(520).
+flies(520).
+
+bird(521).
+blackbird(521).
+flies(521).
+
+bird(522).
+sparrow(522).
+flies(522).
+
+bird(523).
+thrush(523).
+flies(523).
+
+bird(524).
+sparrow(524).
+flies(524).
+
+bird(525).
+thrush(525).
+flies(525).
+
+bird(526).
+thrush(526).
+flies(526).
+
+bird(527).
+blackbird(527).
+flies(527).
+
+bird(528).
+blackbird(528).
+flies(528).
+
+bird(529).
+robin(529).
+flies(529).
+
+bird(530).
+blackbird(530).
+flies(530).
+
+bird(531).
+sparrow(531).
+flies(531).
+
+bird(532).
+eagle(532).
+flies(532).
+
+bird(533).
+sparrow(533).
+flies(533).
+
+bird(534).
+blackbird(534).
+flies(534).
+
+bird(535).
+sparrow(535).
+flies(535).
+
+bird(536).
+eagle(536).
+flies(536).
+
+bird(537).
+blackbird(537).
+flies(537).
+
+bird(538).
+thrush(538).
+flies(538).
+
+bird(539).
+sparrow(539).
+flies(539).
+
+bird(540).
+blackbird(540).
+flies(540).
+
+0.0::bird(541).
+cat(541).
+0.0::flies(541).
+
+0.0::bird(542).
+cat(542).
+0.0::flies(542).
+
+0.0::bird(543).
+dog(543).
+0.0::flies(543).
+
+0.0::bird(544).
+rabbit(544).
+0.0::flies(544).
+
+0.0::bird(545).
+dog(545).
+0.0::flies(545).
+
+0.0::bird(546).
+cat(546).
+0.0::flies(546).
+
+0.0::bird(547).
+cat(547).
+0.0::flies(547).
+
+0.0::bird(548).
+rabbit(548).
+0.0::flies(548).
+
+0.0::bird(549).
+rabbit(549).
+0.0::flies(549).
+
+0.0::bird(550).
+cat(550).
+0.0::flies(550).
+
+0.0::bird(551).
+dog(551).
+0.0::flies(551).
+
+0.0::bird(552).
+rabbit(552).
+0.0::flies(552).
+
+0.0::bird(553).
+cat(553).
+0.0::flies(553).
+
+0.0::bird(554).
+rabbit(554).
+0.0::flies(554).
+
+0.0::bird(555).
+rabbit(555).
+0.0::flies(555).
+
+0.0::bird(556).
+rabbit(556).
+0.0::flies(556).
+
+0.0::bird(557).
+dog(557).
+0.0::flies(557).
+
+0.0::bird(558).
+cat(558).
+0.0::flies(558).
+
+0.0::bird(559).
+cat(559).
+0.0::flies(559).
+
+0.0::bird(560).
+cat(560).
+0.0::flies(560).
+
+0.0::bird(561).
+cat(561).
+0.0::flies(561).
+
+0.0::bird(562).
+cat(562).
+0.0::flies(562).
+
+0.0::bird(563).
+rabbit(563).
+0.0::flies(563).
+
+0.0::bird(564).
+dog(564).
+0.0::flies(564).
+
+0.0::bird(565).
+dog(565).
+0.0::flies(565).
+
+0.0::bird(566).
+dog(566).
+0.0::flies(566).
+
+0.0::bird(567).
+rabbit(567).
+0.0::flies(567).
+
+0.0::bird(568).
+rabbit(568).
+0.0::flies(568).
+
+0.0::bird(569).
+dog(569).
+0.0::flies(569).
+
+0.0::bird(570).
+dog(570).
+0.0::flies(570).
+
+0.0::bird(571).
+dog(571).
+0.0::flies(571).
+
+0.0::bird(572).
+dog(572).
+0.0::flies(572).
+
+0.0::bird(573).
+dog(573).
+0.0::flies(573).
+
+0.0::bird(574).
+cat(574).
+0.0::flies(574).
+
+0.0::bird(575).
+dog(575).
+0.0::flies(575).
+
+0.0::bird(576).
+dog(576).
+0.0::flies(576).
+
+0.0::bird(577).
+cat(577).
+0.0::flies(577).
+
+0.0::bird(578).
+dog(578).
+0.0::flies(578).
+
+0.0::bird(579).
+rabbit(579).
+0.0::flies(579).
+
+0.0::bird(580).
+cat(580).
+0.0::flies(580).
+
+0.0::bird(581).
+cat(581).
+0.0::flies(581).
+
+0.0::bird(582).
+dog(582).
+0.0::flies(582).
+
+0.0::bird(583).
+rabbit(583).
+0.0::flies(583).
+
+0.0::bird(584).
+dog(584).
+0.0::flies(584).
+
+0.0::bird(585).
+dog(585).
+0.0::flies(585).
+
+0.0::bird(586).
+cat(586).
+0.0::flies(586).
+
+0.0::bird(587).
+cat(587).
+0.0::flies(587).
+
+0.0::bird(588).
+rabbit(588).
+0.0::flies(588).
+
+0.0::bird(589).
+cat(589).
+0.0::flies(589).
+
+0.0::bird(590).
+dog(590).
+0.0::flies(590).
+
+0.0::bird(591).
+cat(591).
+0.0::flies(591).
+
+0.0::bird(592).
+cat(592).
+0.0::flies(592).
+
+0.0::bird(593).
+dog(593).
+0.0::flies(593).
+
+0.0::bird(594).
+cat(594).
+0.0::flies(594).
+
+0.0::bird(595).
+rabbit(595).
+0.0::flies(595).
+
+0.0::bird(596).
+rabbit(596).
+0.0::flies(596).
+
+0.0::bird(597).
+cat(597).
+0.0::flies(597).
+
+0.0::bird(598).
+cat(598).
+0.0::flies(598).
+
+0.0::bird(599).
+dog(599).
+0.0::flies(599).
+
+0.0::bird(600).
+cat(600).
+0.0::flies(600).

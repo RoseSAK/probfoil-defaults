@@ -25,14 +25,14 @@ base(dog(x)).
 mode(rabbit(+)).
 base(rabbit(x)).
 
-mode(penguin(+)).
-base(penguin(x)).
+%mode(penguin(+)).
+%base(penguin(x)).
 
 mode(dodo(+)).
 base(dodo(x)).
 
-mode(ostrich(+)).
-base(ostrich(x)).
+%mode(ostrich(+)).
+%base(ostrich(x)).
 
 mode(kiwi(+)).
 base(kiwi(x)).

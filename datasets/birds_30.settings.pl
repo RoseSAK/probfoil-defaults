@@ -16,8 +16,8 @@ base(robin(x)).
 mode(eagle(+)).
 base(eagle(x)).
 
-mode(cat(+)).
-base(cat(x)).
+%mode(cat(+)).
+%base(cat(x)).
 
 mode(dog(+)).
 base(dog(x)).
@@ -25,8 +25,8 @@ base(dog(x)).
 mode(rabbit(+)).
 base(rabbit(x)).
 
-mode(penguin(+)).
-base(penguin(x)).
+%mode(penguin(+)).
+%base(penguin(x)).
 
 mode(dodo(+)).
 base(dodo(x)).
@@ -34,8 +34,8 @@ base(dodo(x)).
 mode(ostrich(+)).
 base(ostrich(x)).
 
-mode(kiwi(+)).
-base(kiwi(x)).
+%mode(kiwi(+)).
+%base(kiwi(x)).
 
 base(flies(x)).
 learn(flies/1).

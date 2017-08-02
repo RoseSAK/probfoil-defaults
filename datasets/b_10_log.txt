@@ -1,0 +1,66 @@
+[LVL9] Output level: 9
+[INFO] Random seed: 0.985001399195
+[INFO] Computing scores: 0.0260s
+[INFO] Number of examples (M): 10
+[INFO] Positive weight (P): 8.0000
+[INFO] Negative weight (N): 2.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.8]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.8
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A) 0.88 (8.0, 1.0, 1.0, 0.0) 0.977777777778 [ACCEPT]
+[LVL9] BETTER RULE flies(A) :- bird(A) (0.8800000000000001, 8.0) > (0.8, 8.0)
+[LVL9] flies(A) :- blackbird(A) 0.95 (3.0, 0.0, 2.0, 5.0) 0.95 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- blackbird(A) (0.95, 3.0) > (0.8800000000000001, 8.0)
+[LVL9] flies(A) :- \+cat(A) 0.88 (8.0, 1.0, 1.0, 0.0) 0.977777777778 [ACCEPT]
+[LVL9] flies(A) :- \+ostrich(A) 0.88 (8.0, 1.0, 1.0, 0.0) 0.977777777778 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- blackbird(A) [0.95]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.88
+[DEBUG] flies(A) :- \+cat(A) 0.88
+[DEBUG] flies(A) :- \+ostrich(A) 0.88
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A), \+ostrich(A) 0.977777777778 (8.0, 0.0, 2.0, 0.0) 0.977777777778 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- bird(A), \+ostrich(A) (0.9777777777777779, 8.0) > (0.95, 3.0)
+[INFO] RULE LEARNED: flies(A) :- bird(A), \+ostrich(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- true 1.0
+[INFO] Computing scores: 0.0250s
+[INFO] Number of examples (M): 10
+[INFO] Positive weight (P): 8.0000
+[INFO] Negative weight (N): 2.0000
+[DEBUG] Best rule so far: flies(A) :- true [0.8]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.8
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A) 0.88 (8.0, 1.0, 1.0, 0.0) 0.977777777778 [ACCEPT]
+[LVL9] BETTER RULE flies(A) :- bird(A) (0.8800000000000001, 8.0) > (0.8, 8.0)
+[LVL9] flies(A) :- blackbird(A) 0.95 (3.0, 0.0, 2.0, 5.0) 0.95 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- blackbird(A) (0.95, 3.0) > (0.8800000000000001, 8.0)
+[LVL9] flies(A) :- \+cat(A) 0.88 (8.0, 1.0, 1.0, 0.0) 0.977777777778 [ACCEPT]
+[LVL9] flies(A) :- \+ostrich(A) 0.88 (8.0, 1.0, 1.0, 0.0) 0.977777777778 [ACCEPT]
+[LVL9] flies(A) :- \+ab_bird(A) 0.88 (8.0, 1.0, 1.0, 0.0) 0.977777777778 [ACCEPT]
+[DEBUG] Best rule so far: flies(A) :- blackbird(A) [0.95]
+[DEBUG] Candidates for iteration 2:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- bird(A) 0.88
+[DEBUG] flies(A) :- \+cat(A) 0.88
+[DEBUG] flies(A) :- \+ostrich(A) 0.88
+[DEBUG] flies(A) :- \+ab_bird(A) 0.88
+[DEBUG] ==================================
+[LVL9] flies(A) :- bird(A), \+ostrich(A) 0.977777777778 (8.0, 0.0, 2.0, 0.0) 0.977777777778 [REJECT* fp] 0.0
+[LVL9] BETTER RULE flies(A) :- bird(A), \+ostrich(A) (0.9777777777777779, 8.0) > (0.95, 3.0)
+[INFO] RULE LEARNED: flies(A) :- bird(A), \+ostrich(A) 1.0
+[DEBUG] Best rule so far: flies(A) :- true [0.0]
+[DEBUG] Candidates for iteration 1:
+[DEBUG] ==================================
+[DEBUG] flies(A) :- true 0.0
+[DEBUG] ==================================
+[INFO] RULE LEARNED: flies(A) :- true 1.0

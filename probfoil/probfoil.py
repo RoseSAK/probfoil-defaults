@@ -449,19 +449,19 @@ def main(argv=sys.argv[1:]):
         learn_class = ProbFOIL2 # this seems to be the default learn_class
 
     time_start = time.time() # record start time
-    learn = learn_class(data, logger=logger, **vars(args))
+    learn_one = learn_class(data, logger=logger, **vars(args))
 
-    hypothesis_one = learn.learn() # run learn function from learn_class
+    hypothesis_one = learn_one.learn() # run learn function from learn_class
 
     time_one = time.time() - time_start # time for first stage
 
-    # call function from defaults.py
-    construct_ab_pred(hypothesis_one, learn, args.files)
+    # call function from defaults.py to construct abnormality predicate
+    construct_ab_pred(hypothesis_one, learn_one, args.files)
 
     # reload data files and re-learn rules with new data
     data = DataFile(*(PrologFile(source) for source in args.files))
-    learn = learn_class(data, logger=logger, **vars(args))
-    hypothesis_two = learn.learn()
+    learn_two = learn_class(data, logger=logger, **vars(args))
+    hypothesis_two = learn_two.learn()
 
     time_total = time.time() - time_start # get time taken
     time_two = time_total - time_one # time for second stage
@@ -470,7 +470,7 @@ def main(argv=sys.argv[1:]):
     for kv in vars(args).items():
         print('%20s:\t%s' % kv)
 
-    if learn.interrupted:
+    if learn_one.interrupted:
         print('================ PARTIAL THEORY ================')
     else:
         print('================= INTERMEDIATE THEORY =================')
@@ -498,8 +498,10 @@ def main(argv=sys.argv[1:]):
     print ('           Precision:\t', precision(hypothesis_two))
     print ('              Recall:\t', recall(hypothesis_two))
     print ('================== STATISTICS ==================')
-    for name, value in learn.statistics():
-        print ('%20s:\t%s' % (name, value))
+    for name, value in learn_one.statistics():
+        print ('%20s Stage One:\t%s' % (name, value))
+    for name, value in learn_two.statistics():
+        print ('%20s Stage One:\t%s' % (name, value))
     print ('      Stage one time:\t%.4fs' % time_one)
     print ('      Stage two time:\t%.4fs' % time_two)
     print ('      Total time:\t%.4fs' % time_total)

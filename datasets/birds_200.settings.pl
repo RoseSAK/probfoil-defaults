@@ -40,3 +40,6 @@ base(kiwi(x)).
 base(flies(x)).
 learn(flies/1).
 example_mode(closed).
+
+mode(ab_bird(+)).
+base(ab_bird(x)).

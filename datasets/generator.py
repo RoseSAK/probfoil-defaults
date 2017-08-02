@@ -20,15 +20,16 @@ parser.add_argument('size', metavar='N', type=int, help='size of dataset')
 args = parser.parse_args()
 
 birdlist = ['blackbird', 'sparrow', 'thrush', 'robin', 'eagle']
-oddbirds = ['penguin', 'dodo', 'ostrich', 'kiwi']
-nonbirds = ['cat', 'dog', 'rabbit']
+oddbirds = ['penguin', 'dodo', 'ostrich', 'kiwi'] # exceptions to the rule
+nonbirds = ['cat', 'dog', 'rabbit'] # other types of things
 types = ['bird']+birdlist+nonbirds+oddbirds
 
-num = args.size+1
-exceptions = int(round(num/10))+1
-others = int(round(num/10))
+num = args.size+1 # size of dataset from user input
+exceptions = int(round(num/10))+1 # take some as exceptions
+others = int(round(num/10)) # take some as other things
 
-with open(args.datafile, 'w+') as w:
+# write data points to data file, randomly select from lists
+with open(args.datafile, 'w+') as w: # create file if it does not exist already
     for i in range(1, exceptions):
         w.write('bird(%d).\n' % i)
         w.write('%s(%d).\n' % (random.choice(oddbirds),i))
@@ -42,10 +43,11 @@ with open(args.datafile, 'w+') as w:
         w.write('%s(%d).\n' % (random.choice(nonbirds), i))
         w.write('0.0::flies(%d).\n\n' % i )
 
+# write settings (types and modes) to settings file, for all predicates
 with open(args.settings, 'w+') as w:
     for t in types:
         w.write('mode(%s(+)).\n' % t)
         w.write('base(%s(x)).\n\n' % t)
     w.write('base(flies(x)).\n')
-    w.write('learn(flies/1).\n')
-    w.write('example_mode(closed).\n\n')
+    w.write('learn(flies/1).\n') # specify target predicate
+    w.write('example_mode(closed).\n\n') # use only examples in the data

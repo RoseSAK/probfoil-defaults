@@ -25,8 +25,8 @@ base(dog(x)).
 mode(rabbit(+)).
 base(rabbit(x)).
 
-mode(penguin(+)).
-base(penguin(x)).
+%mode(penguin(+)).
+%base(penguin(x)).
 
 mode(dodo(+)).
 base(dodo(x)).
