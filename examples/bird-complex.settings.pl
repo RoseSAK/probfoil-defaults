@@ -1,6 +1,5 @@
 % Modes
 mode(bird(+)).
-mode(ab_bird(+)).
 mode(penguin(+)).
 mode(eagle(+)).
 mode(robin(+)).
@@ -12,12 +11,12 @@ mode(ostrich(+)).
 mode(alive(+)).
 mode(dead(+)).
 
-
 % Type definitions
 base(bird(x)).
 base(penguin(x)).
 base(flies(x)).
 base(blackbird(x)).
+base(thrush(x)).
 base(robin(x)).
 base(eagle(x)).
 base(dog(x)).

@@ -12,7 +12,7 @@ from problog.util import init_logger
 from problog.logic import Term, Clause
 from .rule import FOILRule
 from .learn import CandidateBeam, LearnEntail
-from .defaults import construct_ab_pred
+from .defaults_complex import construct_ab_pred
 
 from logging import getLogger
 
