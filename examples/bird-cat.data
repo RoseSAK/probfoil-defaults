@@ -23,10 +23,11 @@ robin(5).
 flies(5).
 0.0::tail(5).
 
-0.0::bird(6).
-dog(6).
-0.0::flies(6).
-tail(6).
+%0.0::bird(6).
+%0.0::cat(6).
+%dog(6).
+%0.0::flies(6).
+%tail(6).
 
 bird(7).
 ostrich(7).
@@ -76,7 +77,8 @@ tail(16).
 %0.0::flies(x):-cat(x).
 %0.0::flies(x):-cat(x).
 %0.0::tail(x):-bird(x).
-
 ab_bird(1).
 ab_bird(8).
 ab_bird(7).
+ab_cat(12).
+ab_cat(11).

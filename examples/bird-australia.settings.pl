@@ -5,42 +5,32 @@ mode(eagle(+)).
 mode(robin(+)).
 mode(blackbird(+)).
 mode(thrush(+)).
-%mode(dog(+)).
+mode(dog(+)).
 mode(dodo(+)).
 mode(ostrich(+)).
-mode(cat(+)).
-mode(tabby(+)).
-mode(siamese(+)).
-mode(ginger(+)).
-mode(injured(+)).
-mode(manx(+)).
+mode(kiwi(+)).
 
 % Type definitions
 base(bird(x)).
 base(penguin(x)).
 base(flies(x)).
 base(blackbird(x)).
-base(thrush(x)).
 base(robin(x)).
 base(eagle(x)).
-%base(dog(x)).
+base(dog(x)).
 base(dodo(x)).
 base(ostrich(x)).
-base(cat(x)).
-base(tabby(x)).
-base(siamese(x)).
-base(ginger(x)).
-base(injured(x)).
-base(manx(x)).
-base(tail(x)).
+base(australian(x)).
+base(kiwi(x)).
+base(thrush(x)).
 
 % Target
-learn(tail/1).
+learn(australian/1).
 
-example_mode(auto).
+example_mode(closed).
 
 mode(ab_bird(+)).
 base(ab_bird(x)).
 
-mode(ab_cat(+)).
-base(ab_cat(x)).
+mode(ab_ab_bird(+)).
+base(ab_ab_bird(x)).

@@ -501,7 +501,7 @@ def main(argv=sys.argv[1:]):
     for name, value in learn_one.statistics():
         print ('%20s Stage One:\t%s' % (name, value))
     for name, value in learn_two.statistics():
-        print ('%20s Stage One:\t%s' % (name, value))
+        print ('%20s Stage Two:\t%s' % (name, value))
     print ('      Stage one time:\t%.4fs' % time_one)
     print ('      Stage two time:\t%.4fs' % time_two)
     print ('      Total time:\t%.4fs' % time_total)
