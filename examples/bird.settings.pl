@@ -9,9 +9,6 @@ mode(thrush(+)).
 mode(dog(+)).
 mode(dodo(+)).
 mode(ostrich(+)).
-mode(alive(+)).
-mode(dead(+)).
-
 
 % Type definitions
 base(bird(x)).
@@ -23,8 +20,6 @@ base(eagle(x)).
 base(dog(x)).
 base(dodo(x)).
 base(ostrich(x)).
-base(alive(x)).
-base(dead(x)).
 
 % Target
 learn(flies/1).
