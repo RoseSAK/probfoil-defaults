@@ -1,3 +1,42 @@
+Abnormal Predicates: Learning Categorical Defaults from Probabilistic Rules
+MSc Project - Rose Azad Khan
+========================
+This repository contains the original ProbFOIL code, along with several files and folders created for use in this MSc project.
+
+In the probfoil folder: every file in this folder belongs to the original ProbFOIL implementation, except for defaults.py,
+defaults_complex.py and generator.py. The original ProbFOIL files are unmodified except for probfoil.py
+
+defaults.py contains the function construct_ab_pred, which creates the abnormal predicate and new data points and writes these to the
+data files.
+
+defaults_complex.py is identical to defaults.py except that it includes a loop which activates when there is more than one positive predicate
+in the body of the rule i.e. more than one candidate for creating ab_pred. This file was used when complex examples were explored in the
+qualitative evaluation
+
+generator.py is the program used to generate datasets for the quantitative evaluation. It can be run from the command line, you need to specify
+an output data file <file.data> and an output settings file <file.settings.pl> and the number of objects in the domain N
+
+probfoil.py has been modified to learn categorical defaults rather than statistical defaults. At the moment, probfoil.py uses the function
+from defaults_complex.py (line 459 of probfoil.py). If you wish to use the function from defaults.py instead, you must change the import statement at the top of the
+file to 'import defaults' instead of import defaults_complex. The function names are identical
+
+To run the modified probfoil algorithm, you need to use the repository version of probfoil. If you are using files from a separate folder,
+you will need to run probfoil as a module, due to importing
+The command is 'python -m probfoil.probfoil -p 0.0 -v <file.settings.pl> <file.data> '
+The significance value p must be set to 0.0. The verbose setting is optional (-v, -vv, -vvv etc)
+
+The folder 'datasets' contains the datasets which were generated for the quantitative evaluation, along with a file analysis.py which was
+used to plot the quantitative results on graphs
+
+The folder 'examples' contains a large number of data files and settings file, which were used for experimentation and for learning complex
+examples.
+
+Running the modified probfoil algorithm writes data points to both the data file and the settings file. If you wish to run the algorithm
+more than once using the same files, you will need to open the files and delete the new data points, unless you wish to keep the new
+abnormal predicate for the next learning stage
+
+The text below is the original ProbFOIL readme
+
 ProbFOIL v2.1
 =============
 
@@ -5,7 +44,7 @@ ProbFOIL is a probabilistic extension of FOIL that is capable of learning probab
 probabilistic data.
 
 ProbFOIL 2.1 is a redesign of the Prob2FOIL algorithm that was introduced in https://lirias.kuleuven.be/handle/123456789/499989.
-It works on top of ProbLog 2.1.
+It works on top of ProbLog 2.1
 
 If you are looking for the version used in the paper, you should check out the tag ``paper_version``.
 
@@ -14,7 +53,7 @@ Installation
 
 ProbFOIL 2.1 requires ProbLog 2.1.
 You can install ProbLog by using the command:
-    
+
 .. code-block:: python
 
     pip install problog
