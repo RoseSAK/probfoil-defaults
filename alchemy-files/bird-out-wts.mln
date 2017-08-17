@@ -1,0 +1,27 @@
+//predicate declarations
+Penguin(dom1)
+Flies(dom1)
+Bird(dom1)
+Ostrich(dom1)
+
+// Penguin(x) => Bird(x).
+Bird(a1) v !Penguin(a1).
+
+// Ostrich(x) => Bird(x).
+Bird(a1) v !Ostrich(a1).
+
+// 9.67796  Bird(x) => Flies(x)
+9.67796  !Bird(a1) v Flies(a1)
+
+// 4.17308  Bird(a1)
+4.17308  Bird(a1)
+
+// -0.693274  Penguin(a1)
+-0.693274  Penguin(a1)
+
+// -0.691441  Ostrich(a1)
+-0.691441  Ostrich(a1)
+
+// -8.97576  Flies(a1)
+-8.97576  Flies(a1)
+

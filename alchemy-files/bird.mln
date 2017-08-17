@@ -1,0 +1,15 @@
+dom1 = {0, 1, 2, 3, 4, 5}
+
+// predicate declarations
+Bird(dom1)
+Penguin(dom1)
+Ostrich(dom1)
+Flies(dom1)
+
+// functions
+Penguin(x) => Bird(x).
+Ostrich(x) => Bird(x).
+
+Penguin(x) => Flies(x)
+Ostrich(x) => Flies(x)
+Bird(x) => Flies(x)

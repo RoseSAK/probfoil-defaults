@@ -1,0 +1,17 @@
+//predicate declarations
+banana(dom1)
+apple(dom1)
+green(dom1)
+
+// 3.37851  green(x) v banana(x)
+3.37851  green(a1) v banana(a1)
+
+// -5.17113  green(a1)
+-5.17113  green(a1)
+
+// -1.09862  apple(a1)
+-1.09862  apple(a1)
+
+// -5.17113  banana(a1)
+-5.17113  banana(a1)
+

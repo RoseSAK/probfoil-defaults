@@ -1,0 +1,5 @@
+green(Obj1)
+apple(Obj1)
+banana(Obj2)
+!green(Obj2)
+apple(Obj3) 

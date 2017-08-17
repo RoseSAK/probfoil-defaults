@@ -1,0 +1,6 @@
+Smokes(Alice)
+Smokes(Bob)
+Friends(Alice, Bob)
+Cancer(Alice)
+!Smokes(Carl)
+!Smokes(Derek)

@@ -1,0 +1,13 @@
+//predicate declarations
+Cancer(people)
+Friends(people,people)
+Smokes(people)
+
+-8.38246   Friends(a1,a1)
+-9.28879   Smokes(a1)
+-0.459765  Friends(a1,a2)
+14.3137    Cancer(a1)
+-2.85706   !Smokes(a1) v !Smokes(a2) v Cancer(a1) v Cancer(a3) v Friends(a3,a2) v !Friends(a2,a1)
+0.501531   !Cancer(a1) v Friends(a1,a2) v !Friends(a1,a3) v !Friends(a1,a4) v !Friends(a5,a3) v !Friends(a6,a5)
+0.864805   !Cancer(a1) v Friends(a2,a3) v Friends(a2,a4) v !Friends(a2,a1) v !Friends(a2,a5) v !Friends(a6,a5)
+

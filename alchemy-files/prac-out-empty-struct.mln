@@ -1,0 +1,11 @@
+//predicate declarations
+banana(domain)
+apple(domain)
+green(domain)
+
+-1.09841   apple(a1)
+-7.1323    green(a1)
+-1.10427   banana(a1)
+4.62919    !banana(a1) v !apple(a1)
+-7.12933   !green(a1) v banana(a1) v !apple(a1)
+

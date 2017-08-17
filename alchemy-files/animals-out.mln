@@ -1,0 +1,6 @@
+//predicate declarations
+R(animals,features)
+
+-0.00153301 R(a1,a2)
+0.0479432  R(a1,a2) v !R(a3,a2)
+

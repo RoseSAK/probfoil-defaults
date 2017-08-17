@@ -1,0 +1,6 @@
+domain = {1, 2, 3}
+
+//predicate declarations
+green(domain)
+banana(domain)
+apple(domain)                                                                                                                                                                                                                                  

@@ -1,0 +1,10 @@
+//domain
+dom1 = {1, 2, 3, 4, 5}
+
+//predicate declarations
+green(dom1)
+apple(dom1)
+banana(dom1)
+
+//functions
+green(x) v banana(x)

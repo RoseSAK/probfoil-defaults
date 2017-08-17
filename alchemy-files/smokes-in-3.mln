@@ -1,0 +1,7 @@
+//domain
+person = {Alice, Bob, Carl, Derek}
+
+//predicate declarations
+Smokes(person)
+Cancer(person)
+Friends(person, person)

@@ -1,0 +1,15 @@
+//predicate declarations
+Penguin(dom1)
+Flies(dom1)
+Bird(dom1)
+Ostrich(dom1)
+
+5.04534    Bird(a1)
+-5.76512   Penguin(a1)
+-5.99439   Flies(a1)
+-0.00053092 Ostrich(a1)
+10.0914    Bird(a1) v !Ostrich(a1)
+11.6038    !Bird(a1) v Flies(a1)
+13.5153    Bird(a1) v !Penguin(a1)
+-11.2906   !Penguin(a1) v Ostrich(a1) v Flies(a1)
+

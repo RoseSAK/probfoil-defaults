@@ -1,0 +1,23 @@
+father(bart, stijn).
+father(bart, pieter).
+father(luc, soetkin).
+
+mother(katleen, stijn).
+mother(katleen, pieter).
+mother(lieve, soetkin).
+
+parent(bart,stijn).
+parent(bart,pieter).
+parent(luc,soetkin).
+
+female(alice).
+female(an).
+female(esther).
+
+male(bart).
+male(etienne).
+male(leon).
+
+grandmother(esther,soetkin).
+grandmother(esther,stijn).
+grandmother(esther,pieter).

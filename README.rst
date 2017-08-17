@@ -31,6 +31,8 @@ used to plot the quantitative results on graphs
 The folder 'examples' contains a large number of data files and settings file, which were used for experimentation and for learning complex
 examples.
 
+The folder 'alchemy-files' contains example Alchemy .mln and .db files, from the initial experimentation with Alchemy
+
 Running the modified probfoil algorithm writes data points to both the data file and the settings file. If you wish to run the algorithm
 more than once using the same files, you will need to open the files and delete the new data points, unless you wish to keep the new
 abnormal predicate for the next learning stage
