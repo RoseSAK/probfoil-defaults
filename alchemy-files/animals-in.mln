@@ -1,0 +1,6 @@
+//domain
+animals = {}
+features = {}
+
+//predicates
+R(animals, features) 
